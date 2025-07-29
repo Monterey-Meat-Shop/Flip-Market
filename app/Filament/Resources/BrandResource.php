@@ -42,7 +42,7 @@ class BrandResource extends Resource
                         Toggle::make('is_active')
                             ->required()
                             ->default(true),
-                        //testing commit
+                        //testing commit changes
                     ]),
             ]);
     }
