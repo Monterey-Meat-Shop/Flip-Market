@@ -36,6 +36,7 @@ class BrandResource extends Resource
                     ->required()
                     ->maxLength(225)
                     ->live(),
+                    //assas
 
                 ]),
 
