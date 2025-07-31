@@ -14,6 +14,10 @@ use Filament\Forms\Components\Toggle;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Filament\Tables\Actions\ActionGroup;
+use Filament\Tables\Actions\ViewAction;
+use Filament\Tables\Actions\EditAction;
+use Filament\Tables\Actions\DeleteAction;
 use Filament\Tables\Columns\TextColumn;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
@@ -28,7 +32,7 @@ class BrandResource extends Resource
     {
         return $form
         ->schema([
-            Section::make('Brand Info')
+            Section::make('Brand Information')
             ->schema([
                 Grid::make()
                 ->schema([
@@ -64,7 +68,11 @@ class BrandResource extends Resource
             ])
             ->filters([])
             ->actions([
-                Tables\Actions\EditAction::make(),
+                ActionGroup::make([
+                    ViewAction::make(),
+                    EditAction::make(),
+                    DeleteAction::make(),
+                ])
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
@@ -76,7 +84,7 @@ class BrandResource extends Resource
     public static function getRelations(): array
     {
         return [
-            //
+            //adsads
         ];
     }
 
