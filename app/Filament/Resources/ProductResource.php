@@ -27,10 +27,14 @@ use Filament\Tables\Actions\ActionGroup;
 use Filament\Tables\Actions\ViewAction;
 use Filament\Tables\Actions\EditAction;
 use Filament\Tables\Actions\DeleteAction;
+use Filament\Tables\Actions\RestoreAction;
+use Filament\Tables\Actions\ForceDeleteAction;
 use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Filters\TrashedFilter;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Illuminate\Support\Str;
+use Illuminate\Database\Eloquent\Model;
 
 class ProductResource extends Resource
 {
@@ -48,6 +52,7 @@ class ProductResource extends Resource
                         ->required()
                         ->maxLength(225)
                         ->live(onBlur: true)
+                        // This is for the slug
                         ->afterStateUpdated(function(string $operation, $state, Set $set) {
                             if ($operation !== 'create') {
                                 return;
@@ -72,6 +77,7 @@ class ProductResource extends Resource
                         ->required()
                         ->reactive()
                         ->afterStateUpdated(function($state, callable $set) {
+                            //check if the state is less than or equal to 0
                             if((int)$state <=0){
                                 $set('is_active', (int) $state > 0);
                             } 
@@ -169,6 +175,7 @@ class ProductResource extends Resource
 
                 ImageColumn::make('image_url')
                     ->label('Image')
+                    //This is for storing multiple images
                     ->getStateUsing(fn ($record) => $record->image_url[0] ?? null),   
 
                 TextColumn::make('brand.name')
@@ -189,31 +196,56 @@ class ProductResource extends Resource
                     ->sortable(),
 
                 TextColumn::make('Size')
-                    ->searchable()
                     ->sortable(),
-
+            
+                // Displays a boolean icon for the 'is_active' column, showing 'false' if the product is soft-deleted and otherwise using the 'is_active' value.
                 IconColumn::make('is_active')
+                    ->getStateUsing(fn (Product $record): bool => $record->trashed() ? false : $record->is_active)
                     ->boolean(),
 
-                TextColumn::make('created_at')->dateTime()->sortable()
-                                              ->toggleable(isToggledHiddenByDefault: true),
+                // Added a new column for the deleted_at timestamp
+                TextColumn::make('deleted_at')
+                    ->label('Archived Date')
+                    ->dateTime()
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
 
-                TextColumn::make('updated_at')->dateTime()->sortable()
-                                              ->toggleable(isToggledHiddenByDefault: true),
+                // Column for the create_at and updated_at timestamps
+                TextColumn::make('created_at')
+                    ->dateTime()->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+
+                TextColumn::make('updated_at')
+                    ->dateTime()->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                     
             ])
             ->filters([
+                // This filter, filters by the 'category_id' column in the 'products' table.
                 SelectFilter::make('category')
                     ->relationship('category', 'name'),
 
                 SelectFilter::make('brand')
                     ->relationship('brand', 'name'),
+
+                // This filter explicitly modifies the query to include soft-deleted records.
+                TrashedFilter::make()
+                    ->modifyQueryUsing(fn (Builder $query) => $query->withTrashed())
+                    ->indicator('Archived', fn (Builder $query) => $query->whereNotNull('deleted_at')),
             ])
             ->actions([
                 ActionGroup::make([
                     ViewAction::make(),
                     EditAction::make(),
-                    DeleteAction::make(),
+                    // The standard DeleteAction performs a soft delete when SoftDeletes is used.
+                    DeleteAction::make()
+                        ->visible(fn (Product $record): bool => ! $record->trashed()),
+                    // This action restores a soft-deleted record.
+                    RestoreAction::make()
+                        ->visible(fn (Product $record): bool => $record->trashed()),
+                    // This action permanently deletes a soft-deleted record.
+                    ForceDeleteAction::make()
+                        ->visible(fn (Product $record): bool => $record->trashed()),
                 ])
             ])
             ->bulkActions([
@@ -237,5 +269,20 @@ class ProductResource extends Resource
             'create' => Pages\CreateProduct::route('/create'),
             'edit' => Pages\EditProduct::route('/{record}/edit'),
         ];
+    }
+
+    public static function getEloquentQuery(): Builder
+    {
+        // This is a custom query that excludes soft-deleted records.
+        return parent::getEloquentQuery()
+            ->withoutGlobalScopes([
+                SoftDeletingScope::class,
+            ]);
+    }
+
+    public static function resolveRecordRouteBinding(int | string $key): ?Model
+    {
+        //for archived records
+        return static::getModel()::where('ProductID', $key)->withTrashed()->first();
     }
 }

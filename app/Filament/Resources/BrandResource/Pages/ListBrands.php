@@ -16,4 +16,5 @@ class ListBrands extends ListRecords
             Actions\CreateAction::make(),
         ];
     }
+
 }
