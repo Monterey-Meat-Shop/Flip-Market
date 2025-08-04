@@ -1,15 +1,15 @@
 <?php
 
-namespace App\Filament\Resources\UserResource\Pages;
+namespace App\Filament\Resources\PaymentResource\Pages;
 
-use App\Filament\Resources\UserResource;
+use App\Filament\Resources\PaymentResource;
 use Filament\Actions;
 use Filament\Resources\Pages\EditRecord;
 use Filament\Notifications\Notification;
 
-class EditUser extends EditRecord
+class EditPayment extends EditRecord
 {
-    protected static string $resource = UserResource::class;
+    protected static string $resource = PaymentResource::class;
 
     protected function getHeaderActions(): array
     {
@@ -27,7 +27,7 @@ class EditUser extends EditRecord
     {
         return Notification::make()
             ->success()
-            ->title('User updated')
-            ->body('The user has been updated successfully.');
+            ->title('Payment Method updated')
+            ->body('The payment method has been updated successfully.');
     }
 }

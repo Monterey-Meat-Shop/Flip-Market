@@ -11,26 +11,28 @@ class Product extends Model
     use HasFactory, SoftDeletes;
     
     protected $table = 'products';
-    protected $primaryKey = 'ProductID';
+    protected $primaryKey = 'productID';
 
     protected $fillable = [
-        'CategoryID',
-        'BrandID',
-        'Name',
-        'Slug',
-        'Description',
-        'Price',
+        'categoryID',
+        'brandID',
+        'name',
+        'slug',
+        'description',
+        'price',
         'image_url',
-        'Stock_Quantity',
-        'Size',
-        'Colorway',
-        'Status', 
+        'status', 
+        'stock_quantity',
+        'size',
+        'colorway',
+        'is_active',
     ];
 
     protected $casts = [
-        'Price' => 'decimal:2',
-        'Size' => 'array',
+        'price' => 'decimal:2',
+        'size' => 'array',
         'image_url' => 'array',
+        'is_active' => 'boolean',
     ];
 
     protected static function boot()
@@ -38,22 +40,41 @@ class Product extends Model
         parent::boot();
 
         static::saving (function ($product) {
-            $product->is_active = $product->Stock_Quantity > 0;
+            // Only update is_active if the product is not in the process of being deleted
+            if (!$product->isDirty('deleted_at')) {
+                $product->is_active = ($product->status === 'pre_order') || ($product->stock_quantity > 0);
+            }
         });
 
     }
 
     public function category()
     {
-        return $this->belongsTo(Category::class, 'CategoryID');
+        // foreign key, local key
+        return $this->belongsTo(Category::class, 'categoryID');
     }
 
     public function brand()
     {
-        return $this->belongsTo(Brand::class, 'BrandID');
+        // foreign key, local key
+        return $this->belongsTo(Brand::class, 'brandID');
     }
 
-    public function orderItems(){
+    public function orderItems()
+    {
         //return $this->hasMany(OrderItem::class);
     }
+
+    public function getIsPreOrderAttribute(): bool
+    {
+        // return $this->status === 'pre_order';
+        return $this->status === 'pre_order';
+    }
+
+    public function getIsInStockAttribute(): bool
+    {
+        // return $this->status === 'in_stock' && $this->stock_quantity > 0;
+        return $this->status === 'in_stock' && $this->stock_quantity > 0;
+    }
+    
 }

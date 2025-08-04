@@ -3,10 +3,11 @@
 namespace App\Filament\Resources\ProductResource\Pages;
 
 use App\Filament\Resources\ProductResource;
-use App\Models\Product; // Import the Product model
+use App\Models\Product;
 use Filament\Actions;
 use Filament\Resources\Pages\ListRecords;
 use Filament\Resources\Pages\ListRecords\Tab;
+use Illuminate\Database\Eloquent\Builder;
 
 class ListProducts extends ListRecords
 {
@@ -21,34 +22,41 @@ class ListProducts extends ListRecords
 
     public function getTabs(): array
     {
-        // A query for available products, using a more descriptive variable name
-        $availableQuery = fn ($query) => $query->where('is_active', true)->where('stock_quantity', '>', 0);
-        $lowStockQuery = fn ($query) => $query->where('is_active', true)->where('stock_quantity', '>', 0)->where('stock_quantity', '<=', 10);
-        $outOfStockQuery = fn ($query) => $query->where('is_active', true)->where('stock_quantity', '=', 0);
-        $archivedQuery = fn ($query) => $query->onlyTrashed();
-
         return [
-            'available' => Tab::make('Products Available')
-                ->modifyQueryUsing($availableQuery)
-                ->badge(Product::query()->where('is_active', true)->where('stock_quantity', '>', 0)->count()),
+            // query for total available
+            'all' => Tab::make('All Available')
+                 ->modifyQueryUsing(fn (Builder $query) => $query->withoutTrashed())
+                 ->badge(Product::withoutTrashed()->count()),
 
+            // query for total in stock
+            'in_stock' => Tab::make('In Stock')
+                ->modifyQueryUsing(fn (Builder $query) => $query->withoutTrashed()->where('status', 'in_stock'))
+                ->badge(Product::withoutTrashed()->where('status', 'in_stock')->count())
+                ->badgeColor('success'),
+            
+            // query for total pre-order
+            'pre_order' => Tab::make('Pre-order')
+                ->modifyQueryUsing(fn (Builder $query) => $query->withoutTrashed()->where('status', 'pre_order'))
+                ->badge(Product::withoutTrashed()->where('status', 'pre_order')->count())
+                ->badgeColor('info'),
+            
+            // query for total low stock
             'low_stock' => Tab::make('Low Stock')
-                ->modifyQueryUsing($lowStockQuery)
-                ->badge(Product::query()->where('is_active', true)->where('stock_quantity', '>', 0)->where('stock_quantity', '<=', 10)->count())
+                ->modifyQueryUsing(fn (Builder $query) => $query->withoutTrashed()->where('stock_quantity', '<=', 10))
+                ->badge(Product::withoutTrashed()->where('stock_quantity', '<=', 10)->count())
                 ->badgeColor('warning'),
 
+            // query for total out of stock    
             'out_of_stock' => Tab::make('Out of Stock')
-                ->modifyQueryUsing(fn ($query) => $query->where('is_active', false))
-                ->badge(Product::where('is_active', false)->count())
+                ->modifyQueryUsing(fn (Builder $query) => $query->withoutTrashed()->where('status', 'out_of_stock'))
+                ->badge(Product::withoutTrashed()->where('status', 'out_of_stock')->count())
                 ->badgeColor('danger'),
-
-            // 'inactive' => Tab::make('Inactive')
-            //      ->modifyQueryUsing(fn ($query) => $query->where('is_active', false))
-            //      ->badge(Product::where('is_active', false)->count()),
-
+             
+            // query for total archived
             'archived' => Tab::make('Archived')
+                ->modifyQueryUsing(fn (Builder $query) => $query->onlyTrashed())
                 ->badge(Product::onlyTrashed()->count())
-                ->modifyQueryUsing($archivedQuery),
+                ->badgeColor('secondary'),
         ];
     }
 }

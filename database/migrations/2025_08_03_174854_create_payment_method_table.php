@@ -11,8 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('products', function (Blueprint $table) {
-            $table->json('size')->nullable()->change();
+        Schema::create('payment_method', function (Blueprint $table) {
+            $table->increments('PaymentMethodID');
+            $table->string('method_name');
+            $table->boolean('is_active')->default(true);
+            $table->timestamps();
         });
     }
 
@@ -21,8 +24,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('products', function (Blueprint $table) {
-            $table->string('size')->nullable()->change();
-        });
+        Schema::dropIfExists('payment_method');
     }
 };

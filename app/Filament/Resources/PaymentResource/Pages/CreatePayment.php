@@ -1,16 +1,16 @@
 <?php
 
-namespace App\Filament\Resources\BrandResource\Pages;
+namespace App\Filament\Resources\PaymentResource\Pages;
 
-use App\Filament\Resources\BrandResource;
+use App\Filament\Resources\PaymentResource;
 use Filament\Actions;
 use Filament\Resources\Pages\CreateRecord;
 
 use Filament\Notifications\Notification;
 
-class CreateBrand extends CreateRecord
+class CreatePayment extends CreateRecord
 {
-    protected static string $resource = BrandResource::class;
+    protected static string $resource = PaymentResource::class;
 
     protected function getRedirectUrl(): string
     {
@@ -21,7 +21,7 @@ class CreateBrand extends CreateRecord
     {
         return Notification::make()
             ->success()
-            ->title('Brand created')
-            ->body('The brand has been created successfully.');
+            ->title('Payment Method created')
+            ->body('The payment method has been created successfully.');
     }
 }

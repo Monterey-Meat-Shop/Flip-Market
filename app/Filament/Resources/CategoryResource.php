@@ -28,6 +28,12 @@ class CategoryResource extends Resource
     protected static ?string $model = Category::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-tag';
+    protected static ?string $navigationGroup = 'Products';
+
+    public static function canAccess(): bool
+    {
+        return auth()->user()->hasRole(['admin']);
+    }
 
     public static function form(Form $form): Form
     {
@@ -40,7 +46,8 @@ class CategoryResource extends Resource
                     TextInput::make('name')
                     ->required()
                     ->maxLength(225)
-                    ->live(),
+                    ->live()
+                    ->unique(),
 
                 ]),
 

@@ -27,6 +27,12 @@ class BrandResource extends Resource
     protected static ?string $model = Brand::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static ?string $navigationGroup = 'Products';
+
+    public static function canAccess(): bool
+    {
+        return auth()->user()->hasRole(['admin']);
+    }
 
     public static function form(Form $form): Form
     {
@@ -39,9 +45,9 @@ class BrandResource extends Resource
                     TextInput::make('name')
                     ->required()
                     ->maxLength(225)
-                    ->live(),
-                    //assas
-
+                    ->live()
+                    ->unique(),
+                
                 ]),
 
                 Toggle::make('is_active')

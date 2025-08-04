@@ -3,6 +3,8 @@
 use Illuminate\Support\Facades\Route;
 use Livewire\Volt\Volt;
 
+use App\Models\Product;
+
 Route::get('/', function () {
     return view('welcome');
 })->name('home');
@@ -18,5 +20,11 @@ Route::middleware(['auth'])->group(function () {
     Volt::route('settings/password', 'settings.password')->name('settings.password');
     Volt::route('settings/appearance', 'settings.appearance')->name('settings.appearance');
 });
+
+// Route::get('/test-archived-products', function() {
+//     $archivedProducts = Product::onlyTrashed()->get();
+//     dd($archivedProducts->toArray());
+// });
+
 
 require __DIR__.'/auth.php';
