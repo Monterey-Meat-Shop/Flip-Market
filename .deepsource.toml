@@ -1,7 +1,30 @@
 version = 1
 
+test_patterns = [
+  "tests/**"
+]
+
+exclude_patterns = [
+  "vendor/**",
+  "storage/**",
+  "bootstrap/cache/**",
+  "public/js/**/*.min.js",
+  "node_modules/**"
+]
+
 [[analyzers]]
 name = "php"
+enabled = true
+
+  [analyzers.meta]
+  bootstrap_files = ["bootstrap/app.php"]
+  skip_doc_coverage = ["magic"]
 
 [[analyzers]]
 name = "javascript"
+enabled = true
+
+  [analyzers.meta]
+  dialect = "typescript"
+  module_system = "es-modules"
+  environment = ["nodejs", "browser"]
