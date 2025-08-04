@@ -23,6 +23,7 @@ use Filament\Tables\Table;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\IconColumn;
+use Filament\Tables\Columns\TagsColumn;
 use Filament\Tables\Actions\ActionGroup;
 use Filament\Tables\Actions\ViewAction;
 use Filament\Tables\Actions\EditAction;
@@ -41,71 +42,96 @@ class ProductResource extends Resource
     protected static ?string $model = Product::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-cube';
+    protected static ?string $navigationGroup = 'Products';
 
+    // This method controls who can see the 'Products' navigation item
+    public static function canAccess(): bool
+    {
+        return auth()->user()->hasRole(['admin', 'manager']);
+    }
+
+    // These methods control permissions within the resource
+    public static function canViewAny(): bool
+    {
+        return auth()->user()->hasRole(['admin', 'manager']);
+    }
+    
+    public static function canCreate(): bool
+    {
+        return auth()->user()->hasRole('admin');
+    }
+
+    public static function canEdit(Model $record): bool
+    {
+        return auth()->user()->hasRole('admin');
+    }
+
+    public static function canDelete(Model $record): bool
+    {
+        return auth()->user()->hasRole('admin');
+    }
+
+    public static function canForceDelete(Model $record): bool
+    {
+        return auth()->user()->hasRole('admin');
+    }
+    
+    public static function canRestore(Model $record): bool
+    {
+        return auth()->user()->hasRole('admin');
+    }
+    
     public static function form(Form $form): Form
     {
         return $form
         ->schema([
             Group::make()->schema([
                 Section::make('Product Information')->schema([
-                    TextInput::make('Name')
+                    TextInput::make('name')
                         ->required()
                         ->maxLength(225)
                         ->live(onBlur: true)
-                        // This is for the slug
                         ->afterStateUpdated(function(string $operation, $state, Set $set) {
                             if ($operation !== 'create') {
                                 return;
                             }
-                            $set('Slug', Str::slug($state));
+                            $set('slug', Str::slug($state));
                         }),
 
-                    TextInput::make('Slug')
+                    TextInput::make('slug')
                         ->required()
                         ->maxLength(225)
                         ->disabled()
                         ->dehydrated()
                         ->unique(Product::class, 'slug', ignoreRecord:true),
 
-                    RichEditor::make('Description')
+                    RichEditor::make('description')
                         ->fileAttachmentsDirectory('products/descriptions')
                         ->columnSpanFull()
                         ->maxLength(1000),
                     
-                    TextInput::make('Stock_Quantity')
+                    TextInput::make('stock_quantity')
                         ->numeric()
                         ->required()
                         ->reactive()
                         ->afterStateUpdated(function($state, callable $set) {
-                            //check if the state is less than or equal to 0
-                            if((int)$state <=0){
-                                $set('is_active', (int) $state > 0);
-                            } 
+                            // No longer needed due to the model logic, but can be a good visual cue for the admin.
                         }),
 
-                    TextInput::make('Colorway')
+                    TextInput::make('colorway')
                         ->required()
                         ->maxLength(225),
 
-                    CheckboxList::make('Size')
+                    CheckboxList::make('size')
                         ->label('Size')
                         ->options([
-                            '36' => '36',
-                            '37' => '37',
-                            '38' => '38',
-                            '39' => '39',
-                            '40' => '40',
-                            '41' => '41',
-                            '42' => '42',
-                            '43' => '43',
-                            '44' => '44',
-                            '45' => '45',
-                            '46' => '46',
-                    ])
-                    ->columns(6)//5
-                    ->columnSpanFull()
-                    ->required()
-
+                            '36' => '36', '37' => '37', '38' => '38', '39' => '39', '40' => '40', '41' => '41', '42' => '42', '43' => '43', '44' => '44', '45' => '45', '46' => '46',
+                        ])
+                        ->columns(6)
+                        ->columnSpanFull()
+                        ->required()
+                        //->dehydrated(true),
+                        
                 ])->columns(2),
 
                 Section::make('Images')->schema([
@@ -114,54 +140,58 @@ class ProductResource extends Resource
                         ->directory('products')
                         ->visibility('public')
                         ->maxFiles(5)
-                        ->reorderable()
+                        ->reorderable(),
                 ])
             ])->columnSpan(2),
             
             Group::make()->schema([ 
                 Section::make('Price')->schema([
-                    TextInput::make('Price')
+                    TextInput::make('price')
                         ->numeric()
+                        ->rules(['required', 'numeric', 'min:1'])
                         ->required()
-                        ->prefix('PHP')
-                    
+                        ->prefix('PHP'),
                 ]),
 
                 Section::make('Association')->schema([
-                    Select::make('CategoryID')
+                    Select::make('categoryID')
                         ->required()
                         ->searchable()
                         ->preload()
                         ->relationship('category', 'name'),
 
-                        Select::make('BrandID')
+                    Select::make('brandID')
                         ->required()
                         ->searchable()
                         ->preload()
-                        ->relationship('brand', 'name')
+                        ->relationship('brand', 'name'),
                 ]),
 
                 Section::make('Status')->schema([
-                    Toggle::make('in_stock')
+                    Select::make('status')
                         ->required()
-                        ->default(true),
-
+                        ->options([
+                            'in_stock' => 'In Stock',
+                            'pre_order' => 'Pre-order',
+                            'out_of_stock' => 'Out of Stock',
+                        ])
+                        ->default('in_stock')
+                        ->afterStateUpdated(function (string $state, callable $set) {
+                            // A pre-order product is considered active regardless of stock.
+                            if ($state === 'pre_order') {
+                                $set('is_active', true);
+                            } else {
+                                // For 'in_stock' or 'out_of_stock', depend on stock quantity
+                                $set('is_active', (int) $set('stock_quantity') > 0);
+                            }
+                        }),
+                        
                     Toggle::make('is_active')
                         ->required()
-                        ->default(true),
-
-                    /*
-                    Toggle::make('in_feature')
-                        ->required()
-                        ,
-
-                    Toggle::make('on_sale')
-                        ->required()
-                    */    
-                ])
-
+                        ->default(true)
+                        ->helperText('This field is automatically managed, but you can override it.'),
+                ]),
             ])->columnSpan(1)
-
         ])->columns(3);
     }
 
@@ -169,14 +199,13 @@ class ProductResource extends Resource
     {
         return $table
             ->columns([
-                TextColumn::make('Name')
+                TextColumn::make('name')
                     ->searchable()
                     ->sortable(),
 
                 ImageColumn::make('image_url')
                     ->label('Image')
-                    //This is for storing multiple images
-                    ->getStateUsing(fn ($record) => $record->image_url[0] ?? null),   
+                    ->getStateUsing(fn ($record) => $record->image_url[0] ?? null), 
 
                 TextColumn::make('brand.name')
                     ->searchable()
@@ -186,31 +215,39 @@ class ProductResource extends Resource
                     ->searchable()
                     ->sortable(),
 
-                TextColumn::make('Stock_Quantity')
-                    ->label('Stock Info')
+                TextColumn::make('status')
+                    ->label('Status')
+                    ->badge()
+                    ->color(fn (string $state): string => match ($state) {
+                        'in_stock' => 'success',
+                        'pre_order' => 'warning',
+                        'out_of_stock' => 'danger',
+                    }),
+                
+                TextColumn::make('stock_quantity')
+                    ->label('Stock Quantity')
                     ->searchable()
                     ->sortable(),
 
-                TextColumn::make('Price')
+                TextColumn::make('price')
                     ->money('PHP')
                     ->sortable(),
 
-                TextColumn::make('Size')
+                TagsColumn::make('size')
+                    ->label('Sizes')
+                    ->searchable()
                     ->sortable(),
             
-                // Displays a boolean icon for the 'is_active' column, showing 'false' if the product is soft-deleted and otherwise using the 'is_active' value.
                 IconColumn::make('is_active')
                     ->getStateUsing(fn (Product $record): bool => $record->trashed() ? false : $record->is_active)
                     ->boolean(),
 
-                // Added a new column for the deleted_at timestamp
                 TextColumn::make('deleted_at')
                     ->label('Archived Date')
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
 
-                // Column for the create_at and updated_at timestamps
                 TextColumn::make('created_at')
                     ->dateTime()->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
@@ -218,39 +255,38 @@ class ProductResource extends Resource
                 TextColumn::make('updated_at')
                     ->dateTime()->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
-                    
             ])
             ->filters([
-                // This filter, filters by the 'category_id' column in the 'products' table.
+                SelectFilter::make('status')
+                    ->options([
+                        'in_stock' => 'In Stock',
+                        'pre_order' => 'Pre-order',
+                        'out_of_stock' => 'Out of Stock',
+                    ])
+                    ->label('Status'),
+
                 SelectFilter::make('category')
                     ->relationship('category', 'name'),
 
                 SelectFilter::make('brand')
                     ->relationship('brand', 'name'),
-
-                // This filter explicitly modifies the query to include soft-deleted records.
-                TrashedFilter::make()
-                    ->modifyQueryUsing(fn (Builder $query) => $query->withTrashed())
-                    ->indicator('Archived', fn (Builder $query) => $query->whereNotNull('deleted_at')),
+                    
+                TrashedFilter::make(),
             ])
             ->actions([
                 ActionGroup::make([
                     ViewAction::make(),
                     EditAction::make(),
-                    // The standard DeleteAction performs a soft delete when SoftDeletes is used.
-                    DeleteAction::make()
-                        ->visible(fn (Product $record): bool => ! $record->trashed()),
-                    // This action restores a soft-deleted record.
-                    RestoreAction::make()
-                        ->visible(fn (Product $record): bool => $record->trashed()),
-                    // This action permanently deletes a soft-deleted record.
-                    ForceDeleteAction::make()
-                        ->visible(fn (Product $record): bool => $record->trashed()),
+                    DeleteAction::make(),
+                    RestoreAction::make(),
+                    ForceDeleteAction::make(),
                 ])
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make(),
+                    Tables\Actions\RestoreBulkAction::make(),
+                    Tables\Actions\ForceDeleteBulkAction::make(),
                 ]),
             ]);
     }
@@ -273,16 +309,12 @@ class ProductResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        // This is a custom query that excludes soft-deleted records.
-        return parent::getEloquentQuery()
-            ->withoutGlobalScopes([
-                SoftDeletingScope::class,
-            ]);
+        return parent::getEloquentQuery();
     }
 
-    public static function resolveRecordRouteBinding(int | string $key): ?Model
-    {
-        //for archived records
-        return static::getModel()::where('ProductID', $key)->withTrashed()->first();
-    }
+    // public static function resolveRecordRouteBinding(int | string $key): ?Model
+    // {
+    //     // The query here is important for finding records that have been soft-deleted.
+    //     return static::getModel()::where('ProductID', $key)->withTrashed()->first();
+    // }
 }
