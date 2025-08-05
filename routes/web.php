@@ -6,7 +6,7 @@ use Livewire\Volt\Volt;
 use App\Models\Product;
 
 Route::get('/', function () {
-    return view('welcome');
+    return view('homepage');
 })->name('home');
 
 Route::view('dashboard', 'dashboard')
