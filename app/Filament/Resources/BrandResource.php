@@ -27,36 +27,36 @@ class BrandResource extends Resource
     public static function form(Form $form): Form
     {
         return $form
-        ->schema([
-            Section::make('Brand Info')
             ->schema([
-                Grid::make()
-                ->schema([
-                    TextInput::make('name')
-                    ->required()
-                    ->maxLength(225)
-                    ->live(),
-                    //assas
+                Section::make('Brand Info')
+                    ->schema([
+                        Grid::make()
+                            ->schema([
+                                TextInput::make('name')
+                                    ->required()
+                                    ->maxLength(225)
+                                    ->live(),
+                                //assas
+                            ]),
 
-                ]),
-
-                Toggle::make('is_active')
-                     ->required()
-                     ->default(true),
-            ]),
-        ]);
+                        Toggle::make('is_active')
+                            ->required()
+                            ->default(true),
+                        //testing commit changes
+                    ]),
+            ]);
     }
 
     public static function table(Table $table): Table
     {
-       return $table
+        return $table
             ->columns([
                 TextColumn::make('name')->searchable()->sortable(),
                 TextColumn::make('is_active')
                     ->label('Status')
-                    ->formatStateUsing(fn (bool $state) : string => $state ? 'Active' : 'Inactive')
+                    ->formatStateUsing(fn(bool $state): string => $state ? 'Active' : 'Inactive')
                     ->badge()
-                    ->color(fn (bool $state): string => $state ? 'success' : 'danger'),
+                    ->color(fn(bool $state): string => $state ? 'success' : 'danger'),
 
                 TextColumn::make('name')->searchable()->sortable(),
                 TextColumn::make('created_at')->dateTime()->label('Created At')->sortable(),
