@@ -9,22 +9,13 @@ Route::get('/', function () {
     return view('homepage');
 })->name('home');
 
-Route::view('dashboard', 'dashboard')
-    ->middleware(['auth', 'verified'])
-    ->name('dashboard');
-
-Route::middleware(['auth'])->group(function () {
-    Route::redirect('settings', 'settings/profile');
-
-    Volt::route('settings/profile', 'settings.profile')->name('settings.profile');
-    Volt::route('settings/password', 'settings.password')->name('settings.password');
-    Volt::route('settings/appearance', 'settings.appearance')->name('settings.appearance');
+Route::get('/products/{id}', function ($id) {
+    $product = App\Models\Product::findOrFail($id);
+    return view(
+        'pages.product-details',
+        compact('product')
+    );
 });
 
-// Route::get('/test-archived-products', function() {
-//     $archivedProducts = Product::onlyTrashed()->get();
-//     dd($archivedProducts->toArray());
-// });
 
-
-require __DIR__.'/auth.php';
+require __DIR__ . '/auth.php';
