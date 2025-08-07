@@ -42,8 +42,8 @@ class ListProducts extends ListRecords
             
             // query for total low stock
             'low_stock' => Tab::make('Low Stock')
-                ->modifyQueryUsing(fn (Builder $query) => $query->withoutTrashed()->where('stock_quantity', '<=', 10))
-                ->badge(Product::withoutTrashed()->where('stock_quantity', '<=', 10)->count())
+                ->modifyQueryUsing(fn (Builder $query) => $query->withoutTrashed()->where('stock_quantity', '<=', 4))
+                ->badge(Product::withoutTrashed()->where('stock_quantity', '<=', 4)->count())
                 ->badgeColor('warning'),
 
             // query for total out of stock    

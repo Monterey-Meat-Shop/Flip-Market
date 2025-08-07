@@ -56,7 +56,12 @@ class UserResource extends Resource
                         ->maxLength(255),
 
                     Select::make('roles')
-                        ->relationship('roles', 'name')
+                        ->relationship(
+                            'roles',
+                            'name',
+                            // not allow to add admin user
+                            fn (Builder $query) => $query->where('name', '!=', 'admin')
+                        )
                         ->preload()
                         ->required(),
                 ])

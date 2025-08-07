@@ -47,7 +47,7 @@ class CategoryResource extends Resource
                     ->required()
                     ->maxLength(225)
                     ->live()
-                    ->unique(),
+                    ->unique(ignoreRecord: true),
 
                 ]),
 

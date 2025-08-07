@@ -18,6 +18,7 @@ class DatabaseSeeder extends Seeder
             RoleSeeder::class,
             BrandsSeeder::class,
             CategoriesSeeder::class,
+            PaymentMethodSeeder::class,
         ]);
         
         // Create the 'Admin' user and assign the 'admin' role.

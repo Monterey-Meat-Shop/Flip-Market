@@ -46,13 +46,12 @@ class BrandResource extends Resource
                                     ->required()
                                     ->maxLength(225)
                                     ->live()
-                                ->unique(),
+                                    ->unique(ignoreRecord: true),
                                             ]),
 
                         Toggle::make('is_active')
                             ->required()
                             ->default(true),
-                        //testing commit changes
                     ]),
             ]);
     }
@@ -90,7 +89,7 @@ class BrandResource extends Resource
     public static function getRelations(): array
     {
         return [
-            //adsads
+            
         ];
     }
 

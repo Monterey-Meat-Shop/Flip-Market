@@ -4,43 +4,32 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB; 
+use Illuminate\Support\Carbon;     
 
-class BrandsSeeder extends Seeder
+class PaymentMethodSeeder extends Seeder
 {
     /**
      * Run the database seeds.
      */
     public function run(): void
     {
-        DB::table('brands')->insert([
+        DB::table('payment_method')->insert([ 
             [
-                'name' => 'Nike', 
+                'method_name' => 'Gcash', 
+                'is_active' => true,      
                 'created_at' => Carbon::now(), 
                 'updated_at' => Carbon::now()
             ],
-
             [
-                'name' => 'Adidas',
+                'method_name' => 'Bank Transfer', 
+                'is_active' => true,
                 'created_at' => Carbon::now(), 
                 'updated_at' => Carbon::now()
             ],
-
             [
-                'name' => 'Puma',
-                'created_at' => Carbon::now(), 
-                'updated_at' => Carbon::now()
-            ],
-
-            [
-                'name' => 'Vans','
-                created_at' => Carbon::now(), 
-                'updated_at' => Carbon::now()
-            ],
-
-            [
-                'name' => 'Converse',
+                'method_name' => 'Cash on Delivery', 
+                'is_active' => false,
                 'created_at' => Carbon::now(), 
                 'updated_at' => Carbon::now()
             ],

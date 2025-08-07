@@ -48,7 +48,7 @@ class PaymentResource extends Resource
                                     ->label('Payment Method Name')
                                     ->required()
                                     ->maxLength(225)
-                                    ->unique(),
+                                    ->unique(ignoreRecord: true),
                             ]),
                         Toggle::make('is_active')
                             ->label('Is Active?')

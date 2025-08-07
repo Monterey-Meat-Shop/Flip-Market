@@ -76,5 +76,10 @@ class Product extends Model
         // return $this->status === 'in_stock' && $this->stock_quantity > 0;
         return $this->status === 'in_stock' && $this->stock_quantity > 0;
     }
+
+    public function discounts()
+    {
+        return $this->belongsToMany(Discount::class, 'discount_product', 'product_id', 'discount_id');
+    }
     
 }

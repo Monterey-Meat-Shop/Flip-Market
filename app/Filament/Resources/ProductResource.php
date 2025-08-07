@@ -221,7 +221,7 @@ class ProductResource extends Resource
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {
                         'in_stock' => 'success',
-                        'pre_order' => 'warning',
+                        'pre_order' => 'info',
                         'out_of_stock' => 'danger',
                     }),
                 
