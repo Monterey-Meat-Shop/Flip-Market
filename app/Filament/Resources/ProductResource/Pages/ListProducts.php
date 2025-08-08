@@ -23,40 +23,53 @@ class ListProducts extends ListRecords
     public function getTabs(): array
     {
         return [
-            // query for total available
-            'all' => Tab::make('All Available')
-                 ->modifyQueryUsing(fn (Builder $query) => $query->withoutTrashed())
-                 ->badge(Product::withoutTrashed()->count()),
+                // query for total available
+                'all' => Tab::make('All Available')
+                    ->modifyQueryUsing(fn (Builder $query) => $query->withoutTrashed())
+                    ->badge(Product::withoutTrashed()->count()),
 
-            // query for total in stock
-            'in_stock' => Tab::make('In Stock')
-                ->modifyQueryUsing(fn (Builder $query) => $query->withoutTrashed()->where('status', 'in_stock'))
-                ->badge(Product::withoutTrashed()->where('status', 'in_stock')->count())
-                ->badgeColor('success'),
-            
-            // query for total pre-order
-            'pre_order' => Tab::make('Pre-order')
-                ->modifyQueryUsing(fn (Builder $query) => $query->withoutTrashed()->where('status', 'pre_order'))
-                ->badge(Product::withoutTrashed()->where('status', 'pre_order')->count())
-                ->badgeColor('info'),
-            
-            // query for total low stock
-            'low_stock' => Tab::make('Low Stock')
-                ->modifyQueryUsing(fn (Builder $query) => $query->withoutTrashed()->where('stock_quantity', '<=', 4))
-                ->badge(Product::withoutTrashed()->where('stock_quantity', '<=', 4)->count())
-                ->badgeColor('warning'),
+                // query for total on sale
+                'on_sale' => Tab::make('On Sale')
+                    ->modifyQueryUsing(function (Builder $query) {
+                        $query->whereHas('discounts', function (Builder $discountQuery) {
+                        $discountQuery->where('is_active', true);
+                        });
+                    })
+                    ->badge(Product::whereHas('discounts', function (Builder $discountQuery) {
+                        $discountQuery->where('is_active', true);
+                    })->count())
+                    ->badgeColor('success'),
 
-            // query for total out of stock    
-            'out_of_stock' => Tab::make('Out of Stock')
-                ->modifyQueryUsing(fn (Builder $query) => $query->withoutTrashed()->where('status', 'out_of_stock'))
-                ->badge(Product::withoutTrashed()->where('status', 'out_of_stock')->count())
-                ->badgeColor('danger'),
+                // query for total in stock
+                'in_stock' => Tab::make('In Stock')
+                    ->modifyQueryUsing(fn (Builder $query) => $query->withoutTrashed()->where('status', 'in_stock'))
+                    ->badge(Product::withoutTrashed()->where('status', 'in_stock')->count())
+                    ->badgeColor('success'),
+            
+                // query for total pre-order
+                'pre_order' => Tab::make('Pre-order')
+                    ->modifyQueryUsing(fn (Builder $query) => $query->withoutTrashed()->where('status', 'pre_order'))
+                    ->badge(Product::withoutTrashed()->where('status', 'pre_order')->count())
+                    ->badgeColor('info'),
+            
+                // query for total low stock
+                'low_stock' => Tab::make('Low Stock')
+                    ->modifyQueryUsing(fn (Builder $query) => $query->withoutTrashed()->where('stock_quantity', '<=', 4))
+                    ->badge(Product::withoutTrashed()->where('stock_quantity', '<=', 4)->count())
+                    ->badgeColor('warning'),
+
+                // query for total out of stock    
+                'out_of_stock' => Tab::make('Out of Stock')
+                    ->modifyQueryUsing(fn (Builder $query) => $query->withoutTrashed()->where('status', 'out_of_stock'))
+                    ->badge(Product::withoutTrashed()->where('status', 'out_of_stock')->count())
+                    ->badgeColor('danger'),
              
-            // query for total archived
-            'archived' => Tab::make('Archived')
-                ->modifyQueryUsing(fn (Builder $query) => $query->onlyTrashed())
-                ->badge(Product::onlyTrashed()->count())
-                ->badgeColor('secondary'),
-        ];
+                    // query for total archived
+                   'archived' => Tab::make('Archived')
+                        ->modifyQueryUsing(fn (Builder $query) => $query->onlyTrashed())
+                        ->badge(Product::onlyTrashed()->count())
+                        ->badgeColor('secondary'),
+
+                ];
     }
 }
