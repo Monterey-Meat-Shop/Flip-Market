@@ -108,8 +108,8 @@ class OrderResource extends Resource
                             ->label('Payment Status')
                             ->options([
                                 'paid' => 'Paid',
-                                'pending' => 'Pending',
-                                'failed' => 'Failed',
+                                'unpaid' => 'Unpaid',
+                                'verified' => 'Verified',
                             ])
                             ->default('pending')
                             ->required(),
@@ -189,7 +189,7 @@ class OrderResource extends Resource
                     Select::make('order_status')
                         ->label('Order Status')
                         ->options([
-                            'new' => 'New',
+                            'pending' => 'Pending',
                             'processing' => 'Processing',
                             'shipped' => 'Shipped',
                             'delivered' => 'Delivered',
@@ -229,6 +229,7 @@ class OrderResource extends Resource
                         'pending' => 'warning',
                         'paid' => 'success',
                         'failed' => 'danger',
+                        'unpaid' => 'warning',
                     })
                     ->sortable(),
 
@@ -240,7 +241,7 @@ class OrderResource extends Resource
                 
                 SelectColumn::make('order_status')
                     ->options([
-                        'new' => 'New',
+                        'pending' => 'Pending',
                         'processing' => 'Processing',
                         'shipped' => 'Shipped',
                         'delivered' => 'Delivered',
@@ -283,6 +284,12 @@ class OrderResource extends Resource
         return [
             //
         ];
+    }
+
+    public static function getNavigationBadge(): ?string
+    {
+        return static::getModel()::query()
+        ->where('order_status', 'pending')->count();
     }
 
     public static function getPages(): array
