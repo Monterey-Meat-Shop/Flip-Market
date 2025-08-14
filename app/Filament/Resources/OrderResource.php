@@ -16,11 +16,13 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput; 
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\DateTimePicker;
+use Filament\Forms\Components\Hidden;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Columns\SelectColumn;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Illuminate\Support\Facades\Auth;
@@ -44,15 +46,29 @@ class OrderResource extends Resource
         return $query->where('customerID', auth()->id());
     }
 
+    // New function to modify data before creating the record
+    protected static function mutateFormDataBeforeCreate(array $data): array
+    {
+        // Get the selected payment method's name
+        $paymentMethod = PaymentMethod::find($data['payment_methodID']);
+
+        // If the payment method is not Gcash, we remove the reference number from the data
+        if ($paymentMethod->method_name !== 'Gcash') {
+            unset($data['reference_number']);
+        }
+        
+        return $data;
+    }
+
     public static function form(Form $form): Form
     {
         return $form
             ->schema([
-                Forms\Components\Hidden::make('total_amount')
+                Hidden::make('total_amount')
                     ->dehydrateStateUsing(fn (Get $get) => collect($get('orderItems') ?? [])->sum('sub_total'))
                     ->default(0.00),
                 
-                Forms\Components\Hidden::make('final_amount')
+                Hidden::make('final_amount')
                     ->dehydrateStateUsing(fn (Get $get) => collect($get('orderItems') ?? [])->sum('sub_total'))
                     ->default(0.00),
 
@@ -74,20 +90,26 @@ class OrderResource extends Resource
                     ->schema([
                         Select::make('payment_methodID')
                             ->label('Payment Method')
-                            ->options(PaymentMethod::pluck('method_name', 'payment_methodID'))
-                            ->required(),
+                            ->options(
+                                PaymentMethod::query()
+                                    ->whereIn('method_name', ['Cash', 'Gcash'])
+                                    ->pluck('method_name', 'payment_methodID')
+                            )
+                            ->required()
+                            ->live(),
 
                         TextInput::make('reference_number')
                             ->label('Reference Number')
                             ->placeholder('Reference no.')
-                            ->required(),
+                            ->visible(fn (Get $get) => PaymentMethod::find($get('payment_methodID'))?->method_name === 'Gcash')
+                            ->required(fn (Get $get) => PaymentMethod::find($get('payment_methodID'))?->method_name === 'Gcash'),
                         
                         Select::make('status')
                             ->label('Payment Status')
                             ->options([
                                 'paid' => 'Paid',
-                                'failed' => 'Failed',
                                 'pending' => 'Pending',
+                                'failed' => 'Failed',
                             ])
                             ->default('pending')
                             ->required(),
@@ -152,7 +174,9 @@ class OrderResource extends Resource
                         ->live(),
                 ]),
                 
-                Placeholder::make('total_amount_placeholder')
+                Section::make('Order Status')
+                ->schema([
+                    Placeholder::make('total_amount_placeholder')
                     ->label('Total Order Amount')
                     ->content(function (Get $get) {
                         $subTotals = collect($get('orderItems'))
@@ -162,14 +186,19 @@ class OrderResource extends Resource
                     })
                     ->live(),
                 
-                Select::make('order_status')
-                    ->label('Order Status')
-                    ->options([
-                        'completed' => 'Completed',
-                        'failed' => 'Failed',
-                    ])
-                    ->default('completed')
-                    ->required(),
+                    Select::make('order_status')
+                        ->label('Order Status')
+                        ->options([
+                            'new' => 'New',
+                            'processing' => 'Processing',
+                            'shipped' => 'Shipped',
+                            'delivered' => 'Delivered',
+                            'cancelled' => 'Cancelled',
+                            'completed' => 'Completed',
+                        ])
+                        ->default('completed')
+                        ->required(),
+                ])->columns(2),
             ]);
     }
 
@@ -192,19 +221,35 @@ class OrderResource extends Resource
                     ->label('Payment Method')
                     ->searchable()
                     ->sortable(),
-                
-                TextColumn::make('order_status')
-                    ->badge()
-                    ->sortable(),
 
                 TextColumn::make('payment.status')
                     ->label('Payment Status')
                     ->badge()
+                    ->color(fn (string $state): string => match ($state) {
+                        'pending' => 'warning',
+                        'paid' => 'success',
+                        'failed' => 'danger',
+                    })
                     ->sortable(),
 
-                // TextColumn::make('order_date')
-                //     ->dateTime()
-                //     ->sortable(),
+                TextColumn::make('payment.reference_number')
+                    ->label('Reference No.')
+                    ->sortable()
+                    ->formatStateUsing(fn ($state) => $state ?? 'N/A')
+                    ->toggleable(isToggledHiddenByDefault: true),
+                
+                SelectColumn::make('order_status')
+                    ->options([
+                        'new' => 'New',
+                        'processing' => 'Processing',
+                        'shipped' => 'Shipped',
+                        'delivered' => 'Delivered',
+                        'cancelled' => 'Cancelled',
+                        'completed' => 'Completed',
+                    ])
+                    ->disabled(fn ($record): bool => in_array($record->order_status, ['completed', 'delivered', 'cancelled']))
+                    ->searchable()
+                    ->sortable(),
 
                 TextColumn::make('order_date')
                     ->dateTime()
