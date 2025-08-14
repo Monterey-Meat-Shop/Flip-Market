@@ -11,7 +11,7 @@ class PaymentMethod extends Model
 
     protected $table = 'payment_method';
 
-    protected $primaryKey = 'PaymentMethodID';
+    protected $primaryKey = 'payment_methodID';
 
     protected $fillable = [
         'method_name',
@@ -24,7 +24,7 @@ class PaymentMethod extends Model
 
     public function payments()
     {
-        return $this->hasMany(Payment::class, 'PaymentMethodID', 'PaymentMethodID');
+        return $this->hasMany(Payment::class, 'payment_methodID');
     }
     
 }

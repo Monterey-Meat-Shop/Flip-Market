@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('orders', function (Blueprint $table) {
-            $table->increments('orderID');
+            $table->bigIncrements('orderID');
 
             // Foreign keys
             $table->unsignedBigInteger('customerID');
@@ -26,6 +26,8 @@ return new class extends Migration
             $table->decimal('final_amount', 10, 2);
             $table->enum('order_status', ['pending', 'processing', 'completed', 'cancelled', 'pre-order'])->default('pending');
             $table->enum('payment_status', ['unpaid', 'paid', 'verified'])->default('unpaid');
+            
+            $table->string('payment_method')->nullable();
 
             $table->timestamps();
         });

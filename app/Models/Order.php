@@ -4,30 +4,18 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Order extends Model
 {
     use HasFactory;
 
-    /**
-     * The table associated with the model.
-     *
-     * @var string
-     */
     protected $table = 'orders';
 
-    /**
-     * The primary key for the model.
-     *
-     * @var string
-     */
     protected $primaryKey = 'orderID';
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var array<int, string>
-     */
     protected $fillable = [
         'customerID',
         'discountID',
@@ -36,38 +24,35 @@ class Order extends Model
         'final_amount',
         'order_status',
         'payment_status',
+        'payment_method',
     ];
 
-    /**
-     * The attributes that should be cast.
-     *
-     * @var array<string, string>
-     */
     protected $casts = [
         'order_date' => 'datetime',
     ];
 
-    /**
-     * Get the customer that owns the order.
-     */
-    public function customer()
+    public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class, 'customerID', 'customerID');
     }
 
-    /**
-     * Get the discount that applies to the order.
-     */
-    public function discount()
+    public function discount(): BelongsTo
     {
         return $this->belongsTo(Discount::class, 'discountID', 'discountID');
     }
 
-    /**
-     * Get the order items for the order.
-     */
-    public function orderItems()
+    public function orderItems(): HasMany
     {
         return $this->hasMany(OrderItem::class, 'orderID', 'orderID');
+    }
+
+    public function payments(): HasMany
+    {
+        return $this->hasMany(Payment::class, 'OrderID', 'orderID');
+    }
+
+    public function payment(): HasOne
+    {
+        return $this->hasOne(Payment::class, 'orderID', 'orderID');
     }
 }

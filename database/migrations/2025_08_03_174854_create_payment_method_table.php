@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('payment_method', function (Blueprint $table) {
-            $table->increments('PaymentMethodID');
+            $table->increments('payment_methodID');
             $table->string('method_name');
             $table->boolean('is_active')->default(true);
             $table->timestamps();
