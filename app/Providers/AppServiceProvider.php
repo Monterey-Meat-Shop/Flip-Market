@@ -1,6 +1,7 @@
 <?php
 
 namespace App\Providers;
+use EightyNine\Reports\ReportsPlugin;
 
 use Illuminate\Support\ServiceProvider;
 
@@ -21,4 +22,15 @@ class AppServiceProvider extends ServiceProvider
     {
         //
     }
+
+    public function panel(Panel $panel): Panel
+{
+    return $panel
+        ->default()
+        ->id('admin')
+        ->path('admin')
+        ->plugins([
+            ReportsPlugin::make()
+        ]);
+}
 }

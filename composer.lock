@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "d5cc7c5109a205595e02867cb952c100",
+    "content-hash": "5ba4e93fb8a8ce3caffbc3c3c1ced11d",
     "packages": [
         {
             "name": "anourvalar/eloquent-serialize",
@@ -984,6 +984,83 @@
                 }
             ],
             "time": "2025-03-06T22:45:56+00:00"
+        },
+        {
+            "name": "eightynine/filament-reports",
+            "version": "3.1.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/eighty9nine/filament-reports.git",
+                "reference": "86484e6c40f7093eeebba7f2b22d94e14f07b3c8"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/eighty9nine/filament-reports/zipball/86484e6c40f7093eeebba7f2b22d94e14f07b3c8",
+                "reference": "86484e6c40f7093eeebba7f2b22d94e14f07b3c8",
+                "shasum": ""
+            },
+            "require": {
+                "filament/filament": "^3.0",
+                "illuminate/contracts": "^10.0|^11.0|^12.0",
+                "php": "^8.2",
+                "spatie/laravel-package-tools": "^1.15.0"
+            },
+            "require-dev": {
+                "nunomaduro/collision": "^7.9|^8.0",
+                "orchestra/testbench": "^8.0|^9.0|^10.0",
+                "pestphp/pest": "^2.0|^3.0",
+                "pestphp/pest-plugin-arch": "^2.0|^3.0",
+                "pestphp/pest-plugin-laravel": "^2.0|^3.0"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "aliases": {
+                        "Reports": "EightyNine\\Reports\\Facades\\Reports"
+                    },
+                    "providers": [
+                        "EightyNine\\Reports\\ReportsServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "files": [
+                    "src/helpers.php"
+                ],
+                "psr-4": {
+                    "EightyNine\\Reports\\": "src/",
+                    "EightyNine\\Reports\\Database\\Factories\\": "database/factories/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Eighty Nine",
+                    "email": "eighty9nine@gmail.com",
+                    "role": "Developer"
+                }
+            ],
+            "description": "Elegant reports in your filament application",
+            "homepage": "https://github.com/eightynine/filament-reports",
+            "keywords": [
+                "eightynine",
+                "filament-reports",
+                "laravel"
+            ],
+            "support": {
+                "issues": "https://github.com/eightynine/filament-reports/issues",
+                "source": "https://github.com/eightynine/filament-reports"
+            },
+            "funding": [
+                {
+                    "url": "https://github.com/eightynine",
+                    "type": "github"
+                }
+            ],
+            "time": "2025-05-25T10:32:10+00:00"
         },
         {
             "name": "filament/actions",

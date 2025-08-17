@@ -28,6 +28,8 @@ class AdminPanelProvider extends PanelProvider
             ->path('admin')
             ->login()
             ->brandName('Flip Market') 
+           //->plugins([ ReportsPlugin::make() ])
+
            // ->brandLogo(fn () => view('admin.logo'))
             
             ->colors([
