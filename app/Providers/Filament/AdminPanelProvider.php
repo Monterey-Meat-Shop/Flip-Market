@@ -27,6 +27,9 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('admin')
             ->login()
+            ->brandName('Flip Market') 
+           // ->brandLogo(fn () => view('admin.logo'))
+            
             ->colors([
                 'primary' => Color::Amber,
             ])
@@ -54,5 +57,6 @@ class AdminPanelProvider extends PanelProvider
             ->authMiddleware([
                 Authenticate::class,
             ]);
+            
     }
 }
