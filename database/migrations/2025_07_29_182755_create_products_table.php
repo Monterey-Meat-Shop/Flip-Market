@@ -30,7 +30,7 @@ return new class extends Migration
             $table->json('image_url')->nullable();
 
             // Use an enum for a more comprehensive status
-            $table->enum('status', ['in_stock', 'pre_order', 'out_of_stock'])->default('in_stock');
+            $table->enum('status', ['in_stock', 'pre_order', 'low_stock', 'out_of_stock'])->default('in_stock');
 
             $table->integer('stock_quantity');
             $table->json('size')->nullable();
@@ -38,6 +38,7 @@ return new class extends Migration
 
             $table->boolean('is_active')->default(true);
             $table->timestamps();
+            
             $table->softDeletes();
         });
     }

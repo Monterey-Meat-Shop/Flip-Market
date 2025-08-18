@@ -24,7 +24,7 @@ class ListProducts extends ListRecords
     {
         return [
                 // query for total available
-                'all' => Tab::make('All Available')
+                'all' => Tab::make('All Product')
                     ->modifyQueryUsing(fn (Builder $query) => $query->withoutTrashed())
                     ->badge(Product::withoutTrashed()->count()),
 
@@ -38,12 +38,6 @@ class ListProducts extends ListRecords
                     ->badge(Product::whereHas('discounts', function (Builder $discountQuery) {
                         $discountQuery->where('is_active', true);
                     })->count())
-                    ->badgeColor('success'),
-
-                // query for total in stock
-                'in_stock' => Tab::make('In Stock')
-                    ->modifyQueryUsing(fn (Builder $query) => $query->withoutTrashed()->where('status', 'in_stock'))
-                    ->badge(Product::withoutTrashed()->where('status', 'in_stock')->count())
                     ->badgeColor('success'),
             
                 // query for total pre-order
@@ -64,12 +58,13 @@ class ListProducts extends ListRecords
                     ->badge(Product::withoutTrashed()->where('status', 'out_of_stock')->count())
                     ->badgeColor('danger'),
              
-                    // query for total archived
-                   'archived' => Tab::make('Archived')
-                        ->modifyQueryUsing(fn (Builder $query) => $query->onlyTrashed())
-                        ->badge(Product::onlyTrashed()->count())
-                        ->badgeColor('secondary'),
+                // query for total archived
+                'archived' => Tab::make('Archived')
+                    ->modifyQueryUsing(fn (Builder $query) => $query->onlyTrashed())
+                    ->badge(Product::onlyTrashed()->count())
+                    ->badgeColor('danger'),
 
                 ];
+                
     }
 }

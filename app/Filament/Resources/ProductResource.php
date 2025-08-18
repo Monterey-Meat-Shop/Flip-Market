@@ -8,6 +8,7 @@ use App\Models\Product;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Forms\Set;
+use Filament\Forms\Get;
 use Filament\Forms\Components\Group;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Section;
@@ -113,12 +114,27 @@ class ProductResource extends Resource
                     TextInput::make('stock_quantity')
                         ->numeric()
                         ->required()
-                        ->reactive()
-                        // ->afterStateUpdated(function($state, callable $set) {
+                        ->reactive() // Use reactive() for immediate updates
+                        ->afterStateUpdated(function (Set $set, Get $get, ?string $state) {
+                            // Only update status if the user hasn't manually set it to 'pre_order'
+                            // This allows for a manual override.
+                            $currentStatus = $get('status');
+                            if ($currentStatus !== 'pre_order') {
+                                $stock = (int) $state;
+                                if ($stock === 0) {
+                                    $set('status', 'out_of_stock');
+                                } elseif ($stock <= 4) {
+                                    $set('status', 'low_stock');
+                                } else {
+                                    $set('status', 'in_stock');
+                                }
+                            }
                             
-                        // })
-                        ,
-
+                            // is_active is controlled by both stock and pre-order status
+                            $currentStatus = $get('status');
+                            $set('is_active', $currentStatus === 'pre_order' || (int) $state > 0);
+                        }),
+                        
                     TextInput::make('colorway')
                         ->required()
                         ->maxLength(225),
@@ -131,7 +147,6 @@ class ProductResource extends Resource
                         ->columns(6)
                         ->columnSpanFull()
                         ->required()
-                        //->dehydrated(true),
                         
                 ])->columns(2),
 
@@ -173,20 +188,22 @@ class ProductResource extends Resource
                         ->required()
                         ->options([
                             'in_stock' => 'In Stock',
+                            'low_stock' => 'Low Stock',
                             'pre_order' => 'Pre-order',
-                            'out_of_stock' => 'Out of Stock',
                         ])
                         ->default('in_stock')
-                        ->afterStateUpdated(function (string $state, callable $set) {
-                            // A pre-order product is considered active regardless of stock.
+                        ->live(onBlur: true)
+                        // This listener handles manual overrides to the status
+                        ->afterStateUpdated(function (Set $set, string $state) {
                             if ($state === 'pre_order') {
                                 $set('is_active', true);
-                            } else {
-                                // For 'in_stock' or 'out_of_stock', depend on stock quantity
-                                $set('is_active', (int) $set('stock_quantity') > 0);
+                            }
+                            if ($state === 'out_of_stock') {
+                                $set('stock_quantity', 0);
+                                $set('is_active', false);
                             }
                         }),
-                        
+                    
                     Toggle::make('is_active')
                         ->required()
                         ->default(true)
@@ -221,6 +238,7 @@ class ProductResource extends Resource
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {
                         'in_stock' => 'success',
+                        'low_stock' => 'warning',
                         'pre_order' => 'info',
                         'out_of_stock' => 'danger',
                     }),
@@ -261,6 +279,7 @@ class ProductResource extends Resource
                 SelectFilter::make('status')
                     ->options([
                         'in_stock' => 'In Stock',
+                        'low_stock' => 'Low Stock',
                         'pre_order' => 'Pre-order',
                         'out_of_stock' => 'Out of Stock',
                     ])
@@ -272,7 +291,6 @@ class ProductResource extends Resource
                 SelectFilter::make('brand')
                     ->relationship('brand', 'name'),
                     
-                // TrashedFilter::make(),
             ])
             ->actions([
                 ActionGroup::make([

@@ -13,7 +13,7 @@ use Filament\Forms\Get;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Select;
-use Filament\Forms\Components\TextInput; 
+use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Hidden;
@@ -28,6 +28,11 @@ use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Collection;
 use Filament\Tables\Actions\ActionGroup;
+use Filament\Tables\Actions\ViewAction;
+use Filament\Tables\Actions\EditAction;
+use Filament\Tables\Actions\DeleteAction;
+use Filament\Tables\Actions\RestoreAction;
+use Closure;
 
 class OrderResource extends Resource
 {
@@ -37,27 +42,16 @@ class OrderResource extends Resource
     
     public static function getEloquentQuery(): Builder
     {
-        $query = parent::getEloquentQuery();
+        // Start with the base query and include soft-deleted records.
+        $query = parent::getEloquentQuery()->withTrashed();
 
+        // If the authenticated user has the 'admin' role, return all records.
         if (auth()->user()->hasRole('admin')) {
             return $query;
         }
 
+        // Otherwise, filter the query to only show records for the authenticated user.
         return $query->where('customerID', auth()->id());
-    }
-
-    // New function to modify data before creating the record
-    protected static function mutateFormDataBeforeCreate(array $data): array
-    {
-        // Get the selected payment method's name
-        $paymentMethod = PaymentMethod::find($data['payment_methodID']);
-
-        // If the payment method is not Gcash, we remove the reference number from the data
-        if ($paymentMethod->method_name !== 'Gcash') {
-            unset($data['reference_number']);
-        }
-        
-        return $data;
     }
 
     public static function form(Form $form): Form
@@ -122,7 +116,12 @@ class OrderResource extends Resource
                         ->relationship('orderItems')
                         ->schema([
                             Select::make('productID')
-                                ->relationship(name: 'product', titleAttribute: 'name')
+                                ->relationship(
+                                    name: 'product',
+                                    titleAttribute: 'name',
+                                    modifyQueryUsing: fn (Builder $query) => $query
+                                        ->whereNotIn('status', ['pre_order', 'out_of_stock']),
+                                )
                                 ->searchable()
                                 ->preload()
                                 ->required()
@@ -145,7 +144,6 @@ class OrderResource extends Resource
                                 ->numeric()
                                 ->required()
                                 ->default(1)
-                                ->minValue(1)
                                 ->live()
                                 ->afterStateUpdated(function (Set $set, Get $get, $state) {
                                     $unitPrice = $get('unit_price');
@@ -153,6 +151,18 @@ class OrderResource extends Resource
                                         $set('sub_total', $unitPrice * $state);
                                     }
                                 })
+                                // This is the new, crucial validation rule
+                                ->rules([
+                                    // Custom closure rule to check against product stock
+                                    function (Get $get) {
+                                        return function (string $attribute, $value, Closure $fail) use ($get) {
+                                            $product = Product::find($get('productID'));
+                                            if ($product && $value > $product->stock_quantity) {
+                                                $fail("The quantity for '{$product->name}' cannot exceed the available stock of {$product->stock_quantity}.");
+                                            }
+                                        };
+                                    },
+                                ])
                                 ->columnSpan(2),
 
                             TextInput::make('unit_price')
@@ -261,6 +271,13 @@ class OrderResource extends Resource
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
+
+                TextColumn::make('deleted_at')
+                    ->label('Archived Date')
+                    ->dateTime()
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+
             ])
             ->filters([
                 //
@@ -270,6 +287,8 @@ class OrderResource extends Resource
                     Tables\Actions\ViewAction::make(),
                     Tables\Actions\EditAction::make(),
                     Tables\Actions\DeleteAction::make(),
+                    Tables\Actions\RestoreAction::make(),
+                    Tables\Actions\ForceDeleteAction::make(),
                 ])
             ])
             ->bulkActions([
@@ -301,7 +320,6 @@ class OrderResource extends Resource
             'edit' => Pages\EditOrder::route('/{record}/edit'),
         ];
     }
-    
     public static function canViewAny(): bool
     {
         return Auth::user()->hasAnyRole(['admin', 'manager', 'cashier']);
