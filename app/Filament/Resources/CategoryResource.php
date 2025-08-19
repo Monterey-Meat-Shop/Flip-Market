@@ -19,6 +19,8 @@ use Filament\Tables\Actions\ActionGroup;
 use Filament\Tables\Actions\ViewAction;
 use Filament\Tables\Actions\EditAction;
 use Filament\Tables\Actions\DeleteAction;
+use Filament\Tables\Actions\RestoreAction;
+use Filament\Tables\Actions\ForceDeleteAction;
 use Filament\Tables\Columns\TextColumn;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
@@ -48,9 +50,7 @@ class CategoryResource extends Resource
                     ->maxLength(225)
                     ->live()
                     ->unique(ignoreRecord: true),
-
                 ]),
-
                 Toggle::make('is_active')
                      ->required()
                      ->default(true),
@@ -58,21 +58,35 @@ class CategoryResource extends Resource
         ]);
 
     }
-
     public static function table(Table $table): Table
     {
         return $table
             ->columns([
-                TextColumn::make('name')->searchable()->sortable(),
+                TextColumn::make('name')
+                    ->searchable()
+                    ->sortable(),
                 TextColumn::make('is_active')
                     ->label('Status')
                     ->formatStateUsing(fn (bool $state) : string => $state ? 'Active' : 'Inactive')
                     ->badge()
                     ->color(fn (bool $state): string => $state ? 'success' : 'danger'),
+                TextColumn::make('name')
+                    ->searchable()
+                    ->sortable(),
+                TextColumn::make('created_at')
+                    ->dateTime()
+                    ->label('Created At')
+                    ->sortable(),
+                TextColumn::make('updated_at')
+                    ->dateTime()
+                    ->label('Updated At')
+                    ->sortable(),
 
-                TextColumn::make('name')->searchable()->sortable(),
-                TextColumn::make('created_at')->dateTime()->label('Created At')->sortable(),
-                TextColumn::make('updated_at')->dateTime()->label('Updated At')->sortable(),
+                TextColumn::make('deleted_at')
+                    ->dateTime()
+                    ->label('Archived At')
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([])
             ->actions([
@@ -80,6 +94,8 @@ class CategoryResource extends Resource
                     ViewAction::make(),
                     EditAction::make(),
                     DeleteAction::make(),
+                    RestoreAction::make(),
+                    ForceDeleteAction::make(),
                 ])
             ])
             ->bulkActions([
@@ -103,5 +119,12 @@ class CategoryResource extends Resource
             'create' => Pages\CreateCategory::route('/create'),
             'edit' => Pages\EditCategory::route('/{record}/edit'),
         ];
+    }
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()
+            ->withoutGlobalScopes([
+                SoftDeletingScope::class,
+            ]);
     }
 }

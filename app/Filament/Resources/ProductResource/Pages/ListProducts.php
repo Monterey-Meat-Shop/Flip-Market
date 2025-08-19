@@ -62,7 +62,7 @@ class ListProducts extends ListRecords
                 'archived' => Tab::make('Archived')
                     ->modifyQueryUsing(fn (Builder $query) => $query->onlyTrashed())
                     ->badge(Product::onlyTrashed()->count())
-                    ->badgeColor('danger'),
+                    ->badgeColor('gray'),
 
                 ];
                 

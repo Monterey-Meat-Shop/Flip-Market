@@ -174,13 +174,21 @@ class ProductResource extends Resource
                         ->required()
                         ->searchable()
                         ->preload()
-                        ->relationship('category', 'name'),
+                        ->relationship(
+                            'category',
+                            'name',
+                            fn (Builder $query) => $query->where('is_active', true)
+                        ),
 
                     Select::make('brandID')
                         ->required()
                         ->searchable()
                         ->preload()
-                        ->relationship('brand', 'name'),
+                        ->relationship(
+                            'brand',
+                            'name',
+                            fn (Builder $query) => $query->where('is_active', true)
+                        ),
                 ]),
 
                 Section::make('Status')->schema([

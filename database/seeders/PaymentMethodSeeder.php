@@ -23,13 +23,13 @@ class PaymentMethodSeeder extends Seeder
             ],
             [
                 'method_name' => 'Bank Transfer', 
-                'is_active' => true,
+                'is_active' => false,
                 'created_at' => Carbon::now(), 
                 'updated_at' => Carbon::now()
             ],
             [
-                'method_name' => 'Cash on Delivery', 
-                'is_active' => false,
+                'method_name' => 'Cash', 
+                'is_active' => true,
                 'created_at' => Carbon::now(), 
                 'updated_at' => Carbon::now()
             ],

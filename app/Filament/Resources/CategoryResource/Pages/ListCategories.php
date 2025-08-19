@@ -27,16 +27,21 @@ class ListCategories extends ListRecords
             // query for active
             'active' => Tab::make('Active Categories')
                 ->badge(Category::query()->where('is_active', true)->count())
-                ->modifyQueryUsing(fn (Builder $query) => $query->where('is_active', true)),
+                ->modifyQueryUsing(fn (Builder $query) => $query->where('is_active', true))
+                ->badgeColor('success'),
 
             // query for inactive
             'inactive' => Tab::make('Inactive Categories')
                 ->badge(Category::query()->where('is_active', false)->count())
-                ->modifyQueryUsing(fn (Builder $query) => $query->where('is_active', false)),
+                ->modifyQueryUsing(fn (Builder $query) => $query->where('is_active', false))
+                ->badgeColor('danger'),
 
-             'archived' => Tab::make('Archived Categories')
-            //     ->badge(Category::onlyTrashed()->count())
-            //     ->modifyQueryUsing(fn (Builder $query) => $query->onlyTrashed()),
+            'archived' => Tab::make('Archived Categories')
+                ->modifyQueryUsing(fn (Builder $query) =>
+                    $query->withoutGlobalScopes([SoftDeletingScope::class])->onlyTrashed()
+                )
+                ->badge(Category::onlyTrashed()->count())
+                ->badgeColor('gray'),
         ];
     }
 }
