@@ -10,21 +10,21 @@ class StatsOverview extends BaseWidget
     protected function getStats(): array
     {
         return [
-            Stat::make('Total Sales')
-                ->value('$12,430')
-                ->description('Last 30 days'),
+            // Stat::make('Total Sales')
+            //     ->value('$12,430')
+            //     ->description('Last 30 days'),
 
-            Stat::make('Orders')
-                ->value('342')
-                ->description('This month'),
+            // Stat::make('Orders')
+            //     ->value('342')
+            //     ->description('This month'),
 
-            Stat::make('New Users')
-                ->value('58')
-                ->description('Signups'),
+            // Stat::make('New Users')
+            //     ->value('58')
+            //     ->description('Signups'),
 
-            Stat::make('Conversion')
-                ->value('6.2%')
-                ->description('Rate'),
+            // Stat::make('Conversion')
+            //     ->value('6.2%')
+            //     ->description('Rate'),
         ];
     }
 }
