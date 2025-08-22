@@ -34,32 +34,37 @@ class ListUsers extends ListRecords
             ->badge(User::query()->where('is_active', true)->whereHas('roles', fn ($query) => $query->where('name', 'admin'))->count())
             ->modifyQueryUsing(fn (Builder $query) => $query
                 ->where('is_active', true)
-                ->whereHas('roles', fn ($query) => $query->where('name', 'admin'))),
+                ->whereHas('roles', fn ($query) => $query->where('name', 'admin')))
+                ->badgeColor('danger'),
 
             // query for manager users
             'manager' => Tab::make('Manager')
             ->badge(User::query()->where('is_active', true)->whereHas('roles', fn ($query) => $query->where('name', 'manager'))->count())
             ->modifyQueryUsing(fn (Builder $query) => $query
                 ->where('is_active', true)
-                ->whereHas('roles', fn ($query) => $query->where('name', 'manager'))),
+                ->whereHas('roles', fn ($query) => $query->where('name', 'manager')))
+                ->badgeColor('info'),
 
             // query for cashier users
             'cashier' => Tab::make('Cashier')
                 ->badge(User::query()->where('is_active', true)->whereHas('roles', fn ($query) => $query->where('name', 'cashier'))->count())
             ->modifyQueryUsing(fn (Builder $query) => $query
                 ->where('is_active', true)
-                ->whereHas('roles', fn ($query) => $query->where('name', 'cashier'))),
+                ->whereHas('roles', fn ($query) => $query->where('name', 'cashier')))
+                ->badgeColor('info'),
 
             // query for customer users
             'customer' => Tab::make('Customer')
                 ->badge(User::query()->where('is_active', true)->whereHas('roles', fn ($query) => $query->where('name', 'customer'))->count())
                 ->modifyQueryUsing(fn (Builder $query) => $query
                 ->where('is_active', true)
-                ->whereHas('roles', fn ($query) => $query->where('name', 'customer'))),
+                ->whereHas('roles', fn ($query) => $query->where('name', 'customer')))
+                ->badgeColor('success'),
 
             'archived' => Tab::make('Archived')
                 ->badge(User::onlyTrashed()->count())
-                ->modifyQueryUsing(fn (Builder $query) => $query->onlyTrashed()),
+                ->modifyQueryUsing(fn (Builder $query) => $query->onlyTrashed())
+                ->badgeColor('gray'),
 
         ];
     }

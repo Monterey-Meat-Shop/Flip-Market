@@ -23,17 +23,23 @@ class ListPayments extends ListRecords
     public function getTabs(): array
     {
         return [
-            // query for active
+            // This tab will show all active payment methods that have not been soft-deleted.
             'active' => Tab::make('Active')
-                ->modifyQueryUsing(fn (Builder $query) => $query->where('is_active', true))
-                ->badge(PaymentMethod::query()->where('is_active', true)->count()),
+                ->modifyQueryUsing(fn (Builder $query) => $query->where('is_active', true)->withoutTrashed())
+                ->badge(PaymentMethod::query()->where('is_active', true)->withoutTrashed()->count())
+                ->badgeColor('success'),
 
-            // query for inactive
+            // This tab will show all inactive payment methods that have not been soft-deleted.
             'inactive' => Tab::make('Inactive')
-                ->modifyQueryUsing(fn (Builder $query) => $query->where('is_active', false))
-                ->badge(PaymentMethod::query()->where('is_active', false)->count()),
+                ->modifyQueryUsing(fn (Builder $query) => $query->where('is_active', false)->withoutTrashed())
+                ->badge(PaymentMethod::query()->where('is_active', false)->withoutTrashed()->count())
+                ->badgeColor('danger'),
 
+            // This tab will show all soft-deleted records.
             'archived' => Tab::make('Archived')
+                ->modifyQueryUsing(fn (Builder $query) => $query->onlyTrashed())
+                ->badge(PaymentMethod::query()->onlyTrashed()->count())
+                ->badgeColor('gray'),
         ];
     }
 }

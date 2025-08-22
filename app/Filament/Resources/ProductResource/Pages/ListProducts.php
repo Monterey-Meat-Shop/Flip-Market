@@ -57,6 +57,9 @@ class ListProducts extends ListRecords
                     ->modifyQueryUsing(fn (Builder $query) => $query->withoutTrashed()->where('status', 'out_of_stock'))
                     ->badge(Product::withoutTrashed()->where('status', 'out_of_stock')->count())
                     ->badgeColor('danger'),
+
+                'returned' => Tab::make('Returned')
+                    ->badgeColor('danger'),
              
                 // query for total archived
                 'archived' => Tab::make('Archived')
