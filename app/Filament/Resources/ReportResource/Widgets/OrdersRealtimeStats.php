@@ -46,7 +46,7 @@ class OrdersRealtimeStats extends BaseWidget
         return [
             Stat::make('orders_count', 'Total Orders')->value((string) $ordersCount)->description('Count of all orders')->icon('heroicon-o-shopping-cart')->color('primary'),
             Stat::make('orders_total', 'Total Sales')->value($formatCurrency($ordersTotal))->description('Sum of order totals')->icon('heroicon-o-currency-dollar')->color('success'),
-            Stat::make('orders_last7', 'Orders (7d)')->value((string) $ordersLast7)->description('Orders in last 7 days')->icon('heroicon-o-clock')->color('warning'),
+           // Stat::make('orders_last7', 'Orders (7d)')->value((string) $ordersLast7)->description('Orders in last 7 days')->icon('heroicon-o-clock')->color('warning'),
         ];
     }
 }

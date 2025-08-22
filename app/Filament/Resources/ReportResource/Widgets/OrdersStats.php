@@ -65,11 +65,11 @@ class OrdersStats extends BaseWidget
                 ->icon('heroicon-o-currency-dollar')
                 ->color('primary'),
 
-           // Stat::make('orders_last7', 'Last 7d')
-                // ->value((string) $ordersLast7)
-                // ->description('Orders in last 7 days')
-                // ->icon('heroicon-o-clock')
-                // ->color('warning'),
+        //    Stat::make('orders_last7', 'Last 7d')
+        //         ->value((string) $ordersLast7)
+        //         ->description('Orders in last 7 days')
+        //         ->icon('heroicon-o-clock')
+        //         ->color('warning'),
         ];
     }
 
@@ -78,7 +78,7 @@ class OrdersStats extends BaseWidget
         return [
             Stat::make('orders_count', 'Orders')->value('0')->description('No orders')->icon('heroicon-o-exclamation-triangle')->color('danger'),
             Stat::make('orders_total', 'Orders Total')->value('₱0.00')->description('No data')->icon('heroicon-o-currency-dollar')->color('primary'),
-           // Stat::make('orders_last7', 'Last 7d')->value('0')->description('No data')->icon('heroicon-o-clock')->color('warning'), // Not Included 
+        //    Stat::make('orders_last7', 'Last 7d')->value('0')->description('No data')->icon('heroicon-o-clock')->color('warning'), // Not Included 
         ];
     }
 }
