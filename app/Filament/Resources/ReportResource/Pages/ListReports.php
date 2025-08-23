@@ -4,10 +4,10 @@ namespace App\Filament\Resources\ReportResource\Pages;
 
 use App\Exports\ReportsExport;
 use App\Filament\Resources\ReportResource;
-use Filament\Resources\Pages\ListRecords;
 use Filament\Actions;
+use Filament\Resources\Pages\ListRecords;
 use Maatwebsite\Excel\Facades\Excel;
-use Symfony\Component\HttpFoundation\StreamedResponse;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class ListReports extends ListRecords
 {
@@ -19,7 +19,7 @@ class ListReports extends ListRecords
             Actions\CreateAction::make(),
             Actions\Action::make('export')
                 ->label('Export Excel')
-               ->icon('heroicon-m-arrow-down-tray')
+                ->icon('heroicon-o-document-text')
                 ->action('export'),
         ];
     }
@@ -30,10 +30,12 @@ class ListReports extends ListRecords
             \App\Filament\Resources\ReportResource\Widgets\ReportStats::class,
             \App\Filament\Resources\ReportResource\Widgets\OrdersStats::class,
             \App\Filament\Resources\ReportResource\Widgets\PaymentsStats::class,
+            \App\Filament\Resources\ReportResource\Widgets\OrdersRealtimeStats::class,
         ];
     }
 
-    public function export(): StreamedResponse
+    // Export action handler (must be public so the Livewire component can call it)
+    public function export(): BinaryFileResponse
     {
         return Excel::download(new ReportsExport(), 'reports.xlsx');
     }

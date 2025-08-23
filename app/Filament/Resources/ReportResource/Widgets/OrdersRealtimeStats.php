@@ -10,7 +10,9 @@ use App\Models\ReportMetric;
 
 class OrdersRealtimeStats extends BaseWidget
 {
+    // bigger, more visible heading + wider widget
     protected ?string $heading = 'Realtime Orders Stats';
+    protected int | string | array $columnSpan = 'full';
 
     protected function getStats(): array
     {

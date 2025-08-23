@@ -12,7 +12,7 @@ use Carbon\Carbon;
 
 class OrdersStats extends BaseWidget
 {
-    protected ?string $heading = 'Orders Overview';
+   // protected ?string $heading = 'Orders Overview';
 
     protected function getStats(): array
     {
@@ -53,17 +53,17 @@ class OrdersStats extends BaseWidget
         $formatCurrency = fn($v) => '₱' . number_format((float) $v, 2);
 
         return [
-            Stat::make('orders_product', 'Orders')
-                ->value((string) $ordersCount)
-                ->description('Total orders')
-                ->icon('heroicon-o-shopping-cart')
-                ->color('primary'),
+            // Stat::make('orders_product', 'Orders')
+            //     ->value((string) $ordersCount)
+            //     ->description('Total orders')
+            //     ->icon('heroicon-o-shopping-cart')
+            //     ->color('primary'),
 
-            Stat::make('orders_total', 'Orders Total')
-                ->value($formatCurrency($ordersTotal))
-                ->description('Sum of order totals')
-                ->icon('heroicon-o-currency-dollar')
-                ->color('primary'),
+            // Stat::make('orders_total', 'Orders Total')
+            //     ->value($formatCurrency($ordersTotal))
+            //     ->description('Sum of order totals')
+            //     ->icon('heroicon-o-currency-dollar')
+            //     ->color('primary'),
 
         //    Stat::make('orders_last7', 'Last 7d')
         //         ->value((string) $ordersLast7)

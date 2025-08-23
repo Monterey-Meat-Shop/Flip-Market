@@ -3,6 +3,9 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\ReportResource\Pages\ListReports;
+use App\Filament\Resources\ReportResource\Widgets\ReportStats;
+use App\Filament\Resources\ReportResource\Widgets\OrdersStats;
+use App\Filament\Resources\ReportResource\Widgets\PaymentsStats;
 use App\Filament\Resources\ReportResource\Widgets\OrdersRealtimeStats;
 use App\Filament\Resources\ReportResource\Widgets\RecentReportsTable;
 use App\Models\Report;
@@ -101,6 +104,9 @@ class ReportResource extends Resource
     public static function getWidgets(): array
     {
         return [
+            ReportStats::class,
+            OrdersStats::class,
+            PaymentsStats::class,
             OrdersRealtimeStats::class,
             RecentReportsTable::class,
         ];
