@@ -124,17 +124,25 @@ class ProductResource extends Resource
                                 ->maxLength(225),
                             TextInput::make('stock_quantity')
                                 ->numeric()
+                                ->rule('integer')
+                                ->minValue(0)
                                 ->required()
-                                ->default(0),
+                                ->default(0)
+                                ->validationMessages([
+                                    'integer' => 'The stock quantity must be a whole number.',
+                                    'min' => 'The stock quantity cannot be less than 0.',
+                                ]),
                         ])
                         ->defaultItems(1)
                         ->columns(2)
                         ->columnSpanFull()
                         ->reactive()
                         ->afterStateUpdated(function (Set $set, Get $get, ?array $state) {
-                            $totalStock = collect($state)->sum('stock_quantity');
+                            $totalStock = collect($state)
+                                ->sum(fn ($item) => (int) ($item['stock_quantity'] ?? 0));
+
                             $currentStatus = $get('status');
-                            
+
                             if ($currentStatus !== 'pre_order') {
                                 if ($totalStock === 0) {
                                     $set('status', 'out_of_stock');
@@ -144,7 +152,7 @@ class ProductResource extends Resource
                                     $set('status', 'in_stock');
                                 }
                             }
-                            
+
                             $currentStatus = $get('status');
                             $set('is_active', $currentStatus === 'pre_order' || $totalStock > 0);
                         }),
