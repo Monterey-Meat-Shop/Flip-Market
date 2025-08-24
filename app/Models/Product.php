@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Product extends Model
 {
@@ -13,6 +14,7 @@ class Product extends Model
     protected $table = 'products';
     protected $primaryKey = 'productID';
 
+    // Remove 'stock_quantity' from the fillable array as it's handled by variants
     protected $fillable = [
         'categoryID',
         'brandID',
@@ -22,7 +24,6 @@ class Product extends Model
         'price',
         'image_url',
         'status', 
-        'stock_quantity',
         'size',
         'colorway',
         'is_active',
@@ -35,6 +36,22 @@ class Product extends Model
         'is_active' => 'boolean',
     ];
 
+    /**
+     * Define the relationship to product variants.
+     */
+    public function variants(): HasMany
+    {
+        return $this->hasMany(ProductVariant::class, 'product_id', 'productID');
+    }
+
+    /**
+     * Get the total stock quantity from all variants.
+     */
+    public function getTotalStockQuantityAttribute(): int
+    {
+        return $this->variants->sum('stock_quantity');
+    }
+
     protected static function boot()
     {
         parent::boot();
@@ -42,10 +59,10 @@ class Product extends Model
         static::saving (function ($product) {
             // Only update is_active if the product is not in the process of being deleted
             if (!$product->isDirty('deleted_at')) {
-                $product->is_active = ($product->status === 'pre_order') || ($product->stock_quantity > 0);
+                // Use the new accessor to get the total stock
+                $product->is_active = ($product->status === 'pre_order') || ($product->total_stock_quantity > 0);
             }
         });
-
     }
 
     public function category()
@@ -74,12 +91,11 @@ class Product extends Model
     public function getIsInStockAttribute(): bool
     {
         // return $this->status === 'in_stock' && $this->stock_quantity > 0;
-        return $this->status === 'in_stock' && $this->stock_quantity > 0;
+        return $this->status === 'in_stock' && $this->total_stock_quantity > 0;
     }
 
     public function discounts()
     {
         return $this->belongsToMany(Discount::class, 'discount_product', 'product_id', 'discount_id');
     }
-    
 }

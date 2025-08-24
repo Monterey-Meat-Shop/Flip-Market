@@ -15,7 +15,7 @@ use Filament\Forms\Components\Section;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\RichEditor;
 use Filament\Forms\Components\FileUpload;
-use Filament\Forms\Components\CheckboxList;
+use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\MarkdownEditor;
 use Filament\Resources\Resource;
 use Filament\Forms\Components\Toggle;
@@ -45,13 +45,11 @@ class ProductResource extends Resource
     protected static ?string $navigationIcon = 'heroicon-o-cube';
     protected static ?string $navigationGroup = 'Products';
 
-    // This method controls who can see the 'Products' navigation item
     public static function canAccess(): bool
     {
         return auth()->user()->hasRole(['admin', 'manager']);
     }
 
-    // These methods control permissions within the resource
     public static function canViewAny(): bool
     {
         return auth()->user()->hasRole(['admin', 'manager']);
@@ -82,6 +80,11 @@ class ProductResource extends Resource
         return auth()->user()->hasRole('admin');
     }
     
+    public static function getRouteKeyName(): ?string
+    {
+        return 'ProductID';
+    }
+
     public static function form(Form $form): Form
     {
         return $form
@@ -111,42 +114,44 @@ class ProductResource extends Resource
                         ->columnSpanFull()
                         ->maxLength(1000),
                     
-                    TextInput::make('stock_quantity')
-                        ->numeric()
-                        ->required()
-                        ->reactive() // Use reactive() for immediate updates
-                        ->afterStateUpdated(function (Set $set, Get $get, ?string $state) {
-                            // Only update status if the user hasn't manually set it to 'pre_order'
-                            // This allows for a manual override.
+                    Repeater::make('size_stocks')
+                        ->label('Sizes & Stock')
+                        ->relationship('variants')
+                        ->schema([
+                            TextInput::make('size')
+                                ->numeric()
+                                ->required()
+                                ->maxLength(225),
+                            TextInput::make('stock_quantity')
+                                ->numeric()
+                                ->required()
+                                ->default(0),
+                        ])
+                        ->defaultItems(1)
+                        ->columns(2)
+                        ->columnSpanFull()
+                        ->reactive()
+                        ->afterStateUpdated(function (Set $set, Get $get, ?array $state) {
+                            $totalStock = collect($state)->sum('stock_quantity');
                             $currentStatus = $get('status');
+                            
                             if ($currentStatus !== 'pre_order') {
-                                $stock = (int) $state;
-                                if ($stock === 0) {
+                                if ($totalStock === 0) {
                                     $set('status', 'out_of_stock');
-                                } elseif ($stock <= 4) {
+                                } elseif ($totalStock <= 4) {
                                     $set('status', 'low_stock');
                                 } else {
                                     $set('status', 'in_stock');
                                 }
                             }
                             
-                            // is_active is controlled by both stock and pre-order status
                             $currentStatus = $get('status');
-                            $set('is_active', $currentStatus === 'pre_order' || (int) $state > 0);
+                            $set('is_active', $currentStatus === 'pre_order' || $totalStock > 0);
                         }),
                         
                     TextInput::make('colorway')
                         ->required()
                         ->maxLength(225),
-
-                    CheckboxList::make('size')
-                        ->label('Size')
-                        ->options([
-                            '36' => '36', '37' => '37', '38' => '38', '39' => '39', '40' => '40', '41' => '41', '42' => '42', '43' => '43', '44' => '44', '45' => '45', '46' => '46',
-                        ])
-                        ->columns(6)
-                        ->columnSpanFull()
-                        ->required()
                         
                 ])->columns(2),
 
@@ -198,16 +203,15 @@ class ProductResource extends Resource
                             'in_stock' => 'In Stock',
                             'low_stock' => 'Low Stock',
                             'pre_order' => 'Pre-order',
+                            'out_of_stock' => 'Out of Stock',
                         ])
                         ->default('in_stock')
                         ->live(onBlur: true)
-                        // This listener handles manual overrides to the status
-                        ->afterStateUpdated(function (Set $set, string $state) {
+                        ->afterStateUpdated(function (Set $set, Get $get, string $state) {
                             if ($state === 'pre_order') {
                                 $set('is_active', true);
                             }
                             if ($state === 'out_of_stock') {
-                                $set('stock_quantity', 0);
                                 $set('is_active', false);
                             }
                         }),
@@ -233,14 +237,22 @@ class ProductResource extends Resource
                     ->label('Image')
                     ->getStateUsing(fn ($record) => $record->image_url[0] ?? null), 
 
+                // Updated to use the relationship directly
                 TextColumn::make('brand.name')
+                    ->label('Brand')
                     ->searchable()
                     ->sortable(),
 
+                // Updated to use the relationship directly
                 TextColumn::make('category.name')
+                    ->label('Category')
                     ->searchable()
                     ->sortable(),
-
+                
+                // New column to show discounts
+                // TagsColumn::make('discounts.name')
+                //     ->label('Discounts'),
+                
                 TextColumn::make('status')
                     ->label('Status')
                     ->badge()
@@ -251,20 +263,23 @@ class ProductResource extends Resource
                         'out_of_stock' => 'danger',
                     }),
                 
-                TextColumn::make('stock_quantity')
-                    ->label('Stock Quantity')
-                    ->searchable()
-                    ->sortable(),
+                TextColumn::make('size_stocks')
+                    ->label('Sizes & Stock')
+                    ->getStateUsing(function ($record) {
+                        $output = '';
+                        if ($record->variants && $record->variants->isNotEmpty()) {
+                            $sizes = $record->variants->map(function ($variant) {
+                                return "Size {$variant->size}: {$variant->stock_quantity}";
+                            })->implode(', ');
+                            $output = $sizes;
+                        }
+                        return $output;
+                    }),
 
                 TextColumn::make('price')
                     ->money('PHP')
                     ->sortable(),
-
-                TagsColumn::make('size')
-                    ->label('Sizes')
-                    ->searchable()
-                    ->sortable(),
-            
+                
                 IconColumn::make('is_active')
                     ->getStateUsing(fn (Product $record): bool => $record->trashed() ? false : $record->is_active)
                     ->boolean(),
@@ -291,7 +306,20 @@ class ProductResource extends Resource
                         'pre_order' => 'Pre-order',
                         'out_of_stock' => 'Out of Stock',
                     ])
-                    ->label('Status'),
+                    ->label('Status')
+                    ->modifyQueryUsing(function (Builder $query, array $data): Builder {
+                        if (empty($data['value'])) {
+                            return $query;
+                        }
+
+                        if ($data['value'] === 'low_stock') {
+                            return $query->whereHas('variants', function (Builder $q) {
+                                $q->where('stock_quantity', '<=', 4);
+                            });
+                        }
+                        
+                        return $query->where('status', $data['value']);
+                    }),
 
                 SelectFilter::make('category')
                     ->relationship('category', 'name'),
@@ -299,11 +327,14 @@ class ProductResource extends Resource
                 SelectFilter::make('brand')
                     ->relationship('brand', 'name'),
                     
+                SelectFilter::make('discounts')
+                    ->relationship('discounts', 'name'),
             ])
             ->actions([
                 ActionGroup::make([
                     ViewAction::make(),
-                    EditAction::make(),
+                    EditAction::make()
+                        ->url(fn (Product $record): string => route('filament.admin.resources.products.edit', ['record' => $record])),
                     DeleteAction::make(),
                     RestoreAction::make(),
                     ForceDeleteAction::make(),
@@ -334,15 +365,21 @@ class ProductResource extends Resource
         ];
     }
 
+    /**
+     * Eager load the relationships for the table.
+     */
     public static function getEloquentQuery(): Builder
     {
-        // Return the base query including soft-deleted records
-        return parent::getEloquentQuery()->withTrashed();
+        return parent::getEloquentQuery()
+            ->withTrashed()
+            ->with(['brand', 'category', 'discounts']);
     }
 
+    /**
+     * Resolve a record route binding with the custom primary key.
+     */
     public static function resolveRecordRouteBinding(int | string $key): ?Model
     {
-        // The query here is important for finding records that have been soft-deleted.
         return static::getModel()::where('ProductID', $key)->withTrashed()->first();
     }
 }

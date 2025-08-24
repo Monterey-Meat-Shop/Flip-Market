@@ -11,32 +11,13 @@ class ProductObserver
      */
     public function updated(Product $product): void
     {
-        // We only want to run this logic if the stock_quantity has actually changed.
-        if ($product->isDirty('stock_quantity')) {
-            $stock = $product->stock_quantity;
-            $newStatus = null;
-            $isActive = $product->is_active;
-
-            if ($stock === 0) {
-                $newStatus = 'out_of_stock';
-                $isActive = false;
-            } elseif ($stock <= 4) {
-                $newStatus = 'low_stock';
-            } else {
-                $newStatus = 'in_stock';
-            }
-
-            // Only update the status if it has changed from the old value.
-            if ($product->status !== $newStatus || $product->is_active !== $isActive) {
-                // To avoid an infinite loop where saving the model re-triggers the observer,
-                // we'll temporarily remove the event dispatcher.
-                $product->status = $newStatus;
-                $product->is_active = $isActive;
-                $product->withoutEvents(function () use ($product) {
-                    $product->save();
-                });
-            }
-        }
+        // The observer should not directly check the `stock_quantity` on the product model,
+        // but rather on its related variants. The `ProductResource` form already handles
+        // setting the status, so this observer logic may be redundant, but if it's needed
+        // for other parts of the application, it should be updated to use the total stock.
+        
+        // This logic is now handled in the ProductResource form, but if you need a fallback,
+        // you would check if the variants have changed, and then update the product status.
     }
 
     /**
