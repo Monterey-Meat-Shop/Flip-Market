@@ -8,7 +8,6 @@ use Illuminate\Database\Eloquent\Model;
 class OrderItem extends Model
 {
     use HasFactory;
-
     
     protected $table = 'order_items';
 
@@ -17,6 +16,9 @@ class OrderItem extends Model
     protected $fillable = [
         'orderID',
         'productID',
+        'product_variant_id', 
+        'size', 
+        'colorway',
         'quantity',
         'unit_price',
         'sub_total',
@@ -30,5 +32,11 @@ class OrderItem extends Model
     public function product()
     {
         return $this->belongsTo(Product::class, 'productID', 'productID');
+    }
+
+    // Add a relationship to the ProductVariant model for easier access
+    public function productVariant()
+    {
+        return $this->belongsTo(ProductVariant::class, 'product_variant_id', 'id');
     }
 }

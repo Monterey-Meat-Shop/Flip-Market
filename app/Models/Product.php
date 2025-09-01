@@ -14,7 +14,6 @@ class Product extends Model
     protected $table = 'products';
     protected $primaryKey = 'productID';
 
-    // Remove 'stock_quantity' from the fillable array as it's handled by variants
     protected $fillable = [
         'categoryID',
         'brandID',
@@ -24,14 +23,11 @@ class Product extends Model
         'price',
         'image_url',
         'status', 
-        'size',
-        'colorway',
         'is_active',
     ];
 
     protected $casts = [
         'price' => 'decimal:2',
-        'size' => 'array',
         'image_url' => 'array',
         'is_active' => 'boolean',
     ];
@@ -67,30 +63,26 @@ class Product extends Model
 
     public function category()
     {
-        // foreign key, local key
         return $this->belongsTo(Category::class, 'categoryID');
     }
 
     public function brand()
     {
-        // foreign key, local key
         return $this->belongsTo(Brand::class, 'brandID');
     }
 
-    public function orderItems()
+    public function orderItems(): HasMany
     {
-        //return $this->hasMany(OrderItem::class);
+        return $this->hasMany(OrderItem::class, 'productID', 'productID');
     }
 
     public function getIsPreOrderAttribute(): bool
     {
-        // return $this->status === 'pre_order';
         return $this->status === 'pre_order';
     }
 
     public function getIsInStockAttribute(): bool
     {
-        // return $this->status === 'in_stock' && $this->stock_quantity > 0;
         return $this->status === 'in_stock' && $this->total_stock_quantity > 0;
     }
 

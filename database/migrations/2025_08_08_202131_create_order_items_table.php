@@ -19,6 +19,14 @@ return new class extends Migration
 
             $table->unsignedBigInteger('productID');
             $table->foreign('productID')->references('productID')->on('products')->onDelete('cascade');
+            
+            $table->foreignId('product_variant_id')
+                  ->nullable()
+                  ->constrained('product_variants', 'id')
+                  ->cascadeOnDelete();
+
+            $table->string('size');
+            $table->string('colorway');
 
             $table->integer('quantity');
             $table->decimal('unit_price', 10, 2);

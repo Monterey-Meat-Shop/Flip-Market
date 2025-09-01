@@ -132,6 +132,9 @@ class ProductResource extends Resource
                                     'integer' => 'The stock quantity must be a whole number.',
                                     'min' => 'The stock quantity cannot be less than 0.',
                                 ]),
+                                TextInput::make('colorway')
+                                ->required()
+                                ->maxLength(225),
                         ])
                         ->defaultItems(1)
                         ->columns(2)
@@ -157,9 +160,7 @@ class ProductResource extends Resource
                             $set('is_active', $currentStatus === 'pre_order' || $totalStock > 0);
                         }),
                         
-                    TextInput::make('colorway')
-                        ->required()
-                        ->maxLength(225),
+                    
                         
                 ])->columns(2),
 

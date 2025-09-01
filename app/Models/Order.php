@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\DB;
 
 class Order extends Model
 {
@@ -47,18 +48,37 @@ class Order extends Model
         return $this->hasMany(OrderItem::class, 'orderID', 'orderID');
     }
 
-    public function payments(): HasMany
-    {
-        return $this->hasMany(Payment::class, 'OrderID', 'orderID');
-    }
-
     public function payment(): HasOne
     {
         return $this->hasOne(Payment::class, 'orderID', 'orderID');
     }
 
-    public function paymentMethod(): BelongsTo
+    public function deductStock(): void
     {
-        return $this->belongsTo(PaymentMethod::class, 'payment_method');
+        DB::transaction(function () {
+            foreach ($this->orderItems as $item) {
+                if ($item->productVariant) {
+                    $variant = $item->productVariant()->lockForUpdate()->first();
+
+                    if ($variant->stock_quantity < $item->quantity) {
+                        throw new \Exception(
+                            "Insufficient stock for {$variant->product->name} (Variant: {$variant->size})"
+                        );
+                    }
+
+                    $variant->decrement('stock_quantity', $item->quantity);
+                }
+            }
+        });
+    }
+
+    protected static function booted()
+    {
+        static::updated(function ($order) {
+            // Only trigger when order_status changes *to completed*
+            if ($order->isDirty('order_status') && $order->order_status === 'completed') {
+                $order->deductStock();
+            }
+        });
     }
 }

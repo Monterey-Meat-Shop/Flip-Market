@@ -35,8 +35,7 @@ return new class extends Migration
             // These columns are being moved to the new `product_variants` table.
             // $table->integer('stock_quantity');
             // $table->json('size')->nullable();
-            
-            $table->string('colorway')->nullable();
+            //$table->string('colorway')->nullable();
 
             $table->boolean('is_active')->default(true);
             $table->timestamps();
