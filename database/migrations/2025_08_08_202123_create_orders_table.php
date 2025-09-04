@@ -30,6 +30,7 @@ return new class extends Migration
             $table->string('payment_method')->nullable();
 
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 

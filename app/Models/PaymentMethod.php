@@ -4,10 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class PaymentMethod extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     protected $table = 'payment_method';
 
@@ -25,6 +26,16 @@ class PaymentMethod extends Model
     public function payments()
     {
         return $this->hasMany(Payment::class, 'payment_methodID');
+    }
+
+    protected static function booted()
+    {
+        static::deleting(function (PaymentMethod $payment_method) {
+            if (! $payment_method->isForceDeleting()) {
+                $payment_method->is_active = false;
+                $payment_method->saveQuietly();
+            }
+        });
     }
     
 }

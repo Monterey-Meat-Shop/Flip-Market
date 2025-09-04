@@ -18,7 +18,10 @@ use Filament\Tables\Actions\ActionGroup;
 use Filament\Tables\Actions\ViewAction;
 use Filament\Tables\Actions\EditAction;
 use Filament\Tables\Actions\DeleteAction;
+use Filament\Tables\Actions\RestoreAction;
+use Filament\Tables\Actions\ForceDeleteAction;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\TrashedFilter;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 
@@ -47,7 +50,7 @@ class BrandResource extends Resource
                                     ->maxLength(225)
                                     ->live()
                                     ->unique(ignoreRecord: true),
-                                            ]),
+                            ]),
 
                         Toggle::make('is_active')
                             ->required()
@@ -60,37 +63,51 @@ class BrandResource extends Resource
     {
         return $table
             ->columns([
-                TextColumn::make('name')->searchable()->sortable(),
+                TextColumn::make('name')
+                    ->searchable()
+                    ->sortable(),
                 TextColumn::make('is_active')
                     ->label('Status')
                     ->formatStateUsing(fn(bool $state): string => $state ? 'Active' : 'Inactive')
                     ->badge()
                     ->color(fn(bool $state): string => $state ? 'success' : 'danger'),
-
-                TextColumn::make('name')->searchable()->sortable(),
-                TextColumn::make('created_at')->dateTime()->label('Created At')->sortable(),
-                TextColumn::make('updated_at')->dateTime()->label('Updated At')->sortable(),
+                TextColumn::make('created_at')
+                    ->dateTime()
+                    ->label('Created At')
+                    ->sortable(),
+                TextColumn::make('updated_at')
+                    ->dateTime()
+                    ->label('Updated At')
+                    ->sortable(),
+                TextColumn::make('deleted_at')
+                    ->dateTime()
+                    ->label('Archived At')
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
             ])
-            ->filters([])
+            ->filters([
+                
+            ])
             ->actions([
                 ActionGroup::make([
-                    ViewAction::make(),
-                    EditAction::make(),
-                    DeleteAction::make(),
+                    Tables\Actions\ViewAction::make(),
+                    Tables\Actions\EditAction::make(),
+                    Tables\Actions\DeleteAction::make(),
+                    Tables\Actions\RestoreAction::make(),
+                    Tables\Actions\ForceDeleteAction::make(),
                 ])
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make(),
+                    Tables\Actions\RestoreBulkAction::make(),
+                    Tables\Actions\ForceDeleteBulkAction::make(),
                 ]),
             ]);
     }
-
     public static function getRelations(): array
     {
-        return [
-            
-        ];
+        return [];
     }
 
     public static function getPages(): array
@@ -100,5 +117,12 @@ class BrandResource extends Resource
             'create' => Pages\CreateBrand::route('/create'),
             'edit' => Pages\EditBrand::route('/{record}/edit'),
         ];
+    }
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()
+            ->withoutGlobalScopes([
+                SoftDeletingScope::class,
+            ]);
     }
 }

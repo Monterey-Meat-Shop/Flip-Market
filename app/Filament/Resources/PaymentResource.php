@@ -14,6 +14,9 @@ use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Actions\ActionGroup;
 use Filament\Tables\Actions\EditAction;
 use Filament\Tables\Actions\DeleteAction;
+use Filament\Tables\Actions\RestoreAction;
+use Filament\Tables\Actions\ForceDeleteAction;
+use Filament\Tables\Filters\TrashedFilter; // Import the TrashedFilter
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Filament\Forms\Components\Section;
@@ -54,7 +57,7 @@ class PaymentResource extends Resource
                             ->label('Is Active?')
                             ->required()
                             ->default(true),
-                ]),
+                    ]),
             ]);
     }
 
@@ -82,16 +85,23 @@ class PaymentResource extends Resource
                     ->sortable(),
             ])
             ->filters([
-                TernaryFilter::make('is_active')
-                    ->label('Status')
-                ->trueLabel('Active')
-                ->falseLabel('Inactive')
-                ->nullable(),
+                // TernaryFilter::make('is_active')
+                //     ->label('Status')
+                //     ->trueLabel('Active')
+                //     ->falseLabel('Inactive')
+                //     ->nullable(),
+                
+                // // Add this filter to allow users to view trashed records.
+                // Tables\Filters\TrashedFilter::make(),
             ])
             ->actions([
                 ActionGroup::make([
-                    EditAction::make(),
-                    DeleteAction::make(),
+                    Tables\Actions\ViewAction::make(),
+                    Tables\Actions\EditAction::make(),
+                    Tables\Actions\DeleteAction::make(),
+                    // These actions are now correct for managing soft deletes.
+                    Tables\Actions\RestoreAction::make(),
+                    Tables\Actions\ForceDeleteAction::make(),
                 ])
             ])
             ->bulkActions([

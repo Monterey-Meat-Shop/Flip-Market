@@ -14,21 +14,13 @@ return new class extends Migration
         Schema::create('discounts', function (Blueprint $table) {
             $table->increments('discountID');
 
-            //Foreign Keys
-            // $table->foreignId('productID')
-            //       ->constrained('products', 'productID')
-            //       ->onDelete('cascade');
-
-            // $table->foreignId('orderID')
-            //       ->constrained('orders', 'orderID')
-            //       ->onDelete('cascade');
-
             $table->string('name');
             $table->string('discount_type');
             $table->decimal('discount_value', 10, 2);
             $table->boolean('is_active')->default(true);
             //$table->string('applies_to');
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 

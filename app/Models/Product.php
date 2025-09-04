@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Product extends Model
 {
@@ -22,18 +23,30 @@ class Product extends Model
         'price',
         'image_url',
         'status', 
-        'stock_quantity',
-        'size',
-        'colorway',
         'is_active',
     ];
 
     protected $casts = [
         'price' => 'decimal:2',
-        'size' => 'array',
         'image_url' => 'array',
         'is_active' => 'boolean',
     ];
+
+    /**
+     * Define the relationship to product variants.
+     */
+    public function variants(): HasMany
+    {
+        return $this->hasMany(ProductVariant::class, 'product_id', 'productID');
+    }
+
+    /**
+     * Get the total stock quantity from all variants.
+     */
+    public function getTotalStockQuantityAttribute(): int
+    {
+        return $this->variants->sum('stock_quantity');
+    }
 
     protected static function boot()
     {
@@ -42,44 +55,39 @@ class Product extends Model
         static::saving (function ($product) {
             // Only update is_active if the product is not in the process of being deleted
             if (!$product->isDirty('deleted_at')) {
-                $product->is_active = ($product->status === 'pre_order') || ($product->stock_quantity > 0);
+                // Use the new accessor to get the total stock
+                $product->is_active = ($product->status === 'pre_order') || ($product->total_stock_quantity > 0);
             }
         });
-
     }
 
     public function category()
     {
-        // foreign key, local key
         return $this->belongsTo(Category::class, 'categoryID');
     }
 
     public function brand()
     {
-        // foreign key, local key
         return $this->belongsTo(Brand::class, 'brandID');
     }
 
-    public function orderItems()
+    public function orderItems(): HasMany
     {
-        //return $this->hasMany(OrderItem::class);
+        return $this->hasMany(OrderItem::class, 'productID', 'productID');
     }
 
     public function getIsPreOrderAttribute(): bool
     {
-        // return $this->status === 'pre_order';
         return $this->status === 'pre_order';
     }
 
     public function getIsInStockAttribute(): bool
     {
-        // return $this->status === 'in_stock' && $this->stock_quantity > 0;
-        return $this->status === 'in_stock' && $this->stock_quantity > 0;
+        return $this->status === 'in_stock' && $this->total_stock_quantity > 0;
     }
 
     public function discounts()
     {
         return $this->belongsToMany(Discount::class, 'discount_product', 'product_id', 'discount_id');
     }
-    
 }

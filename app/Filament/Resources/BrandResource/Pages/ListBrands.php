@@ -8,6 +8,7 @@ use Filament\Resources\Pages\ListRecords;
 use App\Models\Brand;
 use Illuminate\Database\Eloquent\Builder;
 use Filament\Resources\Pages\ListRecords\Tab;
+use Illuminate\Database\Eloquent\SoftDeletingScope;
 
 class ListBrands extends ListRecords
 {
@@ -23,20 +24,22 @@ class ListBrands extends ListRecords
     public function getTabs(): array
     {
         return [
-            // query for active
             'active' => Tab::make('Active Brands')
                 ->badge(Brand::query()->where('is_active', true)->count())
-                ->modifyQueryUsing(fn (Builder $query) => $query->where('is_active', true)),
+                ->modifyQueryUsing(fn (Builder $query) => $query->where('is_active', true))
+                ->badgeColor('success'),
 
-            // query for inactive
             'inactive' => Tab::make('Inactive Brands')
                 ->badge(Brand::query()->where('is_active', false)->count())
-                ->modifyQueryUsing(fn (Builder $query) => $query->where('is_active', false)),
-
+                ->modifyQueryUsing(fn (Builder $query) => $query->where('is_active', false))
+                ->badgeColor('danger'),
+                
             'archived' => Tab::make('Archived Brands')
-                // FIX: Use the Brand model directly for the badge count.
-                // ->badge(Brand::onlyTrashed()->count())
-                // ->modifyQueryUsing(fn (Builder $query) => $query->onlyTrashed()),
+                ->modifyQueryUsing(fn (Builder $query) =>
+                    $query->withoutGlobalScopes([SoftDeletingScope::class])->onlyTrashed()
+                )
+                ->badge(Brand::onlyTrashed()->count())
+                ->badgeColor('gray'),
         ];
     }
 }
