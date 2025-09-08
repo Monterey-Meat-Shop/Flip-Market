@@ -12,11 +12,12 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('addresses', function (Blueprint $table) {
-            $table->bigIncrements('addressID');
+            $table->id('addressID');
 
             // foreign key
-            $table->unsignedBigInteger('customerID');
-            $table->foreign('customerID')->references('customerID')->on('customers')->onDelete('cascade');
+            $table->foreignId('customerID')
+                  ->constrained('customers', 'customerID')
+                  ->onDelete('cascade');
 
             $table->string('address_line_1');
             $table->string('address_line_2')->nullable();

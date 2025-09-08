@@ -9,64 +9,31 @@ class Customer extends Model
 {
     use HasFactory;
 
-    /**
-     * The table associated with the model.
-     *
-     * @var string
-     */
     protected $table = 'customers';
-
-    /**
-     * The primary key for the model.
-     *
-     * @var string
-     */
     protected $primaryKey = 'customerID';
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var array<int, string>
-     */
     protected $fillable = [
+        'user_id',
         'first_name',
         'last_name',
         'phone',
-        'email',
-        'password',
     ];
 
-    /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var array<int, string>
-     */
-    protected $hidden = [
-        'password',
-        'remember_token',
-    ];
-
-    /**
-     * The attributes that should be cast.
-     *
-     * @var array<string, string>
-     */
     protected $casts = [
         'is_active' => 'boolean',
     ];
 
-    /**
-     * Get all of the orders for the customer.
-     */
     public function orders()
     {
         return $this->hasMany(Order::class, 'customerID', 'customerID');
     }
 
-    /**
-     * Get all of the addresses for the customer.
-     */
-    public function addresses()
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'user_id', 'id');
+    }
+
+    public function address()
     {
         return $this->hasMany(Address::class, 'customerID', 'customerID');
     }

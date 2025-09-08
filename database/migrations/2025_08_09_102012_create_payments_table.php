@@ -14,17 +14,23 @@ return new class extends Migration
         Schema::create('payments', function (Blueprint $table) {
             $table->increments('paymentID');
 
-            // FIX: This must be an unsignedBigInteger to match the primary key on the 'orders' table.
+            // Match orders table PK
             $table->unsignedBigInteger('orderID');
-            $table->foreign('orderID')->references('orderID')->on('orders')->onDelete('cascade');
+            $table->foreign('orderID')
+                  ->references('orderID')
+                  ->on('orders')
+                  ->onDelete('cascade');
 
+            // Payment method (FK to payment_methodS table - PLURAL)
             $table->unsignedInteger('payment_methodID');
-            $table->foreign('payment_methodID')->references('payment_methodID')->on('payment_method');
+            $table->foreign('payment_methodID')
+                  ->references('payment_methodID')
+                  ->on('payment_methods'); // <-- FIXED: use plural table name
 
-            $table->decimal('amount', 8, 2);
+            $table->decimal('amount', 8, 2)->default(0);
             $table->string('reference_number')->nullable();
-            $table->string('screenshot_url')->nullable();
-            $table->string('status');
+            $table->enum('status', ['unpaid', 'verified', 'completed', 'failed'])->default('unpaid');
+
             $table->timestamps();
         });
     }

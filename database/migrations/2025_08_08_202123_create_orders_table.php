@@ -29,6 +29,11 @@ return new class extends Migration
             
             $table->string('payment_method')->nullable();
 
+            $table->string('address_choice')->nullable();
+            $table->string('postal_code')->nullable();
+            $table->string('city')->nullable();
+            $table->string('province')->nullable();
+
             $table->timestamps();
             $table->softDeletes();
         });

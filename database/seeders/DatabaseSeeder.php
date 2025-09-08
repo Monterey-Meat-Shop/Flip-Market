@@ -13,7 +13,6 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // First, call the RoleSeeder to ensure all roles exist in the database.
         $this->call([
             RoleSeeder::class,
             BrandsSeeder::class,
@@ -21,22 +20,23 @@ class DatabaseSeeder extends Seeder
             PaymentMethodSeeder::class,
             GuestCustomerSeeder::class,
         ]);
-        
-        // Create the 'Admin' user and assign the 'admin' role.
+
+        // Admin user
         $adminUser = User::factory()->create([
-            'name' => 'Admin',
-            'email' => 'admin@gmail.com',
-            'password' => Hash::make('123'),
+            'name'       => 'Admin',
+            'last_name'  => '',
+            'email'      => 'admin@gmail.com',
+            'password'   => Hash::make('123'),
         ]);
         $adminUser->assignRole('admin');
 
-        // Create the 'Test' user and assign the 'customer' role.
-        $testUser = User::factory()->create([
-            'name' => 'Test',
-            'email' => 'test@gmail.com',
-            'password' => Hash::make('test'),
+        // Manager user
+        $managerUser = User::factory()->create([
+            'name'       => 'Manager',
+            'last_name'  => '',
+            'email'      => 'manager@gmail.com',
+            'password'   => Hash::make('manager'),
         ]);
-        $testUser->assignRole('manager');
-        
+        $managerUser->assignRole('manager');
     }
 }

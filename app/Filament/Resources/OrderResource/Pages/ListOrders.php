@@ -52,10 +52,13 @@ class ListOrders extends ListRecords
                 ->badge(Order::where('order_status', 'completed')->count())
                 ->badgeColor('success'),
 
+            'returned' => Tab::make('Returned'),
+
             'archived' => Tab::make('Archived')
                 ->badge(Order::onlyTrashed()->count())
                 ->modifyQueryUsing(fn (Builder $query) => $query->onlyTrashed())
                 ->badgeColor('danger'),
+
         ];
     }
 

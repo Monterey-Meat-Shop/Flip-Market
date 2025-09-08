@@ -3,67 +3,43 @@
 namespace App\Filament\Resources\OrderResource\Pages;
 
 use App\Filament\Resources\OrderResource;
-use Filament\Actions;
-use Filament\Forms\Components\Repeater;
-use Filament\Forms\Components\Select;
-use Filament\Forms\Components\TextInput;
 use Filament\Resources\Pages\CreateRecord;
-use App\Models\Order;
 use App\Models\Payment;
-use App\Models\Product;
-use Filament\Forms\Get;
-use Illuminate\Validation\ValidationException;
+use App\Models\Shipping;
 use Filament\Notifications\Notification;
+use Illuminate\Support\Arr;
 
 class CreateOrder extends CreateRecord
 {
     protected static string $resource = OrderResource::class;
-
-    protected function getFormSchema(): array
-    {
-        // Re-use the schema from the main resource file.
-        return $this->getResource()::form(
-            $this->getForm()->getForm()
-        )->getSchema();
-    }
     
-    protected function mutateFormDataBeforeCreate(array $data): array
-    {
-        // Add the customerID to the data. This is still necessary.
-        $data['customerID'] = auth()->id();
-        return $data;
-    }
-
     protected function afterCreate(): void
     {
-        $order = $this->record;
+        $record = $this->record;
+        $formData = $this->form->getState();
 
-        $paymentData = $this->data;
-        
+        // Create the Payment record
         Payment::create([
-            'orderID' => $order->orderID,
-            'amount' => $order->total_amount,
-            'payment_methodID' => $paymentData['payment_methodID'],
-            'reference_number' => $paymentData['reference_number'] ?? null, 
-            'status' => $paymentData['status'],
+            'orderID' => $record->orderID,
+            'payment_methodID' => Arr::get($formData, 'payment_methodID'),
+            'amount' => Arr::get($formData, 'downpayment', 0),
+            'reference_number' => Arr::get($formData, 'reference_number'),
+            'status' => Arr::get($formData, 'status', 'unpaid'),
         ]);
 
-        foreach ($order->orderItems as $item) {
-            $product = Product::find($item->productID);
-
-            if ($product) {
-                // Decrease the stock quantity and save it to the database immediately.
-                $product->stock_quantity -= $item->quantity;
-                $product->save();
-            }
-        }
+        // Create the Shipping record
+        Shipping::create([
+            'orderID' => $record->orderID,
+            'shipping_method' => Arr::get($formData, 'shipping_method'),
+            'shipping_status' => Arr::get($formData, 'shipping_status'),
+        ]);
     }
-    
+
     protected function getRedirectUrl(): string
     {
         return $this->getResource()::getUrl('index');
     }
-
+    
     protected function getCreatedNotification(): ?Notification
     {
         return Notification::make()

@@ -14,7 +14,7 @@ class PaymentMethodSeeder extends Seeder
      */
     public function run(): void
     {
-        DB::table('payment_method')->insert([ 
+        DB::table('payment_methods')->insert([ 
             [
                 'method_name' => 'Gcash', 
                 'is_active' => true,      

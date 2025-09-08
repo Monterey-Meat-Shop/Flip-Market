@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -18,32 +17,20 @@ class User extends Authenticatable implements FilamentUser
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasApiTokens, HasFactory, Notifiable, HasRoles, SoftDeletes;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var list<string>
-     */
     protected $fillable = [
         'name',
         'email',
         'password',
+        //'first_name',
+        'last_name',
+        'phone',
     ];
 
-    /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var list<string>
-     */
     protected $hidden = [
         'password',
         'remember_token',
     ];
 
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
     protected function casts(): array
     {
         return [
@@ -52,22 +39,27 @@ class User extends Authenticatable implements FilamentUser
         ];
     }
 
-    /**
-     * Get the user's initials
-     */
-    public function initials(): string
+    // public function initials(): string
+    // {
+    //     return Str::of($this->name)
+    //         ->explode(' ')
+    //         ->take(2)
+    //         ->map(fn ($word) => Str::substr($word, 0, 1))
+    //         ->implode('');
+    // }
+
+    public function customer()
     {
-        return Str::of($this->name)
-            ->explode(' ')
-            ->take(2)
-            ->map(fn ($word) => Str::substr($word, 0, 1))
-            ->implode('');
+        return $this->hasOne(Customer::class, 'user_id', 'id');
     }
 
-    //panel access for authenticated users
     public function canAccessPanel(Panel $panel): bool
     {
-        // Check if the user has any of the required roles
-        return $this->hasRole(['admin', 'manager', 'cashier', 'customer']);
+        // Only allow active (non-deleted) users with specific roles
+        if ($this->trashed()) {
+            return false;
+        }
+
+        return $this->hasAnyRole(['admin', 'manager', 'cashier', 'customer']);
     }
 }

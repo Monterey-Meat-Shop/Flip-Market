@@ -15,7 +15,6 @@ class Order extends Model
     use HasFactory, SoftDeletes;
 
     protected $table = 'orders';
-
     protected $primaryKey = 'orderID';
 
     protected $fillable = [
@@ -25,13 +24,17 @@ class Order extends Model
         'total_amount',
         'final_amount',
         'order_status',
-        'payment_status',
-        'payment_method',
+        'address_choice',
+        'postal_code',
+        'city',
+        'province',
     ];
 
     protected $casts = [
         'order_date' => 'datetime',
     ];
+
+    protected $with = ['payment', 'customer', 'orderItems', 'shipping'];
 
     public function customer(): BelongsTo
     {
@@ -53,6 +56,11 @@ class Order extends Model
         return $this->hasOne(Payment::class, 'orderID', 'orderID');
     }
 
+    public function shipping()
+    {
+        return $this->hasOne(Shipping::class, 'orderID', 'orderID');
+    }
+
     public function deductStock(): void
     {
         DB::transaction(function () {
@@ -72,13 +80,4 @@ class Order extends Model
         });
     }
 
-    protected static function booted()
-    {
-        static::updated(function ($order) {
-            // Only trigger when order_status changes *to completed*
-            if ($order->isDirty('order_status') && $order->order_status === 'completed') {
-                $order->deductStock();
-            }
-        });
-    }
 }
