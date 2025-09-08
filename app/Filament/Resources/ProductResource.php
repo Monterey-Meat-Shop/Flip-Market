@@ -114,12 +114,11 @@ class ProductResource extends Resource
                         ->columnSpanFull()
                         ->maxLength(1000),
                     
-                    Repeater::make('size_stocks')
+                    Repeater::make('variants')
                         ->label('Sizes & Stock')
                         ->relationship('variants')
                         ->schema([
                             TextInput::make('size')
-                                ->numeric()
                                 ->required()
                                 ->maxLength(225),
                             TextInput::make('stock_quantity')
@@ -132,36 +131,13 @@ class ProductResource extends Resource
                                     'integer' => 'The stock quantity must be a whole number.',
                                     'min' => 'The stock quantity cannot be less than 0.',
                                 ]),
-                                TextInput::make('colorway')
+                            TextInput::make('colorway')
                                 ->required()
                                 ->maxLength(225),
                         ])
                         ->defaultItems(1)
-                        ->columns(2)
-                        ->columnSpanFull()
-                        ->reactive()
-                        ->afterStateUpdated(function (Set $set, Get $get, ?array $state) {
-                            $totalStock = collect($state)
-                                ->sum(fn ($item) => (int) ($item['stock_quantity'] ?? 0));
-
-                            $currentStatus = $get('status');
-
-                            if ($currentStatus !== 'pre_order') {
-                                if ($totalStock === 0) {
-                                    $set('status', 'out_of_stock');
-                                } elseif ($totalStock <= 4) {
-                                    $set('status', 'low_stock');
-                                } else {
-                                    $set('status', 'in_stock');
-                                }
-                            }
-
-                            $currentStatus = $get('status');
-                            $set('is_active', $currentStatus === 'pre_order' || $totalStock > 0);
-                        }),
-                        
-                    
-                        
+                        ->columns(3)
+                        ->columnSpanFull(),
                 ])->columns(2),
 
                 Section::make('Images')->schema([
