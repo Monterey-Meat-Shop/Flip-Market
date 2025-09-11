@@ -52,11 +52,24 @@ class Product extends Model
     {
         parent::boot();
 
-        static::saving (function ($product) {
-            // Only update is_active if the product is not in the process of being deleted
-            if (!$product->isDirty('deleted_at')) {
-                // Use the new accessor to get the total stock
-                $product->is_active = ($product->status === 'pre_order') || ($product->total_stock_quantity > 0);
+        static::saved(function ($product) {
+            $totalStock = $product->variants()->sum('stock_quantity');
+
+            if ($product->status !== 'pre_order') {
+                if ($totalStock === 0) {
+                    $product->status = 'out_of_stock';
+                } elseif ($totalStock <= 4) {
+                    $product->status = 'low_stock';
+                } else {
+                    $product->status = 'in_stock';
+                }
+            }
+
+            $product->is_active = ($product->status === 'pre_order') || ($totalStock > 0);
+
+            // Save again only if something changed
+            if ($product->isDirty(['status', 'is_active'])) {
+                $product->saveQuietly();
             }
         });
     }

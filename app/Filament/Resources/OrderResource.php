@@ -3,35 +3,31 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\OrderResource\Pages;
-use App\Filament\Resources\OrderResource\RelationManagers;
 use App\Models\Order;
 use App\Models\Product;
+use App\Models\ProductVariant;
+use App\Models\customer;
 use App\Models\PaymentMethod;
+use App\Models\ShippingMethod;
 use Filament\Forms;
-use Filament\Forms\Set;
 use Filament\Forms\Get;
+use Filament\Forms\Set;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Group;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Hidden;
-use Filament\Forms\Form;
+use Filament\Forms\Components\ToggleButtons;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\SelectColumn;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Collection;
-use Filament\Tables\Actions\ActionGroup;
-use Filament\Tables\Actions\ViewAction;
-use Filament\Tables\Actions\EditAction;
-use Filament\Tables\Actions\DeleteAction;
-use Filament\Tables\Actions\RestoreAction;
 use Closure;
 
 class OrderResource extends Resource
@@ -42,188 +38,370 @@ class OrderResource extends Resource
     protected static ?string $navigationIcon = 'heroicon-o-shopping-bag';
     protected static ?string $navigationLabel = 'Orders';
     protected static ?string $slug = 'orders';
-    
+
     public static function getEloquentQuery(): Builder
     {
-        // Start with the base query and include soft-deleted records.
-        $query = parent::getEloquentQuery()->withTrashed();
+        $query = parent::getEloquentQuery()->with(['payment', 'customer', 'orderItems'])->withTrashed();
 
-        // If the authenticated user has the 'admin' role, return all records.
         if (auth()->user()->hasRole('admin')) {
             return $query;
         }
 
-        // Otherwise, filter the query to only show records for the authenticated user.
         return $query->where('customerID', auth()->id());
     }
 
-    public static function form(Form $form): Form
+    public static function form(Forms\Form $form): Forms\Form
     {
         return $form
             ->schema([
                 Hidden::make('total_amount')
                     ->dehydrateStateUsing(fn (Get $get) => collect($get('orderItems') ?? [])->sum('sub_total'))
                     ->default(0.00),
-                
+
                 Hidden::make('final_amount')
                     ->dehydrateStateUsing(fn (Get $get) => collect($get('orderItems') ?? [])->sum('sub_total'))
                     ->default(0.00),
 
-                Section::make('Order Information')
-                ->schema([
-                    Select::make('customerID')
-                        ->label('Customer Name')
-                        ->relationship(name: 'customer', titleAttribute: 'first_name')
-                        ->searchable()
-                        ->preload()
-                        ->required(),
-                    
-                    DateTimePicker::make('order_date')
-                        ->default(now())
-                        ->required(),
-                ])->columns(2),
+                Section::make('Customer Information')
+                    ->schema([
+                        Select::make('customerID')
+                            ->label('Customer Name')
+                            ->options(
+                                Customer::orderBy('first_name')
+                                    ->get()
+                                    ->mapWithKeys(fn($customer) => [
+                                        $customer->customerID => trim($customer->first_name . ' ' . $customer->last_name),
+                                    ])
+                                    ->filter()
+                                    ->toArray()
+                            )
+                            ->searchable()
+                            ->preload()
+                            ->required()
+                            ->reactive()
+                            ->afterStateUpdated(function (Set $set, Get $get, $state) {
+                                $customer = Customer::with('address')->find($state);
+                                if ($customer) {
+                                    $address = $customer->address->first();
+                                    $set('address_choice', $address?->address_line_1 ?? '');
+                                    $set('postal_code', $address?->postal_code ?? '');
+                                    $set('city', $address?->city ?? '');
+                                    $set('province', $address?->province ?? '');
+                                }
+                            }),
+
+                        Select::make('address_choice')
+                            ->label('Address')
+                            ->options(function (Get $get) {
+                                $customer = Customer::with('address')->find($get('customerID'));
+                                if ($customer) {
+                                    return $customer->address
+                                        ->pluck('address_line_1', 'address_line_1')
+                                        ->merge($customer->address->pluck('address_line_2', 'address_line_2'))
+                                        ->filter()
+                                        ->toArray();
+                                }
+                                return [];
+                            })
+                            ->required()
+                            ->reactive()
+                            ->afterStateUpdated(function (Set $set, Get $get, $state) {
+                                $customer = Customer::with('address')->find($get('customerID'));
+                                if ($customer) {
+                                    $address = $customer->address->firstWhere('address_line_1', $state)
+                                        ?? $customer->address->firstWhere('address_line_2', $state);
+                                    $set('postal_code', $address?->postal_code ?? '');
+                                    $set('city', $address?->city ?? '');
+                                    $set('province', $address?->province ?? '');
+                                }
+                            }),
+
+                        TextInput::make('postal_code')
+                            ->label('Postal Code')
+                            ->required()
+                            ->disabled()
+                            ->dehydrated(true),
+
+                        TextInput::make('city')
+                            ->label('City')
+                            ->required()
+                            ->disabled()
+                            ->dehydrated(true),
+
+                        TextInput::make('province')
+                            ->label('Province')
+                            ->required()
+                            ->disabled()
+                            ->dehydrated(true),
+
+                        DateTimePicker::make('order_date')
+                            ->default(now())
+                            ->required(),
+                    ])->columns(2),
 
                 Section::make('Payment Information')
                     ->schema([
                         Select::make('payment_methodID')
                             ->label('Payment Method')
-                            ->options(
-                                PaymentMethod::query()
-                                    ->whereIn('method_name', ['Cash', 'Gcash'])
-                                    ->pluck('method_name', 'payment_methodID')
-                            )
+                            ->options(PaymentMethod::pluck('method_name', 'payment_methodID'))
                             ->required()
-                            ->live(),
+                            ->searchable()
+                            ->preload()
+                            ->afterStateHydrated(function (Set $set, $state, $record) {
+                                if ($record?->payment) {
+                                    $set('payment_methodID', $record->payment->payment_methodID);
+                                }
+                            }),
 
-                        TextInput::make('reference_number')
-                            ->label('Reference Number')
-                            ->placeholder('Reference no.')
-                            ->visible(fn (Get $get) => PaymentMethod::find($get('payment_methodID'))?->method_name === 'Gcash')
-                            ->required(fn (Get $get) => PaymentMethod::find($get('payment_methodID'))?->method_name === 'Gcash'),
-                        
                         Select::make('status')
                             ->label('Payment Status')
                             ->options([
-                                'paid' => 'Paid',
                                 'unpaid' => 'Unpaid',
                                 'verified' => 'Verified',
+                                'completed' => 'Completed',
+                                'failed' => 'Failed',
                             ])
+                            ->required()
+                            ->afterStateHydrated(function (Set $set, $state, $record) {
+                                if ($record?->payment) {
+                                    $set('status', $record->payment->status);
+                                } else {
+                                    $set('status', 'unpaid');
+                                }
+                            }),
+
+                        TextInput::make('reference_number')
+                            ->label('Reference Number')
+                            ->afterStateHydrated(function (Set $set, $state, $record) {
+                                if ($record?->payment) {
+                                    $set('reference_number', $record->payment->reference_number);
+                                }
+                            }),
+
+                        TextInput::make('downpayment')
+                            ->label('Amount to Pay / Down Payment')
+                            ->numeric()
+                            ->required()
+                            ->afterStateHydrated(function (Set $set, $state, $record) {
+                                if ($record?->payment) {
+                                    $set('downpayment', $record->payment->amount);
+                                } else {
+                                    $set('downpayment', 0);
+                                }
+                            }),
+                    ])->columns(2)
+                    ->columnSpanFull(),
+                
+                Section::make('Order Information')
+                    ->schema([
+                        Select::make('shipping_method')
+                            ->label('Shipping Method')
+                            ->options([
+                                //'pickup' => 'Pickup',
+                                'jnt' => 'JNT',
+                                'lalamove' => 'Lalamove',
+                            ])
+                            ->required()
+                            ->afterStateHydrated(function (Set $set, $state, $record) {
+                // Ensure the correct data is retrieved
+                if ($record?->shipping) {
+                    $set('shipping_method', $record->shipping->shipping_method);
+                }
+            }),
+
+                        ToggleButtons::make('shipping_status')
+                            ->label('Shipping Status')
+                                ->inline()
+                                ->default('pending')
+                                ->options([
+                                    'processing' => 'Processing',
+                                    'shipped' => 'Shipped',
+                                    'delivered' => 'Delivered',
+                                ])
+                                ->colors([
+                                    'processing' => 'warning',
+                                    'shipped' => 'info',
+                                    'delivered' => 'success',
+                                ])
+                                ->icons([
+                                    'processing' => 'heroicon-m-arrow-path',
+                                    'shipped' => 'heroicon-m-truck',
+                                    'delivered' => 'heroicon-m-check-badge',
+                                ])
+                                ->afterStateHydrated(function (Set $set, $state, $record) {
+                // Ensure the correct data is retrieved
+                if ($record?->shipping) {
+                    $set('shipping_status', $record->shipping->shipping_status);
+                } else {
+                    $set('shipping_status', 'pending');
+                }
+            }),
+
+                        ToggleButtons::make('order_status')
+                            ->label('Order Status')
+                            ->inline()
                             ->default('pending')
-                            ->required(),
-                    ])->columns(3),
+                            ->options([
+                                'pending' => 'Pending',
+                                'pre-order' => 'Pre-Order',
+                                'processing' => 'Processing',
+                                'completed' => 'Completed',
+                                'cancelled' => 'Cancelled',
+                                'returned' => 'Returned',
+                            ])
+                            ->colors([
+                                'pending' => 'warning',
+                                'processing' => 'info',
+                                'pre-order' => 'info',
+                                'completed' => 'success',
+                                'cancelled' => 'danger',
+                                'returned' => 'danger',
+                            ])
+                            ->icons([
+                                'pending' => 'heroicon-m-sparkles',
+                                'processing' => 'heroicon-m-truck',
+                                'pre-order' => 'heroicon-m-arrow-path',
+                                'completed' => 'heroicon-m-check-badge',
+                                'cancelled' => 'heroicon-m-x-mark',
+                                'returned' => 'heroicon-m-x-circle',
+                            ])->columnSpanFull(),
+                    ])->columns(2),
 
                 Section::make('Order Items')
-                ->schema([
-                    Repeater::make('orderItems')
-                        ->label('Order Items')
-                        ->relationship('orderItems')
-                        ->schema([
-                            Select::make('productID')
-                                ->relationship(
-                                    name: 'product',
-                                    titleAttribute: 'name',
-                                    modifyQueryUsing: fn (Builder $query) => $query
-                                        ->whereNotIn('status', ['pre_order', 'out_of_stock']),
-                                )
-                                ->searchable()
-                                ->preload()
-                                ->required()
-                                ->distinct()
-                                ->disableOptionsWhenSelectedInSiblingRepeaterItems()
-                                ->reactive()
-                                ->afterStateUpdated(function (Set $set, Get $get, $state) {
-                                    $product = Product::find($state);
-                                    if ($product) {
-                                        $set('unit_price', $product->price);
-                                        $set('sub_total', $product->price * $get('quantity'));
-                                    } else {
-                                        $set('unit_price', 0);
-                                        $set('sub_total', 0);
-                                    }
-                                })
-                                ->columnSpan(4),
+                    ->schema([
+                        Repeater::make('orderItems')
+                            ->label('Products List')
+                            ->relationship('orderItems')
+                            ->schema([
+                                Select::make('productID')
+                                    ->relationship(
+                                        'product',
+                                        'name',
+                                        modifyQueryUsing: fn (Builder $query) => $query->whereNotIn('status', ['pre_order', 'out_of_stock']),
+                                    )
+                                    ->searchable()
+                                    ->preload()
+                                    ->required()
+                                    ->live()
+                                    ->afterStateUpdated(function (Set $set, Get $get) {
+                                        $product = Product::find($get('productID'));
+                                        if ($product) {
+                                            $set('unit_price', $product->price);
+                                            $set('sub_total', $product->price * $get('quantity'));
+                                        } else {
+                                            $set('unit_price', 0);
+                                            $set('sub_total', 0);
+                                        }
+                                        $set('product_variant_id', null);
+                                        $set('size', null);
+                                        $set('colorway', null);
+                                    })
+                                    ->columnSpan(4),
 
-                            TextInput::make('quantity')
-                                ->numeric()
-                                ->required()
-                                ->default(1)
-                                ->live()
-                                ->afterStateUpdated(function (Set $set, Get $get, $state) {
-                                    $unitPrice = $get('unit_price');
-                                    if ($unitPrice && $state) {
-                                        $set('sub_total', $unitPrice * $state);
-                                    }
-                                })
-                                // This is the new, crucial validation rule
-                                ->rules([
-                                    // Custom closure rule to check against product stock
-                                    function (Get $get) {
-                                        return function (string $attribute, $value, Closure $fail) use ($get) {
-                                            $product = Product::find($get('productID'));
-                                            if ($product && $value > $product->stock_quantity) {
-                                                $fail("The quantity for '{$product->name}' cannot exceed the available stock of {$product->stock_quantity}.");
-                                            }
-                                        };
-                                    },
-                                ])
-                                ->columnSpan(2),
+                                Select::make('product_variant_id')
+                                    ->label('Shoe Size')
+                                    ->options(function (Get $get): array {
+                                        $productID = $get('productID');
+                                        if ($productID) {
+                                            return ProductVariant::where('product_id', $productID)
+                                                ->pluck('size', 'id')
+                                                ->filter()
+                                                ->toArray();
+                                        }
+                                        return [];
+                                    })
+                                    ->live()
+                                    ->required()
+                                    ->visible(fn (Get $get) => filled($get('productID')))
+                                    ->afterStateUpdated(function (Set $set, Get $get) {
+                                        $variant = ProductVariant::find($get('product_variant_id'));
+                                        if ($variant) {
+                                            $set('size', $variant->size);
+                                            $set('colorway', $variant->colorway);
+                                        } else {
+                                            $set('size', null);
+                                            $set('colorway', null);
+                                        }
+                                    })
+                                    ->columnSpan(2),
 
-                            TextInput::make('unit_price')
-                                ->numeric()
-                                ->required()
-                                ->disabled()
-                                ->dehydrated(true)
-                                ->columnSpan(3),
+                                TextInput::make('colorway')
+                                    ->label('Colorway')
+                                    ->disabled()
+                                    ->dehydrated(true)
+                                    ->columnSpan(2),
 
-                            TextInput::make('sub_total')
-                                ->numeric()
-                                ->required()
-                                ->disabled()
-                                ->dehydrated(true)
-                                ->columnSpan(3),
-                        ])->columns(12)
-                        ->collapsible()
-                        ->defaultItems(1)
-                        ->live(),
-                ]),
-                
-                Section::make('Order Status')
-                ->schema([
-                    Placeholder::make('total_amount_placeholder')
-                    ->label('Total Order Amount')
-                    ->content(function (Get $get) {
-                        $subTotals = collect($get('orderItems'))
-                            ->pluck('sub_total')
-                            ->filter();
-                        return number_format($subTotals->sum(), 2);
-                    })
-                    ->live(),
-                
-                    Select::make('order_status')
-                        ->label('Order Status')
-                        ->options([
-                            'pending' => 'Pending',
-                            'processing' => 'Processing',
-                            'shipped' => 'Shipped',
-                            'delivered' => 'Delivered',
-                            'cancelled' => 'Cancelled',
-                            'completed' => 'Completed',
-                        ])
-                        ->default('completed')
-                        ->required(),
-                ])->columns(2),
+                                TextInput::make('quantity')
+                                    ->numeric()
+                                    ->required()
+                                    ->default(1)
+                                    ->live()
+                                    ->afterStateUpdated(function (Set $set, Get $get, $state) {
+                                        $unitPrice = $get('unit_price');
+                                        $set('sub_total', ($unitPrice && $state) ? $unitPrice * $state : 0);
+                                    })
+                                    ->rules([
+                                        function (Get $get) {
+                                            return function (string $attribute, $value, Closure $fail) use ($get) {
+                                                $variant = ProductVariant::find($get('product_variant_id'));
+                                                if ($variant && $value > $variant->stock_quantity) {
+                                                    $fail("Quantity cannot exceed available stock ({$variant->stock_quantity}).");
+                                                }
+                                            };
+                                        },
+                                    ])
+                                    ->columnSpan(2),
+
+                                TextInput::make('unit_price')
+                                    ->numeric()
+                                    ->required()
+                                    ->disabled()
+                                    ->dehydrated(true)
+                                    ->columnSpan(2),
+
+                                TextInput::make('sub_total')
+                                    ->numeric()
+                                    ->required()
+                                    ->disabled()
+                                    ->dehydrated(true)
+                                    ->columnSpan(2),
+
+                                Hidden::make('size')
+                                    ->disabled()
+                                    ->dehydrated(true)
+                                    ->columnSpan(2),
+                            ])->columns(12)
+                            ->collapsible()
+                            ->defaultItems(1)
+                            ->live(),
+                    ]),
+
+                Section::make('Total Amount of Order')
+                    ->schema([
+                        Placeholder::make('total_amount_placeholder')
+                            ->label('Total Order Amount')
+                            ->content(fn (Get $get) => number_format(collect($get('orderItems'))->pluck('sub_total')->sum(), 2))
+                            ->live(),
+                    ])->columns(2),
             ]);
     }
+
 
     public static function table(Table $table): Table
     {
         return $table
             ->defaultSort('orderID', 'desc')
             ->columns([
+                TextColumn::make('orderID')
+                    ->label('Order ID')
+                    ->searchable()
+                    ->sortable(),
+                    
                 TextColumn::make('customer.first_name')
                     ->label('Customer')
                     ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->formatStateUsing(fn ($state, $record) => $record->customer?->first_name),
 
                 TextColumn::make('total_amount')
                     ->numeric()
@@ -233,60 +411,75 @@ class OrderResource extends Resource
                 TextColumn::make('payment.paymentMethod.method_name')
                     ->label('Payment Method')
                     ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->formatStateUsing(fn ($state) => $state ?? 'N/A'),
 
                 TextColumn::make('payment.status')
                     ->label('Payment Status')
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {
                         'pending' => 'warning',
-                        'paid' => 'success',
+                        'paid', 'verified' => 'success',
                         'failed' => 'danger',
                         'unpaid' => 'warning',
+                        'completed' => 'success',
+                        //'unpaid', 'verified', 'completed', 'failed'
                     })
-                    ->sortable(),
+                    ->sortable()
+                    ->formatStateUsing(fn ($state) => $state ?? 'N/A'),
 
                 TextColumn::make('payment.reference_number')
                     ->label('Reference No.')
                     ->sortable()
                     ->formatStateUsing(fn ($state) => $state ?? 'N/A')
                     ->toggleable(isToggledHiddenByDefault: true),
-                
-                SelectColumn::make('order_status')
-                    ->options([
-                        'pending' => 'Pending',
-                        'processing' => 'Processing',
-                        'shipped' => 'Shipped',
-                        'delivered' => 'Delivered',
-                        'cancelled' => 'Cancelled',
-                        'completed' => 'Completed',
-                    ])
-                    ->disabled(fn ($record): bool => in_array($record->order_status, ['completed', 'delivered', 'cancelled']))
-                    ->searchable()
-                    ->sortable(),
 
-                TextColumn::make('order_date')
-                    ->dateTime()
+                TextColumn::make('order_status')
+                    ->label('Order Status')
                     ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    ->badge()
+                    ->color(fn (string $state): string => match ($state) {
+                        'pending' => 'warning',
+                        'processing' => 'info',
+                        'completed' => 'success',
+                        'cancelled' => 'danger',
+                        'pre-order' => 'info',
+                        //'pending', 'processing', 'completed', 'cancelled', 'pre-order'
+                    }),
 
-                TextColumn::make('updated_at')
-                    ->dateTime()
+                // SelectColumn::make('order_status')
+                //     ->options([
+                //         'pending' => 'Pending',
+                //         'pre-order' => 'Pre-Order',
+                //         'processing' => 'Processing',
+                //         'shipped' => 'Shipped',
+                //         'delivered' => 'Delivered',
+                //         'return' => 'Return',
+                //         'cancelled' => 'Cancelled',
+                //         'completed' => 'Completed',
+                //     ])
+                //     ->disabled(fn ($record) => in_array($record->order_status, ['completed', 'delivered', 'cancelled']))
+                //     ->searchable()
+                //     ->sortable(),
+
+                TextColumn::make('shipping.shipping_status')
+                    ->label('Shipping Status')
                     ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    ->badge()
+                    ->color(fn (string $state): string => match ($state) {
+                        'pending' => 'warning',
+                        'processing' => 'info',
+                        'shipped' => 'success',
+                        'delivered' => 'success',
+                    })
+                    ->formatStateUsing(fn ($state) => $state ?? 'N/A'),
 
-                TextColumn::make('deleted_at')
-                    ->label('Archived Date')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-
-            ])
-            ->filters([
-                //
+                TextColumn::make('order_date')->dateTime()->sortable()->toggleable(isToggledHiddenByDefault: true),
+                TextColumn::make('updated_at')->dateTime()->sortable()->toggleable(isToggledHiddenByDefault: true),
+                TextColumn::make('deleted_at')->label('Archived Date')->dateTime()->sortable()->toggleable(isToggledHiddenByDefault: true),
             ])
             ->actions([
-                ActionGroup::make([
+                Tables\Actions\ActionGroup::make([
                     Tables\Actions\ViewAction::make(),
                     Tables\Actions\EditAction::make(),
                     Tables\Actions\DeleteAction::make(),
@@ -303,15 +496,12 @@ class OrderResource extends Resource
 
     public static function getRelations(): array
     {
-        return [
-            //
-        ];
+        return [];
     }
 
     public static function getNavigationBadge(): ?string
     {
-        return static::getModel()::query()
-        ->where('order_status', 'pending')->count();
+        return static::getModel()::query()->where('order_status', 'pending')->count();
     }
 
     public static function getPages(): array
@@ -323,8 +513,10 @@ class OrderResource extends Resource
             'edit' => Pages\EditOrder::route('/{record}/edit'),
         ];
     }
+
     public static function canViewAny(): bool
     {
         return Auth::user()->hasAnyRole(['admin', 'manager', 'cashier']);
     }
+
 }

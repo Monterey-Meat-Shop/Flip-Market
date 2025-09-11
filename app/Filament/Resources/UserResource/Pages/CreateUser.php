@@ -3,25 +3,43 @@
 namespace App\Filament\Resources\UserResource\Pages;
 
 use App\Filament\Resources\UserResource;
-use Filament\Actions;
 use Filament\Resources\Pages\CreateRecord;
-
-use Filament\Notifications\Notification;
+use App\Models\Customer;
+use App\Models\Address;
 
 class CreateUser extends CreateRecord
 {
     protected static string $resource = UserResource::class;
 
-    protected function getRedirectUrl(): string
+    protected function afterCreate(): void
     {
-        return $this->getResource()::getUrl('index');
-    }
+        $data = $this->form->getState();
+        $user = $this->record;
 
-    protected function getCreatedNotification(): ?Notification
-    {
-        return Notification::make()
-            ->success()
-            ->title('User created')
-            ->body('The user has been created successfully.');
+        if (isset($data['roles']) && in_array('customer', $data['roles'])) {
+            // Create or update customer
+            $customer = Customer::updateOrCreate(
+                ['user_id' => $user->id],
+                [
+                    'first_name' => $data['name'] ?? null,
+                    'last_name'  => $data['last_name'] ?? null,
+                    'phone'      => $data['phone'] ?? null,
+                ]
+            );
+
+            // Create or update address
+            if ($customer) {
+                Address::updateOrCreate(
+                    ['customer_id' => $customer->id],
+                    [
+                        'address_line_1' => $data['address_line_1'] ?? null,
+                        'address_line_2' => $data['address_line_2'] ?? null,
+                        'city'           => $data['city'] ?? null,
+                        'province'       => $data['province'] ?? null,
+                        'postal_code'    => $data['postal_code'] ?? null,
+                    ]
+                );
+            }
+        }
     }
 }

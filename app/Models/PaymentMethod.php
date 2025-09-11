@@ -10,7 +10,7 @@ class PaymentMethod extends Model
 {
     use HasFactory, SoftDeletes;
 
-    protected $table = 'payment_method';
+    protected $table = 'payment_methods';
 
     protected $primaryKey = 'payment_methodID';
 

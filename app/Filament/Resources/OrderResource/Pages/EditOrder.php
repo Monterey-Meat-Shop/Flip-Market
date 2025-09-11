@@ -3,9 +3,9 @@
 namespace App\Filament\Resources\OrderResource\Pages;
 
 use App\Filament\Resources\OrderResource;
-use Filament\Actions;
 use Filament\Resources\Pages\EditRecord;
 use Filament\Notifications\Notification;
+use Illuminate\Support\Arr;
 
 class EditOrder extends EditRecord
 {
@@ -14,16 +14,32 @@ class EditOrder extends EditRecord
     protected function getHeaderActions(): array
     {
         return [
-            Actions\ViewAction::make(),
-            Actions\DeleteAction::make(),
+            \Filament\Actions\DeleteAction::make(),
         ];
     }
-
-    protected function getRedirectUrl(): string
+    
+    // This method is called after the main Order record is updated.
+    protected function afterSave(): void
     {
-        return $this->getResource()::getUrl('index');
-    }
+        $record = $this->record;
+        $formData = $this->form->getState();
 
+        // Update the existing Payment record
+        if ($record->payment) {
+            $record->payment->update([
+                'amount' => Arr::get($formData, 'downpayment', 0),
+                'status' => Arr::get($formData, 'status', 'unpaid'),
+            ]);
+        }
+
+        // Update the existing Shipping record
+        if ($record->shipping) {
+            $record->shipping->update([
+                'shipping_status' => Arr::get($formData, 'shipping_status'),
+            ]);
+        }
+    }
+    
     protected function getSavedNotification(): ?Notification
     {
         return Notification::make()

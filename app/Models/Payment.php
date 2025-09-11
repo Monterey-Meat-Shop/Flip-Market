@@ -17,8 +17,8 @@ class Payment extends Model
         'orderID',
         'payment_methodID',
         'amount',
+        //'downpayment',
         'reference_number',
-        'screenshot_url',
         'status',
     ];
 
