@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Schema;
 
 class RecentReportsStats extends BaseWidget
 {
-    protected ?string $heading = 'Realtime Orders Stats';
+    // protected ?string $heading = 'Realtime Orders Stats';
 
     protected function getStats(): array
     {

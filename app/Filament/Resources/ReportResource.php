@@ -22,18 +22,18 @@ class ReportResource extends Resource
     protected static ?string $navigationIcon = 'heroicon-o-document-text';
     protected static ?string $navigationLabel = 'Reports';
 
-    public static function form(Form $form): Form
-    {
-        return $form->schema([
-            Forms\Components\TextInput::make('title')->required(),
-            Forms\Components\Select::make('status')
-                ->options([
-                    'published' => 'Published',
-                    'draft'     => 'Draft',
-                ])
-                ->required(),
-        ]);
-    }
+    // public static function form(Form $form): Form
+    // {
+    //     return $form->schema([
+    //         Forms\Components\TextInput::make('title')->required(),
+    //         Forms\Components\Select::make('status')
+    //             ->options([
+    //                 'published' => 'Published',
+    //                 'draft'     => 'Draft',
+    //             ])
+    //             ->required(),
+    //     ]);
+    // }
 
     public static function table(Table $table): Table
     {

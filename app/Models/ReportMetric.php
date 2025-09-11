@@ -11,7 +11,7 @@ class ReportMetric extends Model
     use HasFactory;
 
     protected $fillable = [
-        'metric_date',
+        'metric_date',r
         'orders_count',
         'orders_total',
         'orders_last7',

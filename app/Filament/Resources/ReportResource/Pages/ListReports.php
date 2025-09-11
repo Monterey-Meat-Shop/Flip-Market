@@ -13,23 +13,27 @@ class ListReports extends Page
 {
     protected static string $resource = ReportResource::class;
 
-    // custom blade that renders only widgets (no table)
+    // custom blade, renders only widgets (no table)
     protected static string $view = 'filament.resources.report-resource.pages.list-reports';
 
     protected function getHeaderActions(): array
     {
         return [
-            // no CreateAction — removes the "New report" button
-            Actions\Action::make('export')
-                ->label('Export Excel')
-                ->icon('heroicon-o-document-text')
-                ->action('export'),
+            Actions\Action::make('export_pdf')
+                ->label('Export PDF')
+              //  ->icon('heroicon-o-document-text')
+                ->action('exportPdf'),
         ];
     }
 
-    // public so Livewire/Filament can call it
-    public function export(): BinaryFileResponse
+    // public so Livewire / Filament can call it
+    public function exportPdf(): BinaryFileResponse
     {
-        return Excel::download(new ReportsExport(), 'reports.xlsx');
+        // Use the PDF driver. You can use MPDF, DOMPDF, or TCPDF depending on which you installed
+        return Excel::download(
+            new ReportsExport(),
+            'reports_' . now()->format('Ymd_His') . '.pdf',
+            \Maatwebsite\Excel\Excel::MPDF
+        );
     }
 }
