@@ -25,7 +25,6 @@
         @livewire('partial.navigation')
         @livewire('main')
         @livewire('partial.footer')
-       
         @livewireScripts
         @fluxScripts
     </body>
