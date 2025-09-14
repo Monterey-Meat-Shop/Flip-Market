@@ -195,20 +195,19 @@ class ProductResource extends Resource
                 ]),
 
                 Section::make('Status')->schema([
-    Select::make('status')
-        ->options([
-            'pre_order' => 'Pre-order',
-        ])
-        ->label('Status')
-        ->default('in_stock')
-        ->helperText('Status is calculated automatically unless set to Pre-order.'),
+                Select::make('status')
+                    ->options([
+                        'pre_order' => 'Pre-order',
+                    ])
+                    ->label('Status')
+                    ->default('in_stock')
+                    ->helperText('Status is calculated automatically unless set to Pre-order.'),
 
-    Toggle::make('is_active')
-        ->required()
-        ->default(true)
-        ->helperText('Automatically managed, unless overridden for pre-order.'),
-]),
-
+                Toggle::make('is_active')
+                    ->required()
+                    ->default(true)
+                    ->helperText('Automatically managed, unless overridden for pre-order.'),
+                ]),
             ])->columnSpan(1)
         ])->columns(3);
     }
@@ -372,20 +371,19 @@ class ProductResource extends Resource
     }
 
     public function getCalculatedStatusAttribute()
-{
-    $totalStock = (int) $this->variants()->sum('stock_quantity');
+    {
+        $totalStock = (int) $this->variants()->sum('stock_quantity');
 
-    if ($this->status === 'pre_order') {
-        return 'pre_order';
+        if ($this->status === 'pre_order') {
+            return 'pre_order';
+        }
+
+        if ($totalStock === 0) {
+            return 'out_of_stock';
+        } elseif ($totalStock <= 4) {
+            return 'low_stock';
+        } else {
+            return 'in_stock';
+        }
     }
-
-    if ($totalStock === 0) {
-        return 'out_of_stock';
-    } elseif ($totalStock <= 4) {
-        return 'low_stock';
-    } else {
-        return 'in_stock';
-    }
-}
-
 }

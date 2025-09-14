@@ -6,26 +6,17 @@ use App\Models\OrderItem;
 
 class OrderItemObserver
 {
-    /**
-     * Handle the OrderItem "created" event.
-     */
+
     public function created(OrderItem $orderItem): void
     {
-        // DISABLED: Stock deduction is now handled in Filament pages only
-        // $this->handleStockDeduction($orderItem);
+        
     }
-
-    /**
-     * Handle the OrderItem "updated" event.
-     */
+    
     public function updated(OrderItem $orderItem): void
     {
         
     }
 
-    /**
-     * Handle the OrderItem "deleted" event.
-     */
     public function deleted(OrderItem $orderItem): void
     {
         // Only restore stock if the order had already deducted stock
@@ -34,11 +25,6 @@ class OrderItemObserver
         }
     }
 
-    // Keep these private methods in case you need them later for manual adjustments
-    
-    /**
-     * Centralized stock deduction logic.
-     */
     private function handleStockDeduction(OrderItem $orderItem): void
     {
         if (!$orderItem->order) return;
@@ -61,9 +47,6 @@ class OrderItemObserver
         }
     }
 
-    /**
-     * Adjust stock difference for updated quantity.
-     */
     private function handleStockAdjustment(OrderItem $orderItem, int $difference): void
     {
         if (!$orderItem->order) return;
@@ -83,9 +66,6 @@ class OrderItemObserver
         }
     }
 
-    /**
-     * Deduct stock for the given item and quantity.
-     */
     private function restoreAndDeduct(OrderItem $orderItem, ?int $quantity = null): void
     {
         $quantity = $quantity ?? $orderItem->quantity;
@@ -99,9 +79,6 @@ class OrderItemObserver
         }
     }
 
-    /**
-     * Restore stock for deleted or reduced quantity.
-     */
     private function restoreStock(OrderItem $orderItem, int $quantity): void
     {
         if ($orderItem->productVariant) {
@@ -113,9 +90,6 @@ class OrderItemObserver
         }
     }
 
-    /**
-     * Refresh product status based on stock.
-     */
     private function refreshProductStatus($product): void
     {
         $totalStock = (int) $product->variants()->sum('stock_quantity');
