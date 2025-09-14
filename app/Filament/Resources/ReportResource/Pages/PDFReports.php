@@ -39,4 +39,5 @@ class ListReports extends Page
                 }),
         ];
     }
+
 }
