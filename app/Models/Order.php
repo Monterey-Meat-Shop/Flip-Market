@@ -8,7 +8,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Support\Facades\DB;
 
 class Order extends Model
 {
@@ -28,10 +27,13 @@ class Order extends Model
         'postal_code',
         'city',
         'province',
+        'payment_status',
+        'stock_deducted',
     ];
 
     protected $casts = [
         'order_date' => 'datetime',
+        'stock_deducted' => 'boolean',
     ];
 
     protected $with = ['payment', 'customer', 'orderItems', 'shipping'];
@@ -56,28 +58,63 @@ class Order extends Model
         return $this->hasOne(Payment::class, 'orderID', 'orderID');
     }
 
-    public function shipping()
+    public function shipping(): HasOne
     {
         return $this->hasOne(Shipping::class, 'orderID', 'orderID');
     }
 
-    public function deductStock(): void
+    public function deductStockForTransaction(): void
     {
-        DB::transaction(function () {
-            foreach ($this->orderItems as $item) {
-                if ($item->productVariant) {
-                    $variant = $item->productVariant()->lockForUpdate()->first();
+        if ($this->stock_deducted) {
+            return;
+        }
 
-                    if ($variant->stock_quantity < $item->quantity) {
-                        throw new \Exception(
-                            "Insufficient stock for {$variant->product->name} (Variant: {$variant->size})"
-                        );
-                    }
+        $this->load('orderItems.productVariant', 'orderItems.product');
 
-                    $variant->decrement('stock_quantity', $item->quantity);
+        foreach ($this->orderItems as $item) {
+            if ($item->productVariant) {
+                $item->productVariant->decrement('stock_quantity', $item->quantity);
+                // ensure product status exists
+                if (method_exists($item->productVariant->product, 'refreshProductStatus')) {
+                    $item->productVariant->product->refreshProductStatus();
+                }
+            } elseif ($item->product) {
+                $item->product->decrement('stock_quantity', $item->quantity);
+                if (method_exists($item->product, 'refreshProductStatus')) {
+                    $item->product->refreshProductStatus();
                 }
             }
-        });
+        }
+
+        // mark as done so we don't deduct again
+        $this->stock_deducted = true;
+        $this->saveQuietly();
     }
 
+    public function deductStockForPendingOrder(): void
+    {
+        if ($this->stock_deducted) {
+            return;
+        }
+
+        $this->load('orderItems.productVariant', 'orderItems.product');
+
+        foreach ($this->orderItems as $item) {
+            if ($item->productVariant) {
+                $item->productVariant->decrement('stock_quantity', $item->quantity);
+                if (method_exists($item->productVariant->product, 'refreshProductStatus')) {
+                    $item->productVariant->product->refreshProductStatus();
+                }
+            } elseif ($item->product) {
+                $item->product->decrement('stock_quantity', $item->quantity);
+                if (method_exists($item->product, 'refreshProductStatus')) {
+                    $item->product->refreshProductStatus();
+                }
+            }
+        }
+
+        // mark as done
+        $this->stock_deducted = true;
+        $this->saveQuietly();
+    }
 }

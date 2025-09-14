@@ -143,7 +143,10 @@ class OrderResource extends Resource
                     ->schema([
                         Select::make('payment_methodID')
                             ->label('Payment Method')
-                            ->options(PaymentMethod::pluck('method_name', 'payment_methodID'))
+                            ->options(function () {
+                                return PaymentMethod::where('method_name', '!=', 'Cash')
+                                ->pluck('method_name', 'payment_methodID');
+                            })
                             ->required()
                             ->searchable()
                             ->preload()
@@ -172,6 +175,7 @@ class OrderResource extends Resource
 
                         TextInput::make('reference_number')
                             ->label('Reference Number')
+                            ->unique(table: 'payments', column: 'reference_number')
                             ->afterStateHydrated(function (Set $set, $state, $record) {
                                 if ($record?->payment) {
                                     $set('reference_number', $record->payment->reference_number);
@@ -202,40 +206,40 @@ class OrderResource extends Resource
                                 'lalamove' => 'Lalamove',
                             ])
                             ->required()
+                            ->default('jnt')
                             ->afterStateHydrated(function (Set $set, $state, $record) {
-                // Ensure the correct data is retrieved
-                if ($record?->shipping) {
-                    $set('shipping_method', $record->shipping->shipping_method);
-                }
-            }),
+                            // Ensure the correct data is retrieved
+                            if ($record?->shipping) {
+                                $set('shipping_method', $record->shipping->shipping_method);
+                            }
+                        }),
 
                         ToggleButtons::make('shipping_status')
                             ->label('Shipping Status')
-                                ->inline()
-                                ->default('pending')
-                                ->options([
-                                    'processing' => 'Processing',
-                                    'shipped' => 'Shipped',
-                                    'delivered' => 'Delivered',
-                                ])
-                                ->colors([
-                                    'processing' => 'warning',
-                                    'shipped' => 'info',
-                                    'delivered' => 'success',
-                                ])
-                                ->icons([
-                                    'processing' => 'heroicon-m-arrow-path',
-                                    'shipped' => 'heroicon-m-truck',
-                                    'delivered' => 'heroicon-m-check-badge',
-                                ])
-                                ->afterStateHydrated(function (Set $set, $state, $record) {
-                // Ensure the correct data is retrieved
-                if ($record?->shipping) {
-                    $set('shipping_status', $record->shipping->shipping_status);
-                } else {
-                    $set('shipping_status', 'pending');
-                }
-            }),
+                            ->inline()
+                            ->default('processing')
+                            ->options([
+                                'processing' => 'Processing',
+                                'in-transit' => 'In Transit',
+                                'delivered' => 'Delivered',
+                            ])
+                            ->colors([
+                                'processing' => 'warning',
+                                'in-transit' => 'info',
+                                'delivered' => 'success',
+                            ])
+                            ->icons([
+                                'processing' => 'heroicon-m-arrow-path',
+                                'in-transit' => 'heroicon-m-truck',
+                                'delivered' => 'heroicon-m-check-badge',
+                            ])
+                            ->afterStateHydrated(function (Set $set, $state, $record) {
+                                if ($record?->shipping) {
+                                    $set('shipping_status', $record->shipping->shipping_status);
+                                } else {
+                                    $set('shipping_status', 'processing');
+                                }
+                            }),
 
                         ToggleButtons::make('order_status')
                             ->label('Order Status')
@@ -386,7 +390,6 @@ class OrderResource extends Resource
             ]);
     }
 
-
     public static function table(Table $table): Table
     {
         return $table
@@ -447,29 +450,14 @@ class OrderResource extends Resource
                         //'pending', 'processing', 'completed', 'cancelled', 'pre-order'
                     }),
 
-                // SelectColumn::make('order_status')
-                //     ->options([
-                //         'pending' => 'Pending',
-                //         'pre-order' => 'Pre-Order',
-                //         'processing' => 'Processing',
-                //         'shipped' => 'Shipped',
-                //         'delivered' => 'Delivered',
-                //         'return' => 'Return',
-                //         'cancelled' => 'Cancelled',
-                //         'completed' => 'Completed',
-                //     ])
-                //     ->disabled(fn ($record) => in_array($record->order_status, ['completed', 'delivered', 'cancelled']))
-                //     ->searchable()
-                //     ->sortable(),
-
                 TextColumn::make('shipping.shipping_status')
                     ->label('Shipping Status')
                     ->sortable()
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {
                         'pending' => 'warning',
-                        'processing' => 'info',
-                        'shipped' => 'success',
+                        'processing' => 'warning',
+                        'in-transit' => 'info',
                         'delivered' => 'success',
                     })
                     ->formatStateUsing(fn ($state) => $state ?? 'N/A'),

@@ -221,8 +221,21 @@ class UserResource extends Resource
      */
     private static function isCustomerRole(callable $get): bool
     {
-        $roles = (array) $get('roles');
+        $roleIds = $get('roles');
+        
+        // Handle if roles is null or empty
+        if (empty($roleIds)) {
+            return false;
+        }
+        
+        // If roles is a single value, convert to array
+        if (!is_array($roleIds)) {
+            $roleIds = [$roleIds];
+        }
+        
+        // Get customer role ID
         $customerRoleId = Role::where('name', 'customer')->value('id');
-        return in_array($customerRoleId, $roles);
+        
+        return in_array($customerRoleId, $roleIds);
     }
 }

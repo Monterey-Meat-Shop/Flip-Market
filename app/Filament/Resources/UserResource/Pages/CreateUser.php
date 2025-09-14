@@ -6,6 +6,7 @@ use App\Filament\Resources\UserResource;
 use Filament\Resources\Pages\CreateRecord;
 use App\Models\Customer;
 use App\Models\Address;
+use Spatie\Permission\Models\Role;
 
 class CreateUser extends CreateRecord
 {
@@ -16,7 +17,16 @@ class CreateUser extends CreateRecord
         $data = $this->form->getState();
         $user = $this->record;
 
-        if (isset($data['roles']) && in_array('customer', $data['roles'])) {
+        // Get the selected role IDs and check if customer role is selected
+        $selectedRoleIds = $data['roles'] ?? [];
+        $customerRoleId = Role::where('name', 'customer')->value('id');
+        
+        // Ensure selectedRoleIds is an array
+        if (!is_array($selectedRoleIds)) {
+            $selectedRoleIds = [$selectedRoleIds];
+        }
+        
+        if (in_array($customerRoleId, $selectedRoleIds)) {
             // Create or update customer
             $customer = Customer::updateOrCreate(
                 ['user_id' => $user->id],

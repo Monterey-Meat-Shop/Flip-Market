@@ -32,46 +32,14 @@ class Product extends Model
         'is_active' => 'boolean',
     ];
 
-    /**
-     * Define the relationship to product variants.
-     */
     public function variants(): HasMany
     {
         return $this->hasMany(ProductVariant::class, 'product_id', 'productID');
     }
 
-    /**
-     * Get the total stock quantity from all variants.
-     */
     public function getTotalStockQuantityAttribute(): int
     {
         return $this->variants->sum('stock_quantity');
-    }
-
-    protected static function boot()
-    {
-        parent::boot();
-
-        static::saved(function ($product) {
-            $totalStock = $product->variants()->sum('stock_quantity');
-
-            if ($product->status !== 'pre_order') {
-                if ($totalStock === 0) {
-                    $product->status = 'out_of_stock';
-                } elseif ($totalStock <= 4) {
-                    $product->status = 'low_stock';
-                } else {
-                    $product->status = 'in_stock';
-                }
-            }
-
-            $product->is_active = ($product->status === 'pre_order') || ($totalStock > 0);
-
-            // Save again only if something changed
-            if ($product->isDirty(['status', 'is_active'])) {
-                $product->saveQuietly();
-            }
-        });
     }
 
     public function category()
@@ -102,5 +70,29 @@ class Product extends Model
     public function discounts()
     {
         return $this->belongsToMany(Discount::class, 'discount_product', 'product_id', 'discount_id');
+    }
+
+    /**
+     * Refresh the product status based on total variant stock.
+     */
+    public function refreshProductStatus(): void
+    {
+        $totalStock = $this->variants()->sum('stock_quantity');
+
+        if ($this->status !== 'pre_order') {
+            if ($totalStock === 0) {
+                $this->status = 'out_of_stock';
+            } elseif ($totalStock <= 4) {
+                $this->status = 'low_stock';
+            } else {
+                $this->status = 'in_stock';
+            }
+        }
+
+        $this->is_active = ($this->status === 'pre_order') || ($totalStock > 0);
+
+        if ($this->isDirty(['status', 'is_active'])) {
+            $this->saveQuietly();
+        }
     }
 }
