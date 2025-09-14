@@ -1,66 +1,52 @@
 <?php
 
-namespace App\Filament\Resources\ReportResource\Pages;
+namespace App\Exports;
 
-use App\Exports\ReportsExport;
-use App\Filament\Resources\ReportResource;
-use Filament\Actions;
-use Filament\Forms;
-use Filament\Resources\Pages\Page;
-use Maatwebsite\Excel\Facades\Excel;
-use Barryvdh\DomPDF\Facade\Pdf;
-use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Maatwebsite\Excel\Concerns\FromCollection;
+use Maatwebsite\Excel\Concerns\WithHeadings;
+use Maatwebsite\Excel\Concerns\WithMapping;
+use App\Models\Report; // Adjust this to your actual model
+use Illuminate\Support\Collection;
 
-class ListReports extends Page
+class ReportsExport implements FromCollection, WithHeadings, WithMapping
 {
-    protected static string $resource = ReportResource::class;
-    protected static string $view = 'filament.resources.report-resource.pages.list-reports';
+    public function collection()
+    {
+        // Replace this with your actual data logic
+        return Report::all(); // or whatever query you need
+    }
 
-    protected function getHeaderActions(): array
+    public function headings(): array
     {
         return [
-            // Excel Export Button
-            Actions\Action::make('export_excel')
-                ->label('Export Excel')
-                ->icon('heroicon-o-document-arrow-down')
-                ->form([
-                    Forms\Components\TextInput::make('filename')
-                        ->label('File name')
-                        ->default('weekly-report_' . now()->format('Ymd_His'))
-                        ->required()
-                        ->helperText('Do not include ".xlsx" — it will be added automatically.'),
-                ])
-                ->action(fn(array $data): BinaryFileResponse =>
-                    Excel::download(
-                        new ReportsExport(),
-                        $data['filename'] . '.xlsx'
-                    )
-                ),
-
-            // PDF Export Button
-            Actions\Action::make('export_pdf')
-                ->label('Export PDF')
-                ->icon('heroicon-o-printer')
-                ->form([
-                    Forms\Components\TextInput::make('filename')
-                        ->label('File name')
-                        ->default('weekly-report_' . now()->format('Ymd_His'))
-                        ->required()
-                        ->helperText('Do not include ".pdf" — it will be added automatically.'),
-                ])
-                ->action(function (array $data) {
-                    $export = new ReportsExport();
-
-                    $pdf = Pdf::loadView('pdf.weekly-report', [
-                        'headings' => $export->headings(),
-                        'rows'     => $export->array(),
-                    ])->setPaper('A4', 'portrait');
-
-                    return response()->streamDownload(
-                        fn() => print($pdf->output()),
-                        $data['filename'] . '.pdf'
-                    );
-                }),
+            'ID',
+            'Title',
+            'Description',
+            'Status',
+            'Created At',
+            'Updated At',
+            // Add your actual column headers here
         ];
+    }
+
+    public function map($report): array
+    {
+        return [
+            $report->id,
+            $report->title,
+            $report->description,
+            $report->status,
+            $report->created_at,
+            $report->updated_at,
+            // Map your actual report fields here
+        ];
+    }
+
+    // Helper method for PDF generation
+    public function array(): array
+    {
+        return $this->collection()->map(function ($report) {
+            return $this->map($report);
+        })->toArray();
     }
 }
