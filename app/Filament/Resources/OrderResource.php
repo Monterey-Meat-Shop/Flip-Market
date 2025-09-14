@@ -26,6 +26,7 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\SelectColumn;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
 use Closure;
@@ -34,7 +35,6 @@ class OrderResource extends Resource
 {
     protected static ?string $model = Order::class;
 
-    protected static ?string $navigationGroup = 'Sales';
     protected static ?string $navigationIcon = 'heroicon-o-shopping-bag';
     protected static ?string $navigationLabel = 'Orders';
     protected static ?string $slug = 'orders';
@@ -43,11 +43,56 @@ class OrderResource extends Resource
     {
         $query = parent::getEloquentQuery()->with(['payment', 'customer', 'orderItems'])->withTrashed();
 
-        if (auth()->user()->hasRole('admin')) {
+        if (auth()->user()->hasRole(['admin', 'manager'])) {
             return $query;
         }
 
         return $query->where('customerID', auth()->id());
+    }
+
+    public static function getNavigationGroup(): ?string
+    {
+        $user = auth()->user();
+
+        if ($user && $user->hasRole(['admin'])) {
+           return 'Sales';
+        }
+        return null;
+    }
+
+    public static function canAccess(): bool
+    {
+        return auth()->user()->hasRole(['admin', 'manager']);
+    }
+
+    public static function canCreate(): bool
+    {
+        return auth()->user()->hasRole('admin');
+    }
+
+    public static function canEdit(Model $record): bool
+    {
+        return auth()->user()->hasRole('manager');
+    }
+
+    public static function canDelete(Model $record): bool
+    {
+        return auth()->user()->hasRole('admin');
+    }    
+
+    public static function canForceDelete(Model $record): bool
+    {
+        return auth()->user()->hasRole('admin');
+    }
+
+    public static function canRestore(Model $record): bool
+    {
+        return auth()->user()->hasRole('admin');
+    }
+
+    public static function getRouteKeyName(): ?string
+    {
+        return 'ProductID';
     }
 
     public static function form(Forms\Form $form): Forms\Form

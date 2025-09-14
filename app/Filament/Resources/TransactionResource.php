@@ -50,7 +50,6 @@ class TransactionResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-currency-dollar';
 
-    protected static ?string $navigationGroup = 'Sales';
     protected static ?string $navigationLabel = 'Transactions';
     protected static ?string $pluralModelLabel = 'Transactions';
     protected static ?string $modelLabel = 'Transaction';
@@ -58,24 +57,82 @@ class TransactionResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
+
         $query = parent::getEloquentQuery();
+        $user = auth()->user();
+
+        // If no user is authenticated, return empty query
+        if (!$user) {
+            return $query->whereRaw('1 = 0');
+        }
 
         // Admin: View all transactions
-        if (auth()->user()->hasRole('admin')) {
+        if ($user->hasRole(['admin', 'cashier'])) {
             return $query;
         }
+    
         // Cashier: Only view 'guest' transactions using a direct, reliable filter.
         // This ensures a cashier cannot access other users' data.
-        if (auth()->user()->hasRole('cashier')) {
+        if ($user->hasRole('cashier')) {
             $guestUser = User::where('first_name', 'guest')->first();
             if ($guestUser) {
                 return $query->where('customerID', $guestUser->id);
             }
             // If the guest user does not exist, show an empty table to prevent errors.
-            return $query->where('id', null);
+            return $query->whereRaw('1 = 0'); // Better than where('id', null)
         }
+    
         // Standard user: Only view their own transactions.
-        return $query->where('customerID', auth()->id());
+        return $query->where('customerID', $user->id);
+    }
+
+    public static function getNavigationGroup(): ?string
+    {
+        $user = auth()->user();
+    
+        // Only show 'Sales' group for admin users
+        if ($user && $user->hasRole('admin')) {
+           return 'Sales';
+        }
+    
+        // Return null to hide from Sales group for non-admin users
+        return null;
+    }
+
+    public static function canAccess(): bool
+    {
+        $user = auth()->user();
+        return $user && $user->hasRole(['admin', 'cashier']);
+    }
+
+    public static function canCreate(): bool
+    {
+        $user = auth()->user();
+        return auth()->user()->hasRole(['admin', 'cashier']); //need to changes
+    }
+
+    public static function canEdit(Model $record): bool
+    {
+        $user = auth()->user();
+        return $user && $user->hasRole('cashier');
+    }
+
+    public static function canDelete(Model $record): bool
+    {
+        $user = auth()->user();
+        return $user && $user->hasRole('admin');
+    }
+
+    public static function canForceDelete(Model $record): bool
+    {
+        $user = auth()->user();
+        return $user && $user->hasRole('admin');
+    }
+
+    public static function canRestore(Model $record): bool
+    {
+        $user = auth()->user();
+        return $user && $user->hasRole('admin');
     }
 
     public static function form(Form $form): Form

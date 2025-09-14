@@ -44,11 +44,23 @@ class ProductResource extends Resource
     protected static ?string $model = Product::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-cube';
-    protected static ?string $navigationGroup = 'Products';
+
+    public static function getNavigationGroup(): ?string
+    {
+        $user = auth()->user();
+    
+        // Only show 'Sales' group for admin users
+        if ($user && $user->hasRole('admin')) {
+           return 'Products';
+        }
+    
+        // Return null to hide from Sales group for non-admin users
+        return null;
+    }
 
     public static function canAccess(): bool
     {
-        return auth()->user()->hasRole(['admin', 'manager']);
+        return auth()->user()->hasRole(['admin', 'manager', 'cashier']);
     }
 
     public static function canViewAny(): bool
