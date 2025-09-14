@@ -12,14 +12,11 @@ use Carbon\Carbon;
 
 class OrdersStats extends BaseWidget
 {
-   protected ?string $heading = 'Realtime Orders Stats';
+    protected ?string $heading = 'Weekly Orders Report';
 
     protected function getStats(): array
     {
-        $ttl = 60;
-        $ordersCount = 0;
-        $ordersTotal = 0.0;
-        $ordersLast7 = 0;
+        $ttl = 60; // cache for 1 min
 
         if (! class_exists(Order::class)) {
             return $this->fallbackStats();
@@ -30,10 +27,6 @@ class OrdersStats extends BaseWidget
             return $this->fallbackStats();
         }
 
-        // count
-        $ordersCount = (int) Cache::remember("orders_stats:count", $ttl, fn () => DB::table($table)->count());
-
-        // total (detect common amount columns)
         $amountColumn = Cache::remember("orders_stats:amount_column", $ttl, function () use ($table) {
             foreach (['total', 'total_amount', 'amount', 'grand_total'] as $c) {
                 if (Schema::hasColumn($table, $c)) {
@@ -43,42 +36,88 @@ class OrdersStats extends BaseWidget
             return null;
         });
 
-        if ($amountColumn) {
-            $ordersTotal = (float) Cache::remember("orders_stats:total", $ttl, fn () => DB::table($table)->sum($amountColumn));
-        }
+        // Calculate current week range
+        $startOfWeek = Carbon::now()->startOfWeek();
+        $endOfWeek   = Carbon::now()->endOfWeek();
 
-        // last 7 days (count)
-        $ordersLast7 = (int) Cache::remember("orders_stats:last7_count", $ttl, fn () => DB::table($table)->whereDate('created_at', '>=', now()->subDays(7))->count());
+        // Calculate last week range
+        $startOfLastWeek = (clone $startOfWeek)->subWeek();
+        $endOfLastWeek   = (clone $endOfWeek)->subWeek();
+
+        // Weekly Orders Count
+        $ordersThisWeek = (int) Cache::remember("orders_stats:this_week", $ttl, function () use ($table, $startOfWeek, $endOfWeek) {
+            return DB::table($table)
+                ->whereBetween('created_at', [$startOfWeek, $endOfWeek])
+                ->count();
+        });
+
+        $ordersLastWeek = (int) Cache::remember("orders_stats:last_week", $ttl, function () use ($table, $startOfLastWeek, $endOfLastWeek) {
+            return DB::table($table)
+                ->whereBetween('created_at', [$startOfLastWeek, $endOfLastWeek])
+                ->count();
+        });
+
+        // Weekly Sales Total
+        $salesThisWeek = 0.0;
+        $salesLastWeek = 0.0;
+        if ($amountColumn) {
+            $salesThisWeek = (float) Cache::remember("orders_stats:sales_this_week", $ttl, function () use ($table, $amountColumn, $startOfWeek, $endOfWeek) {
+                return DB::table($table)
+                    ->whereBetween('created_at', [$startOfWeek, $endOfWeek])
+                    ->sum($amountColumn);
+            });
+
+            $salesLastWeek = (float) Cache::remember("orders_stats:sales_last_week", $ttl, function () use ($table, $amountColumn, $startOfLastWeek, $endOfLastWeek) {
+                return DB::table($table)
+                    ->whereBetween('created_at', [$startOfLastWeek, $endOfLastWeek])
+                    ->sum($amountColumn);
+            });
+        }
 
         $formatCurrency = fn($v) => '₱' . number_format((float) $v, 2);
 
+        // Calculate week-over-week change (%)
+        $ordersGrowth = $ordersLastWeek > 0 
+            ? (($ordersThisWeek - $ordersLastWeek) / $ordersLastWeek) * 100 
+            : 0;
+
+        $salesGrowth = $salesLastWeek > 0
+            ? (($salesThisWeek - $salesLastWeek) / $salesLastWeek) * 100
+            : 0;
+
         return [
-            Stat::make('orders_product', 'Orders')
-                ->value((string) $ordersCount)
-                ->description('Total orders')
+            Stat::make('orders_weekly', 'Orders (This Week)')
+                ->value((string) $ordersThisWeek)
+                ->description($ordersGrowth >= 0 
+                    ? '↑ ' . number_format($ordersGrowth, 1) . '% vs last week' 
+                    : '↓ ' . number_format(abs($ordersGrowth), 1) . '% vs last week')
                 ->icon('heroicon-o-shopping-cart')
-                ->color('primary'),
+                ->color($ordersGrowth >= 0 ? 'success' : 'danger'),
 
-            Stat::make('orders_total', 'Orders Total')
-                ->value($formatCurrency($ordersTotal))
-                ->description('Sum of order totals')
+            Stat::make('sales_weekly', 'Sales (This Week)')
+                ->value($formatCurrency($salesThisWeek))
+                ->description($salesGrowth >= 0 
+                    ? '↑ ' . number_format($salesGrowth, 1) . '% vs last week' 
+                    : '↓ ' . number_format(abs($salesGrowth), 1) . '% vs last week')
                 ->icon('heroicon-o-currency-dollar')
-                ->color('primary'),
-
-        //    Stat::make('orders_last7', 'Last 7d')
-        //         ->value((string) $ordersLast7)
-        //         ->description('Orders in last 7 days')
-        //         ->icon('heroicon-o-clock')
-        //         ->color('warning'),
+                ->color($salesGrowth >= 0 ? 'success' : 'danger'),
         ];
     }
 
     protected function fallbackStats(): array
     {
         return [
-            Stat::make('orders_count', 'Orders')->value('0')->description('No orders')->icon('heroicon-o-exclamation-triangle')->color('danger'),
-            Stat::make('orders_total', 'Orders Total')->value('₱0.00')->description('No data')->icon('heroicon-o-currency-dollar')->color('primary'),
-        //    Stat::make('orders_last7', 'Last 7d')->value('0')->description('No data')->icon('heroicon-o-clock')->color('warning'), // Not Included 
+            Stat::make('orders_weekly', 'Orders (This Week)')
+                ->value('0')
+                ->description('No data')
+                ->icon('heroicon-o-exclamation-triangle')
+                ->color('danger'),
+
+            Stat::make('sales_weekly', 'Sales (This Week)')
+                ->value('₱0.00')
+                ->description('No data')
+                ->icon('heroicon-o-currency-dollar')
+                ->color('primary'),
         ];
     }
 }
