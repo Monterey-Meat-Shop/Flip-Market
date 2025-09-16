@@ -21,6 +21,11 @@ class OrderItem extends Model
         'colorway',
         'quantity',
         'unit_price',
+
+        'original_price',
+        'discount_name',
+        'discount_amount',
+        
         'sub_total',
     ];
 

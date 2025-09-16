@@ -18,11 +18,15 @@ class Discount extends Model
         'discount_type',
         'discount_value',
         'is_active',
+        'start_date',   
+        'end_date',     
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
         'discount_value' => 'decimal:2',
+        'start_date' => 'datetime',   
+        'end_date' => 'datetime',     
     ];
 
     public function products()
@@ -32,15 +36,18 @@ class Discount extends Model
 
     public function getFinalPrice(float $originalPrice): float
     {
-        if (!$this->is_active) {
+        if (
+            ! $this->is_active ||
+            ($this->start_date && now()->lt($this->start_date)) ||
+            ($this->end_date && now()->gt($this->end_date))
+        ) {
             return $originalPrice;
         }
 
         if ($this->discount_type === 'Percentage') {
             return $originalPrice - ($originalPrice * ($this->discount_value / 100));
-
         } elseif ($this->discount_type === 'Fixed') {
-            return $originalPrice - $this->discount_value;
+            return max(0, $originalPrice - $this->discount_value); // prevent negative price
         }
 
         return $originalPrice;
@@ -49,7 +56,6 @@ class Discount extends Model
     protected static function booted()
     {
         static::deleting(function (Discount $discount) {
-            // Corrected variable name from $brand to $discount
             if (! $discount->isForceDeleting()) {
                 $discount->is_active = false;
                 $discount->saveQuietly();

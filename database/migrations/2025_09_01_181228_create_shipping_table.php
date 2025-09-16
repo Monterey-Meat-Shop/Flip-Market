@@ -21,7 +21,7 @@ return new class extends Migration
             $table->string('shipping_method'); //Lalamove, JNT, 
             
             // Corrected enum and default value
-            $table->enum('shipping_status', ['pending', 'processing', 'shipped', 'delivered'])->default('pending');
+            $table->enum('shipping_status', ['processing', 'in-transit', 'delivered'])->default('processing');
             
             $table->timestamps();
         });

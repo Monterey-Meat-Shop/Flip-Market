@@ -26,6 +26,8 @@ return new class extends Migration
             $table->decimal('final_amount', 10, 2);
             $table->enum('order_status', ['pending', 'processing', 'completed', 'cancelled', 'pre-order'])->default('pending');
             $table->enum('payment_status', ['unpaid', 'paid', 'verified'])->default('unpaid');
+
+            $table->boolean('stock_deducted')->default(false); //added
             
             $table->string('payment_method')->nullable();
 

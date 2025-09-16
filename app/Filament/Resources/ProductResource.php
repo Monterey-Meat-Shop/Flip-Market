@@ -25,6 +25,7 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TagsColumn;
+use Filament\Tables\Columns\BadgeColumn;
 use Filament\Tables\Actions\ActionGroup;
 use Filament\Tables\Actions\ViewAction;
 use Filament\Tables\Actions\EditAction;
@@ -43,11 +44,23 @@ class ProductResource extends Resource
     protected static ?string $model = Product::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-cube';
-    protected static ?string $navigationGroup = 'Products';
+
+    public static function getNavigationGroup(): ?string
+    {
+        $user = auth()->user();
+    
+        // Only show 'Sales' group for admin users
+        if ($user && $user->hasRole('admin')) {
+           return 'Products';
+        }
+    
+        // Return null to hide from Sales group for non-admin users
+        return null;
+    }
 
     public static function canAccess(): bool
     {
-        return auth()->user()->hasRole(['admin', 'manager']);
+        return auth()->user()->hasRole(['admin', 'manager', 'cashier']);
     }
 
     public static function canViewAny(): bool
@@ -182,29 +195,18 @@ class ProductResource extends Resource
                 ]),
 
                 Section::make('Status')->schema([
-                    Select::make('status')
-                        ->required()
-                        ->options([
-                            'in_stock' => 'In Stock',
-                            'low_stock' => 'Low Stock',
-                            'pre_order' => 'Pre-order',
-                            'out_of_stock' => 'Out of Stock',
-                        ])
-                        ->default('in_stock')
-                        ->live(onBlur: true)
-                        ->afterStateUpdated(function (Set $set, Get $get, string $state) {
-                            if ($state === 'pre_order') {
-                                $set('is_active', true);
-                            }
-                            if ($state === 'out_of_stock') {
-                                $set('is_active', false);
-                            }
-                        }),
-                    
-                    Toggle::make('is_active')
-                        ->required()
-                        ->default(true)
-                        ->helperText('This field is automatically managed, but you can override it.'),
+                Select::make('status')
+                    ->options([
+                        'pre_order' => 'Pre-order',
+                    ])
+                    ->label('Status')
+                    ->default('in_stock')
+                    ->helperText('Status is calculated automatically unless set to Pre-order.'),
+
+                Toggle::make('is_active')
+                    ->required()
+                    ->default(true)
+                    ->helperText('Automatically managed, unless overridden for pre-order.'),
                 ]),
             ])->columnSpan(1)
         ])->columns(3);
@@ -238,15 +240,15 @@ class ProductResource extends Resource
                 // TagsColumn::make('discounts.name')
                 //     ->label('Discounts'),
                 
-                TextColumn::make('status')
-                    ->label('Status')
-                    ->badge()
-                    ->color(fn (string $state): string => match ($state) {
-                        'in_stock' => 'success',
-                        'low_stock' => 'warning',
-                        'pre_order' => 'info',
-                        'out_of_stock' => 'danger',
-                    }),
+                BadgeColumn::make('status')
+    ->colors([
+        'success' => 'in_stock',
+        'warning' => 'low_stock',
+        'danger' => 'out_of_stock',
+        'info' => 'pre_order',
+    ])
+    ->sortable()
+    ->label('Status'),
                 
                 TextColumn::make('size_stocks')
                     ->label('Sizes & Stock')
@@ -366,5 +368,22 @@ class ProductResource extends Resource
     public static function resolveRecordRouteBinding(int | string $key): ?Model
     {
         return static::getModel()::where('ProductID', $key)->withTrashed()->first();
+    }
+
+    public function getCalculatedStatusAttribute()
+    {
+        $totalStock = (int) $this->variants()->sum('stock_quantity');
+
+        if ($this->status === 'pre_order') {
+            return 'pre_order';
+        }
+
+        if ($totalStock === 0) {
+            return 'out_of_stock';
+        } elseif ($totalStock <= 4) {
+            return 'low_stock';
+        } else {
+            return 'in_stock';
+        }
     }
 }

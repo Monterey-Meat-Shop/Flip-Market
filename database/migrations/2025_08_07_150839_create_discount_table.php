@@ -19,6 +19,10 @@ return new class extends Migration
             $table->decimal('discount_value', 10, 2);
             $table->boolean('is_active')->default(true);
             //$table->string('applies_to');
+
+            $table->dateTime('start_date')->nullable();
+            $table->dateTime('end_date')->nullable();
+
             $table->timestamps();
             $table->softDeletes();
         });

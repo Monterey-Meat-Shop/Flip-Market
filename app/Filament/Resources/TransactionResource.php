@@ -3,7 +3,6 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\TransactionResource\Pages;
-use App\Filament\Resources\TransactionResource\RelationManagers;
 use App\Models\User;
 use App\Models\Order;
 use App\Models\PaymentMethod;
@@ -51,7 +50,6 @@ class TransactionResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-currency-dollar';
 
-    protected static ?string $navigationGroup = 'Sales';
     protected static ?string $navigationLabel = 'Transactions';
     protected static ?string $pluralModelLabel = 'Transactions';
     protected static ?string $modelLabel = 'Transaction';
@@ -59,56 +57,105 @@ class TransactionResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        $query = parent::getEloquentQuery();
 
-        // Admin: View all transactions
-        if (auth()->user()->hasRole('admin')) {
-            return $query;
+        $query = parent::getEloquentQuery();
+        $user = auth()->user();
+
+        // If no user is authenticated, return empty query
+        if (!$user) {
+            return $query->whereRaw('1 = 0');
         }
 
+        // Admin: View all transactions
+        if ($user->hasRole(['admin', 'cashier'])) {
+            return $query;
+        }
+    
         // Cashier: Only view 'guest' transactions using a direct, reliable filter.
         // This ensures a cashier cannot access other users' data.
-        if (auth()->user()->hasRole('cashier')) {
+        if ($user->hasRole('cashier')) {
             $guestUser = User::where('first_name', 'guest')->first();
             if ($guestUser) {
                 return $query->where('customerID', $guestUser->id);
             }
             // If the guest user does not exist, show an empty table to prevent errors.
-            return $query->where('id', null);
+            return $query->whereRaw('1 = 0'); // Better than where('id', null)
         }
-
+    
         // Standard user: Only view their own transactions.
-        return $query->where('customerID', auth()->id());
+        return $query->where('customerID', $user->id);
     }
 
-    /**
-     * This method defines the form for creating and editing transactions.
-     * It includes dynamic fields and validation.
-     */
+    public static function getNavigationGroup(): ?string
+    {
+        $user = auth()->user();
+    
+        // Only show 'Sales' group for admin users
+        if ($user && $user->hasRole('admin')) {
+           return 'Sales';
+        }
+    
+        // Return null to hide from Sales group for non-admin users
+        return null;
+    }
+
+    public static function canAccess(): bool
+    {
+        $user = auth()->user();
+        return $user && $user->hasRole(['admin', 'cashier']);
+    }
+
+    public static function canCreate(): bool
+    {
+        $user = auth()->user();
+        return auth()->user()->hasRole(['admin', 'cashier']); //need to changes
+    }
+
+    public static function canEdit(Model $record): bool
+    {
+        $user = auth()->user();
+        return $user && $user->hasRole('cashier');
+    }
+
+    public static function canDelete(Model $record): bool
+    {
+        $user = auth()->user();
+        return $user && $user->hasRole('admin');
+    }
+
+    public static function canForceDelete(Model $record): bool
+    {
+        $user = auth()->user();
+        return $user && $user->hasRole('admin');
+    }
+
+    public static function canRestore(Model $record): bool
+    {
+        $user = auth()->user();
+        return $user && $user->hasRole('admin');
+    }
+
     public static function form(Form $form): Form
     {
         return $form
             ->schema([
-                // Hidden field to store the calculated total amount. This is necessary to save the value to the database.
+                // Hidden field to store the calculated total amount
                 Hidden::make('total_amount')
                     ->dehydrateStateUsing(fn (Get $get) => collect($get('orderItems') ?? [])->sum('sub_total'))
                     ->default(0.00),
 
-                // This is the new hidden field to ensure final_amount is sent to the database.
                 Hidden::make('final_amount')
-                    ->dehydrateStateUsing(fn (Get $get) => collect($get('orderItems') ?? [])->sum('sub_total'))
+                    ->dehydrateStateUsing(fn(Get $get) => collect($get('orderItems') ?? [])->sum('sub_total'))
                     ->default(0.00),
 
                 // Section for general order information
                 Section::make('Order Information')
                     ->schema([
-                        // Select field for customer, filtered to only show the 'guest' user for cashiers.
                         Select::make('customerID')
                             ->label('Customer Name')
                             ->relationship(
                                 name: 'customer',
                                 titleAttribute: 'first_name',
-                                // This is the crucial change: it now filters the dropdown to only show the "guest" user.
                                 modifyQueryUsing: fn (Builder $query) => $query->where('first_name', 'guest')->orderBy('first_name')
                             )
                             ->getOptionLabelFromRecordUsing(fn (Model $record) => "{$record->first_name} {$record->last_name}")
@@ -116,7 +163,6 @@ class TransactionResource extends Resource
                             ->preload()
                             ->required(),
 
-                        // Date picker for the order date, disabled and dehydrated to prevent user from changing it.
                         DateTimePicker::make('order_date')
                             ->default(now())
                             ->required()
@@ -124,19 +170,17 @@ class TransactionResource extends Resource
                             ->dehydrated(true),
                     ])->columns(2),
 
-                // Section for order items using a repeater.
+                // Section for order items using a repeater
                 Section::make('Order Items')
                     ->schema([
                         Repeater::make('orderItems')
                             ->label('Products List')
                             ->relationship('orderItems')
                             ->schema([
-                                // Select field for product, dynamically updating other fields.
                                 Select::make('productID')
                                     ->relationship(
                                         name: 'product',
                                         titleAttribute: 'name',
-                                        // Filter out products that are 'pre_order' or 'out_of_stock' to avoid issues with inventory.
                                         modifyQueryUsing: fn (Builder $query) => $query->whereNotIn('status', ['pre_order', 'out_of_stock']),
                                     )
                                     ->searchable()
@@ -144,33 +188,27 @@ class TransactionResource extends Resource
                                     ->required()
                                     ->live()
                                     ->afterStateUpdated(function (Set $set, Get $get) {
-                                        // Fetch the product price and update fields.
                                         $product = Product::find($get('productID'));
                                         if ($product) {
                                             $set('unit_price', $product->price);
-                                            // Recalculate sub_total based on the new unit price.
                                             $set('sub_total', $product->price * $get('quantity'));
                                         } else {
-                                            // Reset fields if product not found.
                                             $set('unit_price', 0);
                                             $set('sub_total', 0);
                                         }
 
-                                        // Reset size and colorway to force a new selection.
                                         $set('product_variant_id', null);
                                         $set('size', null);
                                         $set('colorway', null);
                                     })
                                     ->columnSpan(4),
 
-                                // Select field for shoe size, dynamically populated from the product variants.
                                 Select::make('product_variant_id')
                                     ->label('Shoe Size')
                                     ->options(function (Get $get): array {
                                         $productID = $get('productID');
                                         if ($productID) {
                                             $variants = ProductVariant::where('product_id', $productID)->get();
-                                            // The key is the variant ID and the value is the size.
                                             return $variants->pluck('size', 'id')->toArray();
                                         }
                                         return [];
@@ -179,7 +217,6 @@ class TransactionResource extends Resource
                                     ->required()
                                     ->visible(fn (Get $get) => filled($get('productID')))
                                     ->afterStateUpdated(function (Set $set, Get $get) {
-                                        // Get the selected product variant and set the size and colorway.
                                         $productVariant = ProductVariant::find($get('product_variant_id'));
                                         if ($productVariant) {
                                             $set('size', $productVariant->size);
@@ -191,14 +228,12 @@ class TransactionResource extends Resource
                                     })
                                     ->columnSpan(2),
                                 
-                                // Text input for colorway, disabled and dehydrated as it's set dynamically.
                                 TextInput::make('colorway')
                                     ->label('Colorway')
                                     ->disabled()
                                     ->dehydrated(true)
                                     ->columnSpan(2),
 
-                                // Text input for quantity with custom validation for stock.
                                 TextInput::make('quantity')
                                     ->numeric()
                                     ->required()
@@ -213,12 +248,9 @@ class TransactionResource extends Resource
                                         }
                                     })
                                     ->rules([
-                                        // Custom validation rule to ensure quantity does not exceed available stock.
                                         function (Get $get) {
                                             return function (string $attribute, $value, Closure $fail) use ($get) {
-                                                // Find the specific product variant based on the variant ID.
                                                 $productVariant = ProductVariant::find($get('product_variant_id'));
-
                                                 if ($productVariant && $value > $productVariant->stock_quantity) {
                                                     $fail("The quantity for this product variant cannot exceed the available stock of {$productVariant->stock_quantity}.");
                                                 }
@@ -227,7 +259,6 @@ class TransactionResource extends Resource
                                     ])
                                     ->columnSpan(2),
 
-                                // Text input for unit price, disabled since it's set dynamically.
                                 TextInput::make('unit_price')
                                     ->numeric()
                                     ->required()
@@ -235,7 +266,6 @@ class TransactionResource extends Resource
                                     ->dehydrated(true)
                                     ->columnSpan(2),
 
-                                // Text input for subtotal, disabled since it's set dynamically.
                                 TextInput::make('sub_total')
                                     ->numeric()
                                     ->required()
@@ -243,7 +273,6 @@ class TransactionResource extends Resource
                                     ->dehydrated(true)
                                     ->columnSpan(2),
                                 
-                                // Hidden field for the size, as it's stored on the OrderItem model.
                                 Hidden::make('size')
                                     ->label('Size')
                                     ->disabled()
@@ -257,40 +286,63 @@ class TransactionResource extends Resource
                     ]),
 
                 Section::make('Payment Information')
+                    ->relationship('payment')
                     ->schema([
-                        // Select field for payment method. It now saves the method name instead of the ID.
-                        Select::make('payment_method')
+                        Select::make('payment_methodID')
                             ->label('Payment Method')
-                            ->options(
-                                PaymentMethod::query()
-                                    ->whereIn('method_name', ['Cash', 'Gcash'])
-                                    ->pluck('method_name', 'method_name')
+                            ->relationship(
+                                name: 'paymentMethod', 
+                                titleAttribute: 'method_name',
+                                modifyQueryUsing: fn (Builder $query) => $query->whereIn('method_name', ['Cash', 'GCash'])
                             )
                             ->required()
+                            ->preload()
+                            ->dehydrated(true)
                             ->live(),
 
-                        // Text input for reference number, conditionally visible for Gcash.
                         TextInput::make('reference_number')
                             ->label('Reference Number')
                             ->placeholder('Reference no.')
-                            ->visible(fn (Get $get) => $get('payment_method') === 'Gcash')
-                            ->required(fn (Get $get) => $get('payment_method') === 'Gcash'),
+                            ->visible(function (Get $get) {
+                                $paymentMethodId = $get('payment_methodID');
+                                if (!$paymentMethodId) {
+                                    return false;
+                                }
+                
+                                $paymentMethod = PaymentMethod::find($paymentMethodId);
+                                return $paymentMethod && strtolower($paymentMethod->method_name) === 'gcash';
+                            })
+                            ->required(function (Get $get) {
+                                $paymentMethodId = $get('payment_methodID');
+                                if (!$paymentMethodId) {
+                                    return false;
+                                }
+                
+                                $paymentMethod = PaymentMethod::find($paymentMethodId);
+                                return $paymentMethod && strtolower($paymentMethod->method_name) === 'gcash';
+                            })
+                            ->dehydrated(true),
 
-                        // Select field for payment status.
-                        Select::make('payment_status')
+                        TextInput::make('amount')
+                            ->numeric()
+                            ->required()
+                            ->dehydrated(true),
+
+                        Select::make('status')
                             ->label('Payment Status')
                             ->options([
-                                'paid' => 'Paid',
                                 'unpaid' => 'Unpaid',
+                                'paid' => 'Paid',
                                 'verified' => 'Verified',
                             ])
-                            ->default('paid')
-                            ->required(),
-                    ])->columns(3),
+                            ->default('paid') // Changed default to 'paid' for transactions
+                            ->required()
+                            ->dehydrated(true),
+                    ])
+                    ->columns(3),
 
                 Section::make('Order Status')
                     ->schema([
-                        // Placeholder for displaying the total order amount.
                         Placeholder::make('total_amount_placeholder')
                             ->label('Total Order Amount')
                             ->content(function (Get $get) {
@@ -301,15 +353,11 @@ class TransactionResource extends Resource
                             })
                             ->live(),
 
-                        // Select field for order status.
                         Select::make('order_status')
                             ->label('Order Status')
                             ->options([
-                                'pending' => 'Pending',
+                                //'pending' => 'Pending',
                                 'processing' => 'Processing',
-                                'shipped' => 'Shipped',
-                                'delivered' => 'Delivered',
-                                'cancelled' => 'Cancelled',
                                 'completed' => 'Completed',
                             ])
                             ->default('completed')
@@ -318,13 +366,9 @@ class TransactionResource extends Resource
             ]);
     }
 
-    /**
-     * This method defines the table's columns, filters, and actions.
-     */
     public static function table(Table $table): Table
     {
         return $table
-            // Corrected default sort to use the 'orderID' column.
             ->defaultSort('orderID', 'desc')
             ->columns([
                 TextColumn::make('customer.first_name')
@@ -334,25 +378,21 @@ class TransactionResource extends Resource
                             $q->where('first_name', 'like', "%{$search}%"))
                     ),
 
-                // Display a list of all products in the order.
                 TextColumn::make('orderItems.product.name')
                     ->label('Products')
                     ->listWithLineBreaks(),
 
-                // Displaying the payment method directly from the order.
-                TextColumn::make('payment_method')
+                TextColumn::make('payment.paymentMethod.method_name')
                     ->label('Payment Method')
                     ->sortable()
                     ->formatStateUsing(fn ($state) => $state ?? 'N/A'),
 
-                // Displaying the total amount of the order with currency.
                 TextColumn::make('total_amount')
                     ->label('Total Amount')
                     ->numeric()
                     ->sortable()
                     ->money('PHP'),
 
-                // Displaying the order status as a colored badge.
                 TextColumn::make('order_status')
                     ->label('Order Status')
                     ->badge()
@@ -368,7 +408,6 @@ class TransactionResource extends Resource
                     ->dateTime()
                     ->sortable(),
 
-                // Displaying the reference number from the related payment record, hidden by default.
                 TextColumn::make('reference_number')
                     ->label('Reference No.')
                     ->sortable()
@@ -447,19 +486,13 @@ class TransactionResource extends Resource
             ]);
     }
 
-    /**
-     * This method defines the relationships that will be displayed on the table.
-     */
     public static function getRelations(): array
     {
         return [
-            // You can add more relations here in the future if needed.
+            //
         ];
     }
 
-    /**
-     * This method adds a navigation badge showing the count of completed orders today.
-     */
     public static function getNavigationBadge(): ?string
     {
         return static::getModel()::query()
@@ -468,9 +501,6 @@ class TransactionResource extends Resource
             ->count();
     }
 
-    /**
-     * This method defines the routes for the resource.
-     */
     public static function getPages(): array
     {
         return [
@@ -480,18 +510,11 @@ class TransactionResource extends Resource
         ];  
     }
 
-    /**
-     * This method restricts who can view the resource page.
-     */
     public static function canViewAny(): bool
     {
         return Auth::user()->hasAnyRole(['admin', 'cashier']);
     }
 
-    /**
-     * This function now explicitly handles stock deduction and
-     * sanitizes the form data before saving the transaction.
-     */
     public static function mutateFormDataBeforeCreate(array $data): array
     {
         $totalAmount = collect($data['orderItems'] ?? [])
@@ -502,26 +525,11 @@ class TransactionResource extends Resource
         $data['total_amount'] = $totalAmount;
         $data['final_amount'] = $totalAmount;
 
-        return $data;
-    }
-
-    /**
-     * Deduct stock after the order is actually created. This is a crucial step for inventory management.
-     */
-    public static function afterCreate(Model $record): void
-    {
-        if ($record instanceof Order && $record->payment_status === 'paid') {
-            // Refresh the record to ensure orderItems are loaded.
-            $record->load('orderItems.productVariant');
-
-            try {
-                // Call the custom method to deduct stock for each ordered item.
-                $record->deductStock();
-            } catch (\Exception $e) {
-                // Log the error and rethrow the exception so the user sees a clear error message.
-                Log::error("Stock deduction failed: " . $e->getMessage());
-                throw $e; 
-            }
+        // FIX: Ensure payment status is included
+        if (isset($data['payment'])) {
+            $data['payment']['status'] = $data['payment']['status'] ?? 'unpaid';
         }
+
+        return $data;
     }
 }
