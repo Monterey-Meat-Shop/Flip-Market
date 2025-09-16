@@ -11,13 +11,12 @@ class Payment extends Model
     use HasFactory;
 
     protected $table = 'payments';
-    protected $primaryKey = 'paymentID'; // Corrected to match the new migration file
+    protected $primaryKey = 'paymentID';
 
     protected $fillable = [
         'orderID',
         'payment_methodID',
         'amount',
-        //'downpayment',
         'reference_number',
         'status',
     ];

@@ -32,17 +32,11 @@ class Product extends Model
         'is_active' => 'boolean',
     ];
 
-    /**
-     * Define the relationship to product variants.
-     */
     public function variants(): HasMany
     {
         return $this->hasMany(ProductVariant::class, 'product_id', 'productID');
     }
 
-    /**
-     * Get the total stock quantity from all variants.
-     */
     public function getTotalStockQuantityAttribute(): int
     {
         return $this->variants->sum('stock_quantity');
@@ -67,7 +61,6 @@ class Product extends Model
 
             $product->is_active = ($product->status === 'pre_order') || ($totalStock > 0);
 
-            // Save again only if something changed
             if ($product->isDirty(['status', 'is_active'])) {
                 $product->saveQuietly();
             }
@@ -102,5 +95,16 @@ class Product extends Model
     public function discounts()
     {
         return $this->belongsToMany(Discount::class, 'discount_product', 'product_id', 'discount_id');
+    }
+
+    /**
+     * 🔥 Scope: Get top performing products by sales & revenue
+     */
+    public function scopeTopPerforming($query, $limit = 6)
+    {
+        return $query->withSum('orderItems as total_sales', 'quantity')
+            ->withSum('orderItems as total_revenue', \DB::raw('unit_price * quantity'))
+            ->orderByDesc('total_sales')
+            ->take($limit);
     }
 }
