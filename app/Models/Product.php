@@ -47,7 +47,6 @@ class Product extends Model
         return $this->variants->sum('stock_quantity');
     }
 
-<<<<<<< HEAD
     protected static function boot()
     {
         parent::boot();
@@ -74,9 +73,6 @@ class Product extends Model
     }
 
     public function category()
-=======
-    public function category(): BelongsTo
->>>>>>> 6dd5d23f23a7d431be701e3d96febf489e04a3c5
     {
         return $this->belongsTo(Category::class, 'categoryID');
     }
@@ -231,7 +227,6 @@ class Product extends Model
             $salesExpr = "COUNT({$orderItemsTable}.{$idCol})";
         }
     }
-<<<<<<< HEAD
 
     /**
      * 🔥 Scope: Get top performing products by sales & revenue
@@ -264,6 +259,4 @@ class Product extends Model
         return $joined;
     }
 }
-=======
-}
->>>>>>> 6dd5d23f23a7d431be701e3d96febf489e04a3c5
+
