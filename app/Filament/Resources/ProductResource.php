@@ -49,12 +49,9 @@ class ProductResource extends Resource
     {
         $user = auth()->user();
     
-        // Only show 'Sales' group for admin users
         if ($user && $user->hasRole('admin')) {
            return 'Products';
         }
-    
-        // Return null to hide from Sales group for non-admin users
         return null;
     }
 
@@ -144,9 +141,31 @@ class ProductResource extends Resource
                                     'integer' => 'The stock quantity must be a whole number.',
                                     'min' => 'The stock quantity cannot be less than 0.',
                                 ]),
-                            TextInput::make('colorway')
-                                ->required()
-                                ->maxLength(225),
+                            Select::make('colorway')
+                                ->label('Colorway')
+                                ->options([
+                                    'Black' => 'Black',
+                                    'White' => 'White',
+                                    'Brown' => 'Brown',
+                                    'Gray' => 'Gray',
+                                    'Beige / Tan / Nude' => 'Beige / Tan / Nude',
+                                    'Navy Blue' => 'Navy Blue',
+                                    'Burgundy / Oxblood' => 'Burgundy / Oxblood',
+                                    'Olive Green' => 'Olive Green',
+                                    'Red' => 'Red',
+                                    'Blue (general)' => 'Blue (general)',
+                                    'Yellow' => 'Yellow',
+                                    'Orange' => 'Orange',
+                                    'Pink' => 'Pink',
+                                    'Green (general)' => 'Green (general)',
+                                    'Purple' => 'Purple',
+                                    'Gold' => 'Gold',
+                                    'Silver' => 'Silver',
+                                    'Multi-color' => 'Multi-color',
+                                ])
+                                ->multiple()
+                                ->dehydrateStateUsing(fn ($state) => is_array($state) ? implode(', ', $state) : $state)
+                                ->required(fn (string $operation): bool => $operation === 'create'), // ✅ required only when adding
                         ])
                         ->defaultItems(1)
                         ->columns(3)
@@ -224,31 +243,25 @@ class ProductResource extends Resource
                     ->label('Image')
                     ->getStateUsing(fn ($record) => $record->image_url[0] ?? null), 
 
-                // Updated to use the relationship directly
                 TextColumn::make('brand.name')
                     ->label('Brand')
                     ->searchable()
                     ->sortable(),
 
-                // Updated to use the relationship directly
                 TextColumn::make('category.name')
                     ->label('Category')
                     ->searchable()
                     ->sortable(),
                 
-                // New column to show discounts
-                // TagsColumn::make('discounts.name')
-                //     ->label('Discounts'),
-                
                 BadgeColumn::make('status')
-    ->colors([
-        'success' => 'in_stock',
-        'warning' => 'low_stock',
-        'danger' => 'out_of_stock',
-        'info' => 'pre_order',
-    ])
-    ->sortable()
-    ->label('Status'),
+                    ->colors([
+                        'success' => 'in_stock',
+                        'warning' => 'low_stock',
+                        'danger' => 'out_of_stock',
+                        'info' => 'pre_order',
+                    ])
+                    ->sortable()
+                    ->label('Status'),
                 
                 TextColumn::make('size_stocks')
                     ->label('Sizes & Stock')
@@ -352,9 +365,6 @@ class ProductResource extends Resource
         ];
     }
 
-    /**
-     * Eager load the relationships for the table.
-     */
     public static function getEloquentQuery(): Builder
     {
         return parent::getEloquentQuery()
@@ -362,9 +372,6 @@ class ProductResource extends Resource
             ->with(['brand', 'category', 'discounts']);
     }
 
-    /**
-     * Resolve a record route binding with the custom primary key.
-     */
     public static function resolveRecordRouteBinding(int | string $key): ?Model
     {
         return static::getModel()::where('ProductID', $key)->withTrashed()->first();
