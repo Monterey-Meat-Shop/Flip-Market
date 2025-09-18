@@ -42,37 +42,7 @@ class Product extends Model
         return $this->hasMany(ProductVariant::class, 'product_id', 'productID');
     }
 
-    public function getTotalStockQuantityAttribute(): int
-    {
-        return $this->variants->sum('stock_quantity');
-    }
-
-    protected static function boot()
-    {
-        parent::boot();
-
-        static::saved(function ($product) {
-            $totalStock = $product->variants()->sum('stock_quantity');
-
-            if ($product->status !== 'pre_order') {
-                if ($totalStock === 0) {
-                    $product->status = 'out_of_stock';
-                } elseif ($totalStock <= 4) {
-                    $product->status = 'low_stock';
-                } else {
-                    $product->status = 'in_stock';
-                }
-            }
-
-            $product->is_active = ($product->status === 'pre_order') || ($totalStock > 0);
-
-            if ($product->isDirty(['status', 'is_active'])) {
-                $product->saveQuietly();
-            }
-        });
-    }
-
-    public function category()
+    public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class, 'categoryID');
     }
@@ -92,10 +62,9 @@ class Product extends Model
         return $this->belongsToMany(Discount::class, 'discount_product', 'product_id', 'discount_id');
     }
 
-    // --- Attributes / helpers ---
+    // --- Attributes / Helpers ---
     public function getTotalStockQuantityAttribute(): int
     {
-        // eager-loaded variants sum, or fallback to query
         if ($this->relationLoaded('variants')) {
             return $this->variants->sum('stock_quantity');
         }
@@ -138,13 +107,12 @@ class Product extends Model
         return $this->status === 'in_stock' && $this->total_stock_quantity > 0;
     }
 
-    // --- Boot ----
+    // --- Boot logic for status/is_active ---
     protected static function boot()
     {
         parent::boot();
 
         static::saved(function ($product) {
-            // keep automatic status/is_active logic, but avoid endless saves
             $totalStock = $product->variants()->sum('stock_quantity');
 
             if (($product->attributes['status'] ?? null) !== 'pre_order') {
@@ -166,33 +134,22 @@ class Product extends Model
     }
 
     /**
-     * Scope: topPerforming
-     *
-     * Usage:
-     *   Product::topPerforming(6)->get(); // top 6 products by units sold (fallbacks applied)
-     *
-     * This builds a subquery on `order_items` to aggregate total_sales and total_revenue.
-     * It tries to be robust: if `order_items.total` exists it uses that; otherwise uses
-     * price * quantity if available; otherwise falls back to counts.
-     *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param int $limit
-     * @return \Illuminate\Database\Eloquent\Builder
+     * 🔥 Scope: Get top performing products by sales & revenue
      */
     public function scopeTopPerforming($query, int $limit = 6)
     {
         $orderItemsTable = 'order_items';
 
-        // if table doesn't exist, just return product rows (no aggregates)
-        if (! Schema::hasTable($orderItemsTable)) {
+        // If order_items table doesn't exist, just return limited products
+        if (!Schema::hasTable($orderItemsTable)) {
             return $query->limit($limit);
         }
 
-        // detect columns
+        // Detect columns
         $quantityCol = Schema::hasColumn($orderItemsTable, 'quantity') ? 'quantity' : null;
 
-        // find numeric/amount column candidates
-        $amountCandidates = ['total', 'subtotal', 'amount', 'line_total', 'row_total', 'price', 'unit_price'];
+        // Find revenue/amount column candidates
+        $amountCandidates = ['total', 'subtotal', 'amount', 'line_total', 'row_total', 'unit_price', 'price'];
         $amountCol = null;
         foreach ($amountCandidates as $c) {
             if (Schema::hasColumn($orderItemsTable, $c)) {
@@ -201,53 +158,36 @@ class Product extends Model
             }
         }
 
-        // build aggregate expressions for revenue and sales
+        // Build revenue expression
         if ($amountCol === 'total' || in_array($amountCol, ['subtotal','amount','line_total','row_total'])) {
             $revenueExpr = "SUM({$orderItemsTable}.{$amountCol})";
-        } elseif ($amountCol === 'price' && $quantityCol) {
-            $revenueExpr = "SUM({$orderItemsTable}.price * {$orderItemsTable}.{$quantityCol})";
+        } elseif ($amountCol && $quantityCol) {
+            $revenueExpr = "SUM({$orderItemsTable}.{$amountCol} * {$orderItemsTable}.{$quantityCol})";
         } elseif ($amountCol) {
-            // amount present but quantity may or may not exist
-            if ($quantityCol) {
-                $revenueExpr = "SUM(COALESCE({$orderItemsTable}.{$amountCol},0) * {$orderItemsTable}.{$quantityCol})";
-            } else {
-                $revenueExpr = "SUM(COALESCE({$orderItemsTable}.{$amountCol},0))";
-            }
+            $revenueExpr = "SUM(COALESCE({$orderItemsTable}.{$amountCol},0))";
         } else {
-            // no recognizable amount column, fallback to 0 revenue
             $revenueExpr = "0";
         }
 
+        // Build sales expression
         if ($quantityCol) {
             $salesExpr = "SUM({$orderItemsTable}.{$quantityCol})";
         } else {
-            // fallback to counting rows for units sold
-            // prefer an id column if present, else count productID occurrences
             $idCol = Schema::hasColumn($orderItemsTable, 'id') ? 'id' : 'productID';
             $salesExpr = "COUNT({$orderItemsTable}.{$idCol})";
         }
-    }
 
-    /**
-     * 🔥 Scope: Get top performing products by sales & revenue
-     */
-    public function scopeTopPerforming($query, $limit = 6)
-    {
-        return $query->withSum('orderItems as total_sales', 'quantity')
-            ->withSum('orderItems as total_revenue', \DB::raw('unit_price * quantity'))
-
-        // build the subquery that aggregates by productID
+        // Subquery: aggregate sales & revenue by productID
         $sub = DB::table($orderItemsTable)
             ->select(
-                "{$orderItemsTable}.productID as productID",
+                "{$orderItemsTable}.productID",
                 DB::raw("{$salesExpr} as total_sales"),
                 DB::raw("{$revenueExpr} as total_revenue")
             )
             ->groupBy("{$orderItemsTable}.productID");
 
-        // Left join subquery to products and select.
-        // We select products.* and aggregate columns from subquery (coalesced to 0).
-        $joined = $query->leftJoinSub($sub, 'oi', 'oi.productID', '=', 'products.productID')
+        // Left join the subquery with products
+        return $query->leftJoinSub($sub, 'oi', 'oi.productID', '=', 'products.productID')
             ->select(
                 'products.*',
                 DB::raw('COALESCE(oi.total_sales, 0) AS total_sales'),
@@ -255,8 +195,5 @@ class Product extends Model
             )
             ->orderByDesc('total_sales')
             ->limit($limit);
-
-        return $joined;
     }
 }
-
