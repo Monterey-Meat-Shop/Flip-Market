@@ -203,6 +203,174 @@ class OrderResource extends Resource
                             ->required(),
                     ])->columns(2),
 
+                Section::make('Order Items')
+                    ->schema([
+                        Repeater::make('orderItems')
+                            ->label('Products List')
+                            ->relationship('orderItems')
+                            ->schema([
+                                Select::make('productID')
+                                    ->relationship(
+                                    'product',
+                                    'name',
+                                    modifyQueryUsing: fn (Builder $query) => $query->whereNotIn('status', ['pre_order', 'out_of_stock']),
+                                    )
+                                    ->searchable()
+                                    ->preload()
+                                    ->required()
+                                    ->live()
+                                    ->afterStateUpdated(function (Set $set, Get $get) {
+                                        $product = Product::find($get('productID'));
+                                        if ($product) {
+                                            $originalPrice = $product->price;
+                                            $finalPrice = $originalPrice;
+                                            $discountName = null;
+                                            $discountAmount = 0;
+        
+                                            $discountID = $get('../../discountID');
+                                            Log::info("Debug - Processing product:", [
+                                                'productID' => $product->productID,
+                                                'original_price' => $originalPrice,
+                                                'discountID' => $discountID
+                                            ]);
+        
+                                            if ($discountID) {
+                                                $discount = Discount::find($discountID);
+                                                Log::info("Debug - Discount found:", [
+                                                    'discount' => $discount ? $discount->toArray() : 'null',
+                                                    'product_has_discount' => $discount ? $product->discounts->contains($discount) : false
+                                                ]);
+            
+                                                if ($discount && $product->discounts->contains($discount)) {
+                                                    $finalPrice = $discount->getFinalPrice($originalPrice);
+                                                    $discountName = $discount->name;
+                                                    $discountAmount = $originalPrice - $finalPrice;
+                
+                                                    Log::info("Debug - Discount calculation details:", [
+                                                        'original_price' => $originalPrice,
+                                                        'original_price_type' => gettype($originalPrice),
+                                                        'final_price' => $finalPrice,
+                                                        'final_price_type' => gettype($finalPrice),
+                                                        'calculated_discount_amount' => $discountAmount,
+                                                        'discount_amount_type' => gettype($discountAmount),
+                                                        'discount_name' => $discountName,
+                                                        'discount_type' => $discount->discount_type,
+                                                        'discount_value' => $discount->discount_value
+                                                    ]);
+                                                }
+                                            }
+        
+                                            // Set the values
+                                            $set('original_price', $originalPrice);
+                                            $set('discount_name', $discountName);
+                                            $set('discount_amount', $discountAmount);
+                                            $set('unit_price', $finalPrice);
+                                            $set('sub_total', $finalPrice * ($get('quantity') ?? 1));
+        
+                                            Log::info("Debug - Values being set:", [
+                                                'setting_original_price' => $originalPrice,
+                                                'setting_discount_name' => $discountName,
+                                                'setting_discount_amount' => $discountAmount,
+                                                'setting_unit_price' => $finalPrice
+                                            ]);
+                                        }
+    
+                                        // Reset other fields
+                                        $set('product_variant_id', null);
+                                        $set('size', null);
+                                        $set('colorway', null);
+                                    })
+                                    ->columnSpan(4),
+
+                                Select::make('product_variant_id')
+                                    ->label('Shoe Size')
+                                    ->options(function (Get $get): array {
+                                        $productID = $get('productID');
+                                        if ($productID) {
+                                            return ProductVariant::where('product_id', $productID)
+                                                ->pluck('size', 'id')
+                                                ->filter()
+                                                ->toArray();
+                                        }
+                                        return [];
+                                    })
+                                    ->live()
+                                    ->required()
+                                    ->visible(fn (Get $get) => filled($get('productID')))
+                                    ->afterStateUpdated(function (Set $set, Get $get) {
+                                        $variant = ProductVariant::find($get('product_variant_id'));
+                                        if ($variant) {
+                                            $set('size', $variant->size);
+                                            $set('colorway', $variant->colorway);
+                                        } else {
+                                            $set('size', null);
+                                            $set('colorway', null);
+                                        }
+                                    })
+                                    ->columnSpan(2),
+
+                                Hidden::make('original_price')
+                                    ->dehydrated(true),
+
+                                Hidden::make('discount_name')
+                                    ->dehydrated(true),
+
+                                Hidden::make('discount_amount')
+                                    ->dehydrated(true),
+
+                                TextInput::make('colorway')
+                                    ->label('Colorway')
+                                    ->disabled()
+                                    ->dehydrated(true)
+                                    ->columnSpan(2),
+
+                                TextInput::make('quantity')
+                                    ->numeric()
+                                    ->required()
+                                    ->default(1)
+                                    ->live()
+                                    ->afterStateUpdated(function (Set $set, Get $get, $state) {
+                                        $unitPrice = $get('unit_price');
+                                        $originalPrice = $get('original_price');
+                                        $discountAmount = $get('discount_amount');
+        
+                                        // Update sub_total
+                                        $set('sub_total', ($unitPrice && $state) ? $unitPrice * $state : 0);
+        
+                                        // If there's no original_price set yet, get it from the product
+                                        if (!$originalPrice && $get('productID')) {
+                                            $product = Product::find($get('productID'));
+                                            if ($product) {
+                                                $set('original_price', $product->price);
+                                            }
+                                        }
+                                    })
+                                    ->columnSpan(2),
+
+                                TextInput::make('unit_price')
+                                    ->numeric()
+                                    ->required()
+                                    ->disabled()
+                                    ->dehydrated(true)
+                                    ->columnSpan(2),
+
+                                TextInput::make('sub_total')
+                                    ->numeric()
+                                    ->required()
+                                    ->disabled()
+                                    ->dehydrated(true)
+                                    ->columnSpan(2),
+
+                                Hidden::make('size')
+                                    ->disabled()
+                                    ->dehydrated(true)
+                                    ->columnSpan(2),
+                            ])->columns(12)
+                            ->collapsible()
+                            ->defaultItems(1)
+                            ->live(),
+                    ]),
+
                 Section::make('Discount Information')
                     ->schema([
                         Select::make('discountID')
@@ -414,176 +582,6 @@ class OrderResource extends Resource
                                 'returned' => 'heroicon-m-x-circle',
                             ])->columnSpanFull(),
                     ])->columns(2),
-
-                Section::make('Order Items')
-                    ->schema([
-                        Repeater::make('orderItems')
-                            ->label('Products List')
-                            ->relationship('orderItems')
-                            ->schema([
-                                Select::make('productID')
-                                    ->relationship(
-                                    'product',
-                                    'name',
-                                    modifyQueryUsing: fn (Builder $query) => $query->whereNotIn('status', ['pre_order', 'out_of_stock']),
-                                    )
-                                    ->searchable()
-                                    ->preload()
-                                    ->required()
-                                    ->live()
-                                    ->afterStateUpdated(function (Set $set, Get $get) {
-                                        $product = Product::find($get('productID'));
-                                        if ($product) {
-                                            $originalPrice = (float) $product->price;
-                                            $finalPrice = $originalPrice;
-                                            $discountName = null;
-                                            $discountAmount = 0;
-
-                                            $discountID = $get('../../discountID');
-                                            Log::info("Debug - Processing product:", [
-                                                'productID' => $product->productID,
-                                                'original_price' => $originalPrice,
-                                                'discountID' => $discountID
-                                            ]);
-
-                                            if ($discountID) {
-                                                $discount = Discount::find($discountID);
-                                                Log::info("Debug - Discount found:", [
-                                                    'discount' => $discount ? $discount->toArray() : 'null',
-                                                    'product_has_discount' => $discount ? $product->discounts->contains($discount) : false
-                                                ]);
-
-                                                if ($discount && $product->discounts->contains($discount)) {
-                                                    $finalPrice = (float) $discount->getFinalPrice($originalPrice);
-                                                    $discountName = $discount->name;
-                                                    $discountAmount = $originalPrice - $finalPrice;
-
-                                                    Log::info("Debug - Discount calculation details:", [
-                                                        'original_price' => $originalPrice,
-                                                        'original_price_type' => gettype($originalPrice),
-                                                        'final_price' => $finalPrice,
-                                                        'final_price_type' => gettype($finalPrice),
-                                                        'calculated_discount_amount' => $discountAmount,
-                                                        'discount_amount_type' => gettype($discountAmount),
-                                                        'discount_name' => $discountName,
-                                                        'discount_type' => $discount->discount_type,
-                                                        'discount_value' => $discount->discount_value
-                                                    ]);
-                                                }
-                                            }
-
-                                            // Set the values
-                                            $set('original_price', $originalPrice);
-                                            $set('discount_name', $discountName);
-                                            $set('discount_amount', $discountAmount);
-                                            $set('unit_price', $finalPrice);
-                                            $set('sub_total', (float) ($finalPrice * ((float) ($get('quantity') ?? 1))));
-
-                                            Log::info("Debug - Values being set:", [
-                                                'setting_original_price' => $originalPrice,
-                                                'setting_discount_name' => $discountName,
-                                                'setting_discount_amount' => $discountAmount,
-                                                'setting_unit_price' => $finalPrice
-                                            ]);
-                                        }
-
-                                        // Reset other fields
-                                        $set('product_variant_id', null);
-                                        $set('size', null);
-                                        $set('colorway', null);
-                                    })
-                                    ->columnSpan(4),
-
-                                Select::make('product_variant_id')
-                                    ->label('Shoe Size')
-                                    ->options(function (Get $get): array {
-                                        $productID = $get('productID');
-                                        if ($productID) {
-                                            return ProductVariant::where('product_id', $productID)
-                                                ->pluck('size', 'id')
-                                                ->filter()
-                                                ->toArray();
-                                        }
-                                        return [];
-                                    })
-                                    ->live()
-                                    ->required()
-                                    ->visible(fn (Get $get) => filled($get('productID')))
-                                    ->afterStateUpdated(function (Set $set, Get $get) {
-                                        $variant = ProductVariant::find($get('product_variant_id'));
-                                        if ($variant) {
-                                            $set('size', $variant->size);
-                                            $set('colorway', $variant->colorway);
-                                        } else {
-                                            $set('size', null);
-                                            $set('colorway', null);
-                                        }
-                                    })
-                                    ->columnSpan(2),
-
-                                Hidden::make('original_price')
-                                    ->dehydrated(true),
-
-                                Hidden::make('discount_name')
-                                    ->dehydrated(true),
-
-                                Hidden::make('discount_amount')
-                                    ->dehydrated(true),
-
-                                TextInput::make('colorway')
-                                    ->label('Colorway')
-                                    ->disabled()
-                                    ->dehydrated(true)
-                                    ->columnSpan(2),
-
-                                TextInput::make('quantity')
-                                    ->numeric()
-                                    ->required()
-                                    ->default(1)
-                                    ->live()
-                                    ->afterStateUpdated(function (Set $set, Get $get, $state) {
-                                        $unitPrice = (float) $get('unit_price');
-                                        $originalPrice = (float) $get('original_price');
-                                        $discountAmount = (float) $get('discount_amount');
-
-                                        $qty = (float) $state;
-
-                                        // Update sub_total safely with casts
-                                        $set('sub_total', ($unitPrice && $qty) ? (float) ($unitPrice * $qty) : 0);
-
-                                        // If there's no original_price set yet, get it from the product
-                                        if (!$originalPrice && $get('productID')) {
-                                            $product = Product::find($get('productID'));
-                                            if ($product) {
-                                                $set('original_price', (float) $product->price);
-                                            }
-                                        }
-                                    })
-                                    ->columnSpan(2),
-
-                                TextInput::make('unit_price')
-                                    ->numeric()
-                                    ->required()
-                                    ->disabled()
-                                    ->dehydrated(true)
-                                    ->columnSpan(2),
-
-                                TextInput::make('sub_total')
-                                    ->numeric()
-                                    ->required()
-                                    ->disabled()
-                                    ->dehydrated(true)
-                                    ->columnSpan(2),
-
-                                Hidden::make('size')
-                                    ->disabled()
-                                    ->dehydrated(true)
-                                    ->columnSpan(2),
-                            ])->columns(12)
-                            ->collapsible()
-                            ->defaultItems(1)
-                            ->live(),
-                    ]),
 
                 Section::make('Order Summary')
                     ->schema([

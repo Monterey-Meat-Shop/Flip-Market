@@ -42,7 +42,41 @@ class Product extends Model
         return $this->hasMany(ProductVariant::class, 'product_id', 'productID');
     }
 
+    public function getTotalStockQuantityAttribute(): int
+    {
+        return $this->variants->sum('stock_quantity');
+    }
+
+<<<<<<< HEAD
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::saved(function ($product) {
+            $totalStock = $product->variants()->sum('stock_quantity');
+
+            if ($product->status !== 'pre_order') {
+                if ($totalStock === 0) {
+                    $product->status = 'out_of_stock';
+                } elseif ($totalStock <= 4) {
+                    $product->status = 'low_stock';
+                } else {
+                    $product->status = 'in_stock';
+                }
+            }
+
+            $product->is_active = ($product->status === 'pre_order') || ($totalStock > 0);
+
+            if ($product->isDirty(['status', 'is_active'])) {
+                $product->saveQuietly();
+            }
+        });
+    }
+
+    public function category()
+=======
     public function category(): BelongsTo
+>>>>>>> 6dd5d23f23a7d431be701e3d96febf489e04a3c5
     {
         return $this->belongsTo(Category::class, 'categoryID');
     }
@@ -196,6 +230,16 @@ class Product extends Model
             $idCol = Schema::hasColumn($orderItemsTable, 'id') ? 'id' : 'productID';
             $salesExpr = "COUNT({$orderItemsTable}.{$idCol})";
         }
+    }
+<<<<<<< HEAD
+
+    /**
+     * 🔥 Scope: Get top performing products by sales & revenue
+     */
+    public function scopeTopPerforming($query, $limit = 6)
+    {
+        return $query->withSum('orderItems as total_sales', 'quantity')
+            ->withSum('orderItems as total_revenue', \DB::raw('unit_price * quantity'))
 
         // build the subquery that aggregates by productID
         $sub = DB::table($orderItemsTable)
@@ -220,3 +264,6 @@ class Product extends Model
         return $joined;
     }
 }
+=======
+}
+>>>>>>> 6dd5d23f23a7d431be701e3d96febf489e04a3c5
