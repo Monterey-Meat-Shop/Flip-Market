@@ -6,7 +6,7 @@ use App\Filament\Resources\OrderResource\Pages;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\ProductVariant;
-use App\Models\customer;
+use App\Models\Customer;
 use App\Models\PaymentMethod;
 use App\Models\ShippingMethod;
 use App\Models\Discount;
@@ -26,7 +26,6 @@ use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Filament\Tables\Columns\TextColumn;
-use Filament\Tables\Columns\SelectColumn;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Builder;
@@ -101,23 +100,29 @@ class OrderResource extends Resource
     {
         return $form
             ->schema([
+                // ensure numeric is returned
                 Hidden::make('total_amount')
-                    ->dehydrateStateUsing(fn (Get $get) => collect($get('orderItems') ?? [])->sum('sub_total'))
+                    ->dehydrateStateUsing(fn (Get $get) => (float) collect($get('orderItems') ?? [])->sum(function ($item) {
+                        return (float) ($item['sub_total'] ?? 0);
+                    }))
                     ->default(0.00),
 
                 Hidden::make('final_amount')
                     ->dehydrateStateUsing(function (Get $get) {
-                        $subTotal = collect($get('orderItems') ?? [])->sum('sub_total');
+                        $subTotal = (float) collect($get('orderItems') ?? [])->sum(function ($item) {
+                            return (float) ($item['sub_total'] ?? 0);
+                        });
+
                         $discountID = $get('discountID');
-                        
                         if ($discountID) {
                             $discount = Discount::find($discountID);
                             if ($discount) {
-                                return $discount->getFinalPrice($subTotal);
+                                // cast to float to be safe
+                                return (float) $discount->getFinalPrice($subTotal);
                             }
                         }
-                        
-                        return $subTotal;
+
+                        return (float) $subTotal;
                     })
                     ->default(0.00),
 
@@ -205,11 +210,11 @@ class OrderResource extends Resource
                             ->options(function (Get $get): array {
                                 $orderItems = $get('orderItems') ?? [];
                                 $productIds = collect($orderItems)->pluck('productID')->filter()->toArray();
-        
+
                                 if (empty($productIds)) {
                                     return [];
                                 }
-        
+
                                 return Discount::where('is_active', true)
                                     ->where(function($query) {
                                         $query->where('start_date', '<=', now())
@@ -230,18 +235,18 @@ class OrderResource extends Resource
                             ->live()
                             ->afterStateUpdated(function (Set $set, Get $get, $state) {
                                 Log::info("Discount selection changed", ['discountID' => $state]);
-        
+
                                 // Trigger recalculation of totals when discount changes
                                 $orderItems = $get('orderItems') ?? [];
                                 foreach ($orderItems as $index => $item) {
                                     if (isset($item['productID'])) {
                                         $product = Product::find($item['productID']);
                                         if ($product) {
-                                            $originalPrice = $product->price;
+                                            $originalPrice = (float) $product->price;
                                             $finalPrice = $originalPrice;
                                             $discountName = null;
                                             $discountAmount = 0;
-                    
+
                                             if ($state) {
                                                 $discount = Discount::find($state);
                                                 Log::info("Processing discount for item {$index}", [
@@ -249,12 +254,12 @@ class OrderResource extends Resource
                                                     'discount_found' => $discount ? true : false,
                                                     'product_has_discount' => $discount ? $product->discounts->contains($discount) : false
                                                 ]);
-                        
+
                                                 if ($discount && $product->discounts->contains($discount)) {
-                                                    $finalPrice = $discount->getFinalPrice($originalPrice);
+                                                    $finalPrice = (float) $discount->getFinalPrice($originalPrice);
                                                     $discountName = $discount->name;
                                                     $discountAmount = $originalPrice - $finalPrice;
-                            
+
                                                     Log::info("Applying discount to item {$index}", [
                                                         'original_price' => $originalPrice,
                                                         'final_price' => $finalPrice,
@@ -263,15 +268,15 @@ class OrderResource extends Resource
                                                     ]);
                                                 }
                                             }
-                    
-                                            $quantity = $item['quantity'] ?? 1;
-                    
+
+                                            $quantity = (float) ($item['quantity'] ?? 1);
+
                                             // Update ALL fields including discount information
                                             $set("orderItems.{$index}.original_price", $originalPrice);
                                             $set("orderItems.{$index}.discount_name", $discountName);
                                             $set("orderItems.{$index}.discount_amount", $discountAmount);
                                             $set("orderItems.{$index}.unit_price", $finalPrice);
-                                            $set("orderItems.{$index}.sub_total", $finalPrice * $quantity);
+                                            $set("orderItems.{$index}.sub_total", (float) ($finalPrice * $quantity));
                                         }
                                     }
                                 }
@@ -429,30 +434,30 @@ class OrderResource extends Resource
                                     ->afterStateUpdated(function (Set $set, Get $get) {
                                         $product = Product::find($get('productID'));
                                         if ($product) {
-                                            $originalPrice = $product->price;
+                                            $originalPrice = (float) $product->price;
                                             $finalPrice = $originalPrice;
                                             $discountName = null;
                                             $discountAmount = 0;
-        
+
                                             $discountID = $get('../../discountID');
                                             Log::info("Debug - Processing product:", [
                                                 'productID' => $product->productID,
                                                 'original_price' => $originalPrice,
                                                 'discountID' => $discountID
                                             ]);
-        
+
                                             if ($discountID) {
                                                 $discount = Discount::find($discountID);
                                                 Log::info("Debug - Discount found:", [
                                                     'discount' => $discount ? $discount->toArray() : 'null',
                                                     'product_has_discount' => $discount ? $product->discounts->contains($discount) : false
                                                 ]);
-            
+
                                                 if ($discount && $product->discounts->contains($discount)) {
-                                                    $finalPrice = $discount->getFinalPrice($originalPrice);
+                                                    $finalPrice = (float) $discount->getFinalPrice($originalPrice);
                                                     $discountName = $discount->name;
                                                     $discountAmount = $originalPrice - $finalPrice;
-                
+
                                                     Log::info("Debug - Discount calculation details:", [
                                                         'original_price' => $originalPrice,
                                                         'original_price_type' => gettype($originalPrice),
@@ -466,14 +471,14 @@ class OrderResource extends Resource
                                                     ]);
                                                 }
                                             }
-        
+
                                             // Set the values
                                             $set('original_price', $originalPrice);
                                             $set('discount_name', $discountName);
                                             $set('discount_amount', $discountAmount);
                                             $set('unit_price', $finalPrice);
-                                            $set('sub_total', $finalPrice * ($get('quantity') ?? 1));
-        
+                                            $set('sub_total', (float) ($finalPrice * ((float) ($get('quantity') ?? 1))));
+
                                             Log::info("Debug - Values being set:", [
                                                 'setting_original_price' => $originalPrice,
                                                 'setting_discount_name' => $discountName,
@@ -481,7 +486,7 @@ class OrderResource extends Resource
                                                 'setting_unit_price' => $finalPrice
                                             ]);
                                         }
-    
+
                                         // Reset other fields
                                         $set('product_variant_id', null);
                                         $set('size', null);
@@ -537,18 +542,20 @@ class OrderResource extends Resource
                                     ->default(1)
                                     ->live()
                                     ->afterStateUpdated(function (Set $set, Get $get, $state) {
-                                        $unitPrice = $get('unit_price');
-                                        $originalPrice = $get('original_price');
-                                        $discountAmount = $get('discount_amount');
-        
-                                        // Update sub_total
-                                        $set('sub_total', ($unitPrice && $state) ? $unitPrice * $state : 0);
-        
+                                        $unitPrice = (float) $get('unit_price');
+                                        $originalPrice = (float) $get('original_price');
+                                        $discountAmount = (float) $get('discount_amount');
+
+                                        $qty = (float) $state;
+
+                                        // Update sub_total safely with casts
+                                        $set('sub_total', ($unitPrice && $qty) ? (float) ($unitPrice * $qty) : 0);
+
                                         // If there's no original_price set yet, get it from the product
                                         if (!$originalPrice && $get('productID')) {
                                             $product = Product::find($get('productID'));
                                             if ($product) {
-                                                $set('original_price', $product->price);
+                                                $set('original_price', (float) $product->price);
                                             }
                                         }
                                     })
@@ -584,48 +591,48 @@ class OrderResource extends Resource
                             ->label('Subtotal (Before Discount)')
                             ->content(function (Get $get) {
                                 $orderItems = $get('orderItems') ?? [];
-                                $subtotal = 0;
-                                
+                                $subtotal = 0.0;
+
                                 foreach ($orderItems as $item) {
                                     if (isset($item['productID']) && isset($item['quantity'])) {
                                         $product = Product::find($item['productID']);
                                         if ($product) {
-                                            $subtotal += $product->price * $item['quantity'];
+                                            $subtotal += (float) $product->price * (float) $item['quantity'];
                                         }
                                     }
                                 }
-                                
+
                                 return '₱' . number_format($subtotal, 2);
                             })
                             ->live(),
-                            
+
                         Placeholder::make('discount_amount_placeholder')
                             ->label('Discount Amount')
                             ->content(function (Get $get) {
                                 $orderItems = $get('orderItems') ?? [];
                                 $discountID = $get('discountID');
-                                
+
                                 if (!$discountID) {
                                     return '₱0.00';
                                 }
-                                
-                                $subtotal = 0;
+
+                                $subtotal = 0.0;
                                 foreach ($orderItems as $item) {
                                     if (isset($item['productID']) && isset($item['quantity'])) {
                                         $product = Product::find($item['productID']);
                                         if ($product) {
-                                            $subtotal += $product->price * $item['quantity'];
+                                            $subtotal += (float) $product->price * (float) $item['quantity'];
                                         }
                                     }
                                 }
-                                
+
                                 $discount = Discount::find($discountID);
                                 if ($discount) {
-                                    $finalPrice = $discount->getFinalPrice($subtotal);
+                                    $finalPrice = (float) $discount->getFinalPrice($subtotal);
                                     $discountAmount = $subtotal - $finalPrice;
                                     return '-₱' . number_format($discountAmount, 2);
                                 }
-                                
+
                                 return '₱0.00';
                             })
                             ->live(),
@@ -633,7 +640,7 @@ class OrderResource extends Resource
                         Placeholder::make('total_amount_placeholder')
                             ->label('Final Total Amount')
                             ->content(function (Get $get) {
-                                $subTotals = collect($get('orderItems'))->pluck('sub_total')->sum();
+                                $subTotals = collect($get('orderItems') ?? [])->pluck('sub_total')->map(fn($v) => (float)$v)->sum();
                                 return '₱' . number_format($subTotals, 2);
                             })
                             ->live(),
@@ -650,7 +657,7 @@ class OrderResource extends Resource
                     ->label('Order ID')
                     ->searchable()
                     ->sortable(),
-                    
+
                 TextColumn::make('customer.first_name')
                     ->label('Customer')
                     ->searchable()
@@ -677,7 +684,6 @@ class OrderResource extends Resource
                         'failed' => 'danger',
                         'unpaid' => 'warning',
                         'completed' => 'success',
-                        //'unpaid', 'verified', 'completed', 'failed'
                     })
                     ->sortable()
                     ->formatStateUsing(fn ($state) => $state ?? 'N/A'),
@@ -698,7 +704,6 @@ class OrderResource extends Resource
                         'completed' => 'success',
                         'cancelled' => 'danger',
                         'pre-order' => 'info',
-                        //'pending', 'processing', 'completed', 'cancelled', 'pre-order'
                     }),
 
                 TextColumn::make('shipping.shipping_status')
