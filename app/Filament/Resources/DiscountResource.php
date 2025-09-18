@@ -3,28 +3,22 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\DiscountResource\Pages;
-use App\Filament\Resources\DiscountResource\RelationManagers;
 use App\Models\Discount;
-use App\Models\Product; // Make sure to import the Product model
+use App\Models\Product;
 use Filament\Forms;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Toggle;
+use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Actions\ActionGroup;
-use Filament\Tables\Actions\DeleteAction;
-use Filament\Tables\Actions\BulkActionGroup;
-use Filament\Tables\Actions\DeleteBulkAction;
-use Filament\Tables\Actions\EditAction;
+use Filament\Tables\Table;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\IconColumn;
-use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
-use Closure;
 use Filament\Forms\Get;
 
 class DiscountResource extends Resource
@@ -45,54 +39,59 @@ class DiscountResource extends Resource
         return $form
             ->schema([
                 Section::make('Discount Information')
-                ->schema([
-                    TextInput::make('name')
-                        ->required()
-                        ->maxLength(225),
+                    ->schema([
+                        TextInput::make('name')
+                            ->required()
+                            ->maxLength(225),
 
-                    Select::make('discount_type')
-                        ->label('Discount Type')
-                        ->options([
-                            'Fixed' => 'Fixed Amount',
-                            'Percentage' => 'Percentage',
-                        ]),
+                        Select::make('products')
+                            ->label('Applies To Product')
+                            ->relationship('products', 'name', null, false, 'productID')
+                            ->searchable()
+                            ->multiple()
+                            ->preload()
+                            ->required()
+                            ->options(function (Get $get, ?Discount $record): array {
+                                $products = Product::whereDoesntHave('discounts', function (Builder $query) use ($record) {
+                                    $query->where('is_active', true);
+                                    if ($record) {
+                                        $query->where('discounts.discountID', '!=', $record->discountID);
+                                    }
+                                })
+                                ->pluck('name', 'productID')
+                                ->toArray();
 
-                    TextInput::make('discount_value')
-                        ->required()
-                        ->numeric()
-                        ->rules(['min:0'])
-                        ->helperText('Enter a value (e.g., 10 for a ₱10 discount or a 10% discount)'),
+                                return $products;
+                            }),
 
-                    Toggle::make('is_active')
-                        ->label('Is Active?')
-                        ->required()
-                        ->default(true),
+                        Select::make('discount_type')
+                            ->label('Discount Type')
+                            ->options([
+                                'Fixed' => 'Fixed Amount',
+                                'Percentage' => 'Percentage',
+                            ]),
 
-                    Select::make('products')
-                        ->label('Applies To Product')
-                        ->relationship('products', 'name', null, false, 'productID') // Explicitly specify the 'productID' as the key
-                        ->searchable()
-                        ->multiple()
-                        ->preload()
-                        ->required()
-                        // Use a closure on the `options()` method to dynamically filter the products.
-                        ->options(function (Get $get, ?Discount $record): array {
-                            // Find all products that are not associated with an active discount.
-                            $products = Product::whereDoesntHave('discounts', function (Builder $query) use ($record) {
-                                $query->where('is_active', true);
-                                // When editing, exclude the current discount from the check.
-                                if ($record) {
-                                    // Use 'discountID' as the primary key for the 'discounts' table
-                                    $query->where('discounts.discountID', '!=', $record->discountID);
-                                }
-                            })
-                            // Use 'productID' and 'name' for the options list
-                            ->pluck('name', 'productID')
-                            ->toArray();
+                        TextInput::make('discount_value')
+                            ->required()
+                            ->numeric()
+                            ->rules(['min:0'])
+                            ->helperText('Enter a value (e.g., 10 for ₱10 discount or 10% discount)'),
 
-                            return $products;
-                        }),
-                ])
+                        DateTimePicker::make('start_date')
+                            ->default(now())
+                            ->required(),
+
+                        DateTimePicker::make('end_date')
+                            ->required()
+                            ->rule('after:start_date')
+                            ->helperText('End date must be later than start date'),
+
+                        Toggle::make('is_active')
+                            ->label('Is Active?')
+                            ->required()
+                            ->default(true),
+
+                    ])->columns(2),
             ]);
     }
 
@@ -111,18 +110,33 @@ class DiscountResource extends Resource
                 TextColumn::make('discount_value')
                     ->label('Discounts')
                     ->formatStateUsing(function ($state, $record): string {
-                        if($record->discount_type == 'Fixed') {
-                            return '₱'.$record->discount_value;
+                        if ($record->discount_type == 'Fixed') {
+                            return '₱' . $record->discount_value;
                         } else {
-                            return $record->discount_value.'%';
+                            return $record->discount_value . '%';
                         }
                     })
+                    ->sortable(),
+
+                TextColumn::make('start_date')
+                    ->dateTime('M d, Y H:i')
+                    ->label('Starts')
+                    ->sortable(),
+
+                TextColumn::make('end_date')
+                    ->dateTime('M d, Y H:i')
+                    ->label('Ends')
                     ->sortable(),
 
                 IconColumn::make('is_active')
                     ->label('Status')
                     ->boolean()
-                    ->sortable(),
+                    ->sortable()
+                    ->getStateUsing(function ($record) {
+                        return $record->is_active &&
+                            (! $record->start_date || now()->gte($record->start_date)) &&
+                            (! $record->end_date || now()->lte($record->end_date));
+                    }),
 
                 TextColumn::make('products.name')
                     ->sortable(),
@@ -131,7 +145,7 @@ class DiscountResource extends Resource
                     ->dateTime()
                     ->label('Created At')
                     ->sortable(),
-                
+
                 TextColumn::make('updated_at')
                     ->dateTime()
                     ->label('Updated At')
@@ -143,11 +157,6 @@ class DiscountResource extends Resource
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
-
-                
-            ])
-            ->filters([
-                
             ])
             ->actions([
                 ActionGroup::make([
@@ -167,9 +176,7 @@ class DiscountResource extends Resource
 
     public static function getRelations(): array
     {
-        return [
-            //
-        ];
+        return [];
     }
 
     public static function getPages(): array

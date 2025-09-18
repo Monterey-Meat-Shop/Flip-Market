@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Product extends Model
 {
@@ -42,6 +44,7 @@ class Product extends Model
         return $this->variants->sum('stock_quantity');
     }
 
+<<<<<<< HEAD
     protected static function boot()
     {
         parent::boot();
@@ -68,11 +71,14 @@ class Product extends Model
     }
 
     public function category()
+=======
+    public function category(): BelongsTo
+>>>>>>> 6dd5d23f23a7d431be701e3d96febf489e04a3c5
     {
         return $this->belongsTo(Category::class, 'categoryID');
     }
 
-    public function brand()
+    public function brand(): BelongsTo
     {
         return $this->belongsTo(Brand::class, 'brandID');
     }
@@ -82,6 +88,47 @@ class Product extends Model
         return $this->hasMany(OrderItem::class, 'productID', 'productID');
     }
 
+    public function discounts(): BelongsToMany
+    {
+        return $this->belongsToMany(Discount::class, 'discount_product', 'product_id', 'discount_id');
+    }
+
+    /**
+     * Get the calculated status based on stock levels
+     */
+    public function getCalculatedStatusAttribute(): string
+    {
+        // If status is explicitly set to pre_order, return it
+        if ($this->attributes['status'] === 'pre_order') {
+            return 'pre_order';
+        }
+
+        // Calculate total stock from variants
+        $totalStock = (int) $this->variants()->sum('stock_quantity');
+
+        if ($totalStock === 0) {
+            return 'out_of_stock';
+        } elseif ($totalStock <= 4) {
+            return 'low_stock';
+        } else {
+            return 'in_stock';
+        }
+    }
+
+    /**
+     * Override the status attribute to return calculated status when not pre_order
+     */
+    public function getStatusAttribute($value): string
+    {
+        // If status is explicitly set to pre_order, return it
+        if ($value === 'pre_order') {
+            return 'pre_order';
+        }
+
+        // Otherwise return calculated status
+        return $this->calculated_status;
+    }
+
     public function getIsPreOrderAttribute(): bool
     {
         return $this->status === 'pre_order';
@@ -89,13 +136,36 @@ class Product extends Model
 
     public function getIsInStockAttribute(): bool
     {
-        return $this->status === 'in_stock' && $this->total_stock_quantity > 0;
+        return $this->calculated_status === 'in_stock';
     }
 
-    public function discounts()
+    /**
+     * Refresh the product status based on total variant stock.
+     * This method updates the database - should be called from observers
+     */
+    public function refreshProductStatus(): void
     {
-        return $this->belongsToMany(Discount::class, 'discount_product', 'product_id', 'discount_id');
+        $totalStock = $this->variants()->sum('stock_quantity');
+
+        // Only update status in database if it's not pre_order
+        if ($this->attributes['status'] !== 'pre_order') {
+            if ($totalStock === 0) {
+                $this->attributes['status'] = 'out_of_stock';
+            } elseif ($totalStock <= 4) {
+                $this->attributes['status'] = 'low_stock';
+            } else {
+                $this->attributes['status'] = 'in_stock';
+            }
+        }
+
+        // Products should always be active (as per your requirement)
+        $this->is_active = true;
+
+        if ($this->isDirty(['status', 'is_active'])) {
+            $this->saveQuietly();
+        }
     }
+<<<<<<< HEAD
 
     /**
      * 🔥 Scope: Get top performing products by sales & revenue
@@ -108,3 +178,6 @@ class Product extends Model
             ->take($limit);
     }
 }
+=======
+}
+>>>>>>> 6dd5d23f23a7d431be701e3d96febf489e04a3c5

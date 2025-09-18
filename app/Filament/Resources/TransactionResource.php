@@ -3,12 +3,12 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\TransactionResource\Pages;
-use App\Filament\Resources\TransactionResource\RelationManagers;
 use App\Models\User;
 use App\Models\Order;
 use App\Models\PaymentMethod;
 use App\Models\Product;
 use App\Models\ProductVariant;
+use App\Models\Discount;
 use Closure;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -39,11 +39,11 @@ use Filament\Tables\Filters\Indicator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Filament\Forms\Get;
 use Filament\Forms\Set;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 
 class TransactionResource extends Resource
 {
@@ -51,7 +51,6 @@ class TransactionResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-currency-dollar';
 
-    protected static ?string $navigationGroup = 'Sales';
     protected static ?string $navigationLabel = 'Transactions';
     protected static ?string $pluralModelLabel = 'Transactions';
     protected static ?string $modelLabel = 'Transaction';
@@ -59,272 +58,563 @@ class TransactionResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        $query = parent::getEloquentQuery();
 
-        // Admin: View all transactions
-        if (auth()->user()->hasRole('admin')) {
-            return $query;
+        $query = parent::getEloquentQuery();
+        $user = auth()->user();
+
+        // If no user is authenticated, return empty query
+        if (!$user) {
+            return $query->whereRaw('1 = 0');
         }
 
+        // Admin: View all transactions
+        if ($user->hasRole(['admin', 'cashier'])) {
+            return $query;
+        }
+    
         // Cashier: Only view 'guest' transactions using a direct, reliable filter.
         // This ensures a cashier cannot access other users' data.
-        if (auth()->user()->hasRole('cashier')) {
+        if ($user->hasRole('cashier')) {
             $guestUser = User::where('first_name', 'guest')->first();
             if ($guestUser) {
                 return $query->where('customerID', $guestUser->id);
             }
             // If the guest user does not exist, show an empty table to prevent errors.
-            return $query->where('id', null);
+            return $query->whereRaw('1 = 0'); // Better than where('id', null)
         }
-
+    
         // Standard user: Only view their own transactions.
-        return $query->where('customerID', auth()->id());
+        return $query->where('customerID', $user->id);
     }
 
-    /**
-     * This method defines the form for creating and editing transactions.
-     * It includes dynamic fields and validation.
-     */
-    public static function form(Form $form): Form
+    public static function getNavigationGroup(): ?string
     {
-        return $form
-            ->schema([
-                // Hidden field to store the calculated total amount. This is necessary to save the value to the database.
-                Hidden::make('total_amount')
-                    ->dehydrateStateUsing(fn (Get $get) => collect($get('orderItems') ?? [])->sum('sub_total'))
-                    ->default(0.00),
+        $user = auth()->user();
+    
+        // Only show 'Sales' group for admin users
+        if ($user && $user->hasRole('admin')) {
+           return 'Sales';
+        }
+    
+        // Return null to hide from Sales group for non-admin users
+        return null;
+    }
 
-                // This is the new hidden field to ensure final_amount is sent to the database.
-                Hidden::make('final_amount')
-                    ->dehydrateStateUsing(fn (Get $get) => collect($get('orderItems') ?? [])->sum('sub_total'))
-                    ->default(0.00),
+    public static function canAccess(): bool
+    {
+        $user = auth()->user();
+        return $user && $user->hasRole(['admin', 'cashier']);
+    }
 
-                // Section for general order information
-                Section::make('Order Information')
-                    ->schema([
-                        // Select field for customer, filtered to only show the 'guest' user for cashiers.
-                        Select::make('customerID')
-                            ->label('Customer Name')
-                            ->relationship(
-                                name: 'customer',
-                                titleAttribute: 'first_name',
-                                // This is the crucial change: it now filters the dropdown to only show the "guest" user.
-                                modifyQueryUsing: fn (Builder $query) => $query->where('first_name', 'guest')->orderBy('first_name')
-                            )
-                            ->getOptionLabelFromRecordUsing(fn (Model $record) => "{$record->first_name} {$record->last_name}")
-                            ->searchable()
-                            ->preload()
-                            ->required(),
+    public static function canCreate(): bool
+    {
+        $user = auth()->user();
+        return auth()->user()->hasRole(['admin', 'cashier']); //need to changes
+    }
 
-                        // Date picker for the order date, disabled and dehydrated to prevent user from changing it.
-                        DateTimePicker::make('order_date')
-                            ->default(now())
-                            ->required()
-                            ->disabled()
-                            ->dehydrated(true),
-                    ])->columns(2),
+    public static function canEdit(Model $record): bool
+    {
+        $user = auth()->user();
+        return $user && $user->hasRole('cashier');
+    }
 
-                // Section for order items using a repeater.
-                Section::make('Order Items')
-                    ->schema([
-                        Repeater::make('orderItems')
-                            ->label('Products List')
-                            ->relationship('orderItems')
+    public static function canDelete(Model $record): bool
+    {
+        $user = auth()->user();
+        return $user && $user->hasRole('admin');
+    }
+
+    public static function canForceDelete(Model $record): bool
+    {
+        $user = auth()->user();
+        return $user && $user->hasRole('admin');
+    }
+
+    public static function canRestore(Model $record): bool
+    {
+        $user = auth()->user();
+        return $user && $user->hasRole('admin');
+    }
+
+    public static function form(Form $form): Form
+{
+    return $form
+        ->schema([
+            // Hidden fields for data storage
+            Hidden::make('total_amount')
+                ->dehydrateStateUsing(fn (Get $get) => collect($get('orderItems') ?? [])->sum('sub_total'))
+                ->default(0.00),
+
+            Hidden::make('final_amount')
+                ->dehydrateStateUsing(function (Get $get) {
+                    $subTotal = collect($get('orderItems') ?? [])->sum('sub_total');
+                    $discountID = $get('discountID');
+    
+                    if ($discountID) {
+                        $discount = Discount::find($discountID);
+                        if ($discount) {
+                            return $discount->getFinalPrice($subTotal);
+                        }
+                    }
+    
+                    return $subTotal;
+                })
+                ->default(0.00),
+
+            // Main two-column layout
+            Forms\Components\Grid::make(3)
+                ->schema([
+                    // Left Column - Main Form (2/3 width)
+                    Forms\Components\Group::make([
+                        // Customer Information
+                        Section::make('Customer Information')
                             ->schema([
-                                // Select field for product, dynamically updating other fields.
-                                Select::make('productID')
+                                Select::make('customerID')
+                                    ->label('Customer Name')
                                     ->relationship(
-                                        name: 'product',
-                                        titleAttribute: 'name',
-                                        // Filter out products that are 'pre_order' or 'out_of_stock' to avoid issues with inventory.
-                                        modifyQueryUsing: fn (Builder $query) => $query->whereNotIn('status', ['pre_order', 'out_of_stock']),
+                                        name: 'customer',
+                                        titleAttribute: 'first_name',
+                                        modifyQueryUsing: fn (Builder $query) => $query->where('first_name', 'guest')->orderBy('first_name')
                                     )
+                                    ->getOptionLabelFromRecordUsing(fn (Model $record) => "{$record->first_name} {$record->last_name}")
                                     ->searchable()
                                     ->preload()
-                                    ->required()
-                                    ->live()
-                                    ->afterStateUpdated(function (Set $set, Get $get) {
-                                        // Fetch the product price and update fields.
-                                        $product = Product::find($get('productID'));
-                                        if ($product) {
-                                            $set('unit_price', $product->price);
-                                            // Recalculate sub_total based on the new unit price.
-                                            $set('sub_total', $product->price * $get('quantity'));
-                                        } else {
-                                            // Reset fields if product not found.
-                                            $set('unit_price', 0);
-                                            $set('sub_total', 0);
-                                        }
+                                    ->required(),
 
-                                        // Reset size and colorway to force a new selection.
-                                        $set('product_variant_id', null);
-                                        $set('size', null);
-                                        $set('colorway', null);
-                                    })
-                                    ->columnSpan(4),
-
-                                // Select field for shoe size, dynamically populated from the product variants.
-                                Select::make('product_variant_id')
-                                    ->label('Shoe Size')
-                                    ->options(function (Get $get): array {
-                                        $productID = $get('productID');
-                                        if ($productID) {
-                                            $variants = ProductVariant::where('product_id', $productID)->get();
-                                            // The key is the variant ID and the value is the size.
-                                            return $variants->pluck('size', 'id')->toArray();
-                                        }
-                                        return [];
-                                    })
-                                    ->live()
+                                DateTimePicker::make('order_date')
+                                    ->default(now())
                                     ->required()
-                                    ->visible(fn (Get $get) => filled($get('productID')))
-                                    ->afterStateUpdated(function (Set $set, Get $get) {
-                                        // Get the selected product variant and set the size and colorway.
-                                        $productVariant = ProductVariant::find($get('product_variant_id'));
-                                        if ($productVariant) {
-                                            $set('size', $productVariant->size);
-                                            $set('colorway', $productVariant->colorway);
-                                        } else {
-                                            $set('size', null);
-                                            $set('colorway', null);
-                                        }
-                                    })
-                                    ->columnSpan(2),
-                                
-                                // Text input for colorway, disabled and dehydrated as it's set dynamically.
-                                TextInput::make('colorway')
-                                    ->label('Colorway')
                                     ->disabled()
-                                    ->dehydrated(true)
-                                    ->columnSpan(2),
+                                    ->dehydrated(true),
+                            ])->columns(2),
 
-                                // Text input for quantity with custom validation for stock.
-                                TextInput::make('quantity')
-                                    ->numeric()
-                                    ->required()
-                                    ->default(1)
+                        // Product Selection
+                        Section::make('Add Products')
+                            ->schema([
+                                Forms\Components\Grid::make(2)
+                                    ->schema([
+                                        Select::make('temp_productID')
+                                            ->label('Select Product')
+                                            ->options(
+                                                Product::whereNotIn('status', ['pre_order', 'out_of_stock'])
+                                                    ->pluck('name', 'productID')
+                                                    ->toArray()
+                                            )
+                                            ->searchable()
+                                            ->preload()
+                                            ->live()
+                                            ->afterStateUpdated(function (Set $set) {
+                                                $set('temp_variant_id', null);
+                                                $set('temp_quantity', 1);
+                                            }),
+
+                                        Select::make('temp_variant_id')
+                                            ->label('Size')
+                                            ->options(function (Get $get): array {
+                                                $productID = $get('temp_productID');
+                                                if ($productID) {
+                                                    return ProductVariant::where('product_id', $productID)
+                                                        ->pluck('size', 'id')
+                                                        ->toArray();
+                                                }
+                                                return [];
+                                            })
+                                            ->visible(fn (Get $get) => filled($get('temp_productID')))
+                                            ->live()
+                                            ->required(),
+                                    ]),
+
+                                Forms\Components\Grid::make(3)
+                                    ->schema([
+                                        TextInput::make('temp_quantity')
+                                            ->label('Quantity')
+                                            ->numeric()
+                                            ->default(1)
+                                            ->minValue(1)
+                                            ->visible(fn (Get $get) => filled($get('temp_productID')))
+                                            ->rules([
+                                                function (Get $get) {
+                                                    return function (string $attribute, $value, Closure $fail) use ($get) {
+                                                        $variantId = $get('temp_variant_id');
+                                                        if ($variantId) {
+                                                            $variant = ProductVariant::find($variantId);
+                                                            if ($variant && $value > $variant->stock_quantity) {
+                                                                $fail("Only {$variant->stock_quantity} items available in stock.");
+                                                            }
+                                                        }
+                                                    };
+                                                },
+                                            ]),
+
+                                        Placeholder::make('stock_info')
+                                            ->label('Available Stock')
+                                            ->content(function (Get $get) {
+                                                $variantId = $get('temp_variant_id');
+                                                if ($variantId) {
+                                                    $variant = ProductVariant::find($variantId);
+                                                    return $variant ? "{$variant->stock_quantity} available" : '';
+                                                }
+                                                return '';
+                                            })
+                                            ->visible(fn (Get $get) => filled($get('temp_variant_id')))
+                                            ->live(),
+
+                                        Forms\Components\Actions::make([
+                                            Forms\Components\Actions\Action::make('addToCart')
+                                                ->label('Add to Cart')
+                                                ->icon('heroicon-m-plus')
+                                                ->color('success')
+                                                ->size('lg')
+                                                ->visible(fn (Get $get) => filled($get('temp_productID')) && filled($get('temp_variant_id')))
+                                                ->action(function (Get $get, Set $set) {
+                                                    $productID = $get('temp_productID');
+                                                    $variantId = $get('temp_variant_id');
+                                                    $quantity = $get('temp_quantity') ?? 1;
+                                                    
+                                                    // Validate all required fields
+                                                    if (!$productID || !$variantId || $quantity < 1) {
+                                                        return;
+                                                    }
+
+                                                    $product = Product::find($productID);
+                                                    $variant = ProductVariant::find($variantId);
+                                                    
+                                                    if (!$product || !$variant) {
+                                                        return;
+                                                    }
+
+                                                    // Check stock
+                                                    if ($quantity > $variant->stock_quantity) {
+                                                        return;
+                                                    }
+
+                                                    $orderItems = $get('orderItems') ?? [];
+                                                    $existingIndex = null;
+                                                    
+                                                    // Check for existing item
+                                                    foreach ($orderItems as $index => $item) {
+                                                        if (isset($item['productID']) && isset($item['product_variant_id']) 
+                                                            && $item['productID'] == $productID 
+                                                            && $item['product_variant_id'] == $variantId) {
+                                                            $existingIndex = $index;
+                                                            break;
+                                                        }
+                                                    }
+
+                                                    // Calculate prices with discount
+                                                    $originalPrice = $product->price;
+                                                    $finalPrice = $originalPrice;
+                                                    $discountName = null;
+                                                    $discountAmount = 0;
+
+                                                    $discountID = $get('discountID');
+                                                    if ($discountID) {
+                                                        $discount = Discount::find($discountID);
+                                                        if ($discount && $product->discounts->contains($discount)) {
+                                                            $finalPrice = $discount->getFinalPrice($originalPrice);
+                                                            $discountName = $discount->name;
+                                                            $discountAmount = $originalPrice - $finalPrice;
+                                                        }
+                                                    }
+
+                                                    if ($existingIndex !== null) {
+                                                        // Update existing item
+                                                        $currentQty = $orderItems[$existingIndex]['quantity'] ?? 0;
+                                                        $newQty = $currentQty + $quantity;
+                                                        
+                                                        if ($newQty <= $variant->stock_quantity) {
+                                                            $set("orderItems.{$existingIndex}.quantity", $newQty);
+                                                            $set("orderItems.{$existingIndex}.sub_total", $finalPrice * $newQty);
+                                                        }
+                                                    } else {
+                                                        // Add new item
+                                                        $newItem = [
+                                                            'productID' => $productID,
+                                                            'product_variant_id' => $variantId,
+                                                            'size' => $variant->size,
+                                                            'colorway' => $variant->colorway,
+                                                            'quantity' => $quantity,
+                                                            'original_price' => $originalPrice,
+                                                            'discount_name' => $discountName,
+                                                            'discount_amount' => $discountAmount,
+                                                            'unit_price' => $finalPrice,
+                                                            'sub_total' => $finalPrice * $quantity,
+                                                        ];
+                                                        
+                                                        $orderItems[] = $newItem;
+                                                        $set('orderItems', $orderItems);
+                                                    }
+
+                                                    // Clear form
+                                                    $set('temp_productID', null);
+                                                    $set('temp_variant_id', null);
+                                                    $set('temp_quantity', 1);
+                                                }),
+                                        ])
+                                            ->alignEnd(),
+                                    ]),
+                            ])
+                            ->collapsible(),
+
+                        // Discount Section
+                        Section::make('Discounts')
+                            ->schema([
+                                Select::make('discountID')
+                                    ->label('Apply Discount')
+                                    ->options(function (Get $get): array {
+                                        $orderItems = $get('orderItems') ?? [];
+                                        $productIds = collect($orderItems)->pluck('productID')->filter()->toArray();
+            
+                                        if (empty($productIds)) {
+                                            return [];
+                                        }
+            
+                                        return Discount::where('is_active', true)
+                                            ->where(function($query) {
+                                                $query->where('start_date', '<=', now())
+                                                      ->orWhereNull('start_date');
+                                            })
+                                            ->where(function($query) {
+                                                $query->where('end_date', '>=', now())
+                                                      ->orWhereNull('end_date');
+                                            })
+                                            ->whereHas('products', function($query) use ($productIds) {
+                                                $query->whereIn('product_id', $productIds);
+                                            })
+                                            ->pluck('name', 'discountID')
+                                            ->toArray();
+                                    })
+                                    ->searchable()
+                                    ->preload()
                                     ->live()
                                     ->afterStateUpdated(function (Set $set, Get $get, $state) {
-                                        $unitPrice = $get('unit_price');
-                                        if ($unitPrice && $state) {
-                                            $set('sub_total', $unitPrice * $state);
-                                        } else {
-                                            $set('sub_total', 0);
-                                        }
-                                    })
-                                    ->rules([
-                                        // Custom validation rule to ensure quantity does not exceed available stock.
-                                        function (Get $get) {
-                                            return function (string $attribute, $value, Closure $fail) use ($get) {
-                                                // Find the specific product variant based on the variant ID.
-                                                $productVariant = ProductVariant::find($get('product_variant_id'));
-
-                                                if ($productVariant && $value > $productVariant->stock_quantity) {
-                                                    $fail("The quantity for this product variant cannot exceed the available stock of {$productVariant->stock_quantity}.");
+                                        // Recalculate all items when discount changes
+                                        $orderItems = $get('orderItems') ?? [];
+                                        foreach ($orderItems as $index => $item) {
+                                            if (isset($item['productID'])) {
+                                                $product = Product::find($item['productID']);
+                                                if ($product) {
+                                                    $originalPrice = $product->price;
+                                                    $finalPrice = $originalPrice;
+                                                    $discountName = null;
+                                                    $discountAmount = 0;
+                        
+                                                    if ($state) {
+                                                        $discount = Discount::find($state);
+                                                        if ($discount && $product->discounts->contains($discount)) {
+                                                            $finalPrice = $discount->getFinalPrice($originalPrice);
+                                                            $discountName = $discount->name;
+                                                            $discountAmount = $originalPrice - $finalPrice;
+                                                        }
+                                                    }
+                        
+                                                    $quantity = $item['quantity'] ?? 1;
+                        
+                                                    $set("orderItems.{$index}.original_price", $originalPrice);
+                                                    $set("orderItems.{$index}.discount_name", $discountName);
+                                                    $set("orderItems.{$index}.discount_amount", $discountAmount);
+                                                    $set("orderItems.{$index}.unit_price", $finalPrice);
+                                                    $set("orderItems.{$index}.sub_total", $finalPrice * $quantity);
                                                 }
-                                            };
-                                        },
+                                            }
+                                        }
+                                    }),
+                            ])
+                            ->collapsible(),
+
+                        // Payment Information
+                        Section::make('Payment Information')
+                            ->relationship('payment')
+                            ->schema([
+                                Select::make('payment_methodID')
+                                    ->label('Payment Method')
+                                    ->relationship(
+                                        name: 'paymentMethod', 
+                                        titleAttribute: 'method_name',
+                                        modifyQueryUsing: fn (Builder $query) => $query->whereIn('method_name', ['Cash', 'GCash'])
+                                    )
+                                    ->required()
+                                    ->preload()
+                                    ->dehydrated(true)
+                                    ->live(),
+
+                                TextInput::make('reference_number')
+                                    ->label('Reference Number')
+                                    ->placeholder('Reference no.')
+                                    ->visible(function (Get $get) {
+                                        $paymentMethodId = $get('payment_methodID');
+                                        if (!$paymentMethodId) {
+                                            return false;
+                                        }
+                        
+                                        $paymentMethod = PaymentMethod::find($paymentMethodId);
+                                        return $paymentMethod && strtolower($paymentMethod->method_name) === 'gcash';
+                                    })
+                                    ->required(function (Get $get) {
+                                        $paymentMethodId = $get('payment_methodID');
+                                        if (!$paymentMethodId) {
+                                            return false;
+                                        }
+                        
+                                        $paymentMethod = PaymentMethod::find($paymentMethodId);
+                                        return $paymentMethod && strtolower($paymentMethod->method_name) === 'gcash';
+                                    })
+                                    ->dehydrated(true),
+
+                                TextInput::make('amount')
+                                    ->numeric()
+                                    ->required()
+                                    ->dehydrated(true),
+
+                                Select::make('status')
+                                    ->label('Payment Status')
+                                    ->options([
+                                        'unpaid' => 'Unpaid',
+                                        'paid' => 'Paid',
+                                        'verified' => 'Verified',
                                     ])
-                                    ->columnSpan(2),
-
-                                // Text input for unit price, disabled since it's set dynamically.
-                                TextInput::make('unit_price')
-                                    ->numeric()
+                                    ->default('paid')
                                     ->required()
-                                    ->disabled()
-                                    ->dehydrated(true)
-                                    ->columnSpan(2),
+                                    ->dehydrated(true),
+                            ])
+                            ->columns(2),
+                    ])
+                    ->columnSpan(2), // Takes 2/3 of the width
 
-                                // Text input for subtotal, disabled since it's set dynamically.
-                                TextInput::make('sub_total')
-                                    ->numeric()
-                                    ->required()
-                                    ->disabled()
-                                    ->dehydrated(true)
-                                    ->columnSpan(2),
-                                
-                                // Hidden field for the size, as it's stored on the OrderItem model.
-                                Hidden::make('size')
-                                    ->label('Size')
-                                    ->disabled()
-                                    ->dehydrated(true)
-                                    ->columnSpan(2),
+                    // Right Column - Cart Sidebar (1/3 width)
+                    Forms\Components\Group::make([
+                        Section::make('Shopping Cart')
+                            ->schema([
+                                // Cart Items
+                                Repeater::make('orderItems')
+                                    ->label('')
+                                    //->relationship('orderItems')
+                                    ->schema([
+                                        Forms\Components\Grid::make(1)
+                                            ->schema([
+                                                // Product Name
+                                                Placeholder::make('product_name')
+                                                    ->content(function (Get $get) {
+                                                        $productID = $get('productID');
+                                                        if ($productID) {
+                                                            $product = Product::find($productID);
+                                                            return $product ? $product->name : 'Unknown Product';
+                                                        }
+                                                        return '';
+                                                    })
+                                                    ->extraAttributes(['class' => 'font-semibold']),
 
-                            ])->columns(12)
-                            ->collapsible()
-                            ->defaultItems(1)
-                            ->live(),
+                                                // Size and Colorway
+                                                Placeholder::make('variant_details')
+                                                    ->content(function (Get $get) {
+                                                        $size = $get('size');
+                                                        $colorway = $get('colorway');
+                                                        return "Size: {$size}" . ($colorway ? " • {$colorway}" : '');
+                                                    })
+                                                    ->extraAttributes(['class' => 'text-sm text-gray-600']),
+
+                                                // Quantity and Price
+                                                Forms\Components\Grid::make(2)
+                                                    ->schema([
+                                                        TextInput::make('quantity')
+                                                            ->numeric()
+                                                            ->minValue(1)
+                                                            ->live()
+                                                            ->afterStateUpdated(function (Set $set, Get $get, $state) {
+                                                                $unitPrice = $get('unit_price');
+                                                                $set('sub_total', ($unitPrice && $state) ? $unitPrice * $state : 0);
+                                                            }),
+
+                                                        Placeholder::make('price_display')
+                                                            ->content(function (Get $get) {
+                                                                $subTotal = $get('sub_total') ?? 0;
+                                                                return '₱' . number_format($subTotal, 2);
+                                                            })
+                                                            ->live(),
+                                                    ]),
+                                            ]),
+
+                                        // Hidden fields
+                                        Hidden::make('productID')->dehydrated(true),
+                                        Hidden::make('product_variant_id')->dehydrated(true),
+                                        Hidden::make('size')->dehydrated(true),
+                                        Hidden::make('colorway')->dehydrated(true),
+                                        Hidden::make('unit_price')->dehydrated(true),
+                                        Hidden::make('sub_total')->dehydrated(true),
+                                        Hidden::make('original_price')->dehydrated(true),
+                                        Hidden::make('discount_name')->dehydrated(true),
+                                        Hidden::make('discount_amount')->dehydrated(true),
+                                    ])
+                                    ->addable(false)
+                                    ->reorderable(false)
+                                    ->collapsed(false)
+                                    ->cloneable(false)
+                                    ->defaultItems(0) // FIXED: Changed from 1 to 0 to prevent empty items
+                                    ->itemLabel(fn (array $state): string => 
+                                        Product::find($state['productID'] ?? null)?->name ?? 'Unknown Product'
+                                    ),
+
+                                // Cart Summary
+                                Forms\Components\Grid::make(1)
+    ->schema([
+         Forms\Components\Fieldset::make('Order Summary')->schema([
+                                Placeholder::make('subtotal')
+                                    ->label('Subtotal')
+                                    ->content(function (Get $get) {
+                                        $subtotal = 0;
+                                        foreach ($get('orderItems') ?? [] as $item) {
+                                            $subtotal += ($item['original_price'] ?? 0) * ($item['quantity'] ?? 0);
+                                        }
+                                        return '₱' . number_format($subtotal, 2);
+                                    })
+                                    ->live(),
+
+                                Placeholder::make('discount')
+                                    ->label('Discount')
+                                    ->content(function (Get $get) {
+                                        $totalDiscount = 0;
+                                        foreach ($get('orderItems') ?? [] as $item) {
+                                            $totalDiscount += ($item['discount_amount'] ?? 0) * ($item['quantity'] ?? 0);
+                                        }
+                                        return $totalDiscount > 0
+                                            ? '-₱' . number_format($totalDiscount, 2)
+                                            : '₱0.00';
+                                    })
+                                    ->live()
+                                    ->extraAttributes(['class' => 'text-red-600']),
+
+                                Placeholder::make('total')
+                                    ->label('Total')
+                                    ->content(function (Get $get) {
+                                        $total = 0;
+                                        foreach ($get('orderItems') ?? [] as $item) {
+                                            $total += $item['sub_total'] ?? 0;
+                                        }
+                                        return '₱' . number_format($total, 2);
+                                    })
+                                    ->live()
+                                    ->extraAttributes(['class' => 'text-lg font-bold text-green-600']),
+                            ]),
+
+                            Select::make('order_status')
+                                ->label('Order Status')
+                                ->options([
+                                    'processing' => 'Processing',
+                                    'completed'  => 'Completed',
+                                ])
+                                ->default('completed')
+                                ->required(),
+                        ]),
                     ]),
 
-                Section::make('Payment Information')
-                    ->schema([
-                        // Select field for payment method. It now saves the method name instead of the ID.
-                        Select::make('payment_method')
-                            ->label('Payment Method')
-                            ->options(
-                                PaymentMethod::query()
-                                    ->whereIn('method_name', ['Cash', 'Gcash'])
-                                    ->pluck('method_name', 'method_name')
-                            )
-                            ->required()
-                            ->live(),
+            ])->columnSpan(1), // Takes 1/3 of the width
+                ])
+        ]);
+}
 
-                        // Text input for reference number, conditionally visible for Gcash.
-                        TextInput::make('reference_number')
-                            ->label('Reference Number')
-                            ->placeholder('Reference no.')
-                            ->visible(fn (Get $get) => $get('payment_method') === 'Gcash')
-                            ->required(fn (Get $get) => $get('payment_method') === 'Gcash'),
-
-                        // Select field for payment status.
-                        Select::make('payment_status')
-                            ->label('Payment Status')
-                            ->options([
-                                'paid' => 'Paid',
-                                'unpaid' => 'Unpaid',
-                                'verified' => 'Verified',
-                            ])
-                            ->default('paid')
-                            ->required(),
-                    ])->columns(3),
-
-                Section::make('Order Status')
-                    ->schema([
-                        // Placeholder for displaying the total order amount.
-                        Placeholder::make('total_amount_placeholder')
-                            ->label('Total Order Amount')
-                            ->content(function (Get $get) {
-                                $subTotals = collect($get('orderItems'))
-                                    ->pluck('sub_total')
-                                    ->filter();
-                                return number_format($subTotals->sum(), 2);
-                            })
-                            ->live(),
-
-                        // Select field for order status.
-                        Select::make('order_status')
-                            ->label('Order Status')
-                            ->options([
-                                'pending' => 'Pending',
-                                'processing' => 'Processing',
-                                'shipped' => 'Shipped',
-                                'delivered' => 'Delivered',
-                                'cancelled' => 'Cancelled',
-                                'completed' => 'Completed',
-                            ])
-                            ->default('completed')
-                            ->required(),
-                    ])->columns(2),
-            ]);
-    }
-
-    /**
-     * This method defines the table's columns, filters, and actions.
-     */
     public static function table(Table $table): Table
     {
         return $table
-            // Corrected default sort to use the 'orderID' column.
             ->defaultSort('orderID', 'desc')
             ->columns([
                 TextColumn::make('customer.first_name')
@@ -334,25 +624,21 @@ class TransactionResource extends Resource
                             $q->where('first_name', 'like', "%{$search}%"))
                     ),
 
-                // Display a list of all products in the order.
                 TextColumn::make('orderItems.product.name')
                     ->label('Products')
                     ->listWithLineBreaks(),
 
-                // Displaying the payment method directly from the order.
-                TextColumn::make('payment_method')
+                TextColumn::make('payment.paymentMethod.method_name')
                     ->label('Payment Method')
                     ->sortable()
                     ->formatStateUsing(fn ($state) => $state ?? 'N/A'),
 
-                // Displaying the total amount of the order with currency.
                 TextColumn::make('total_amount')
                     ->label('Total Amount')
                     ->numeric()
                     ->sortable()
                     ->money('PHP'),
 
-                // Displaying the order status as a colored badge.
                 TextColumn::make('order_status')
                     ->label('Order Status')
                     ->badge()
@@ -368,7 +654,6 @@ class TransactionResource extends Resource
                     ->dateTime()
                     ->sortable(),
 
-                // Displaying the reference number from the related payment record, hidden by default.
                 TextColumn::make('reference_number')
                     ->label('Reference No.')
                     ->sortable()
@@ -447,19 +732,13 @@ class TransactionResource extends Resource
             ]);
     }
 
-    /**
-     * This method defines the relationships that will be displayed on the table.
-     */
     public static function getRelations(): array
     {
         return [
-            // You can add more relations here in the future if needed.
+            //
         ];
     }
 
-    /**
-     * This method adds a navigation badge showing the count of completed orders today.
-     */
     public static function getNavigationBadge(): ?string
     {
         return static::getModel()::query()
@@ -468,9 +747,6 @@ class TransactionResource extends Resource
             ->count();
     }
 
-    /**
-     * This method defines the routes for the resource.
-     */
     public static function getPages(): array
     {
         return [
@@ -480,18 +756,11 @@ class TransactionResource extends Resource
         ];  
     }
 
-    /**
-     * This method restricts who can view the resource page.
-     */
     public static function canViewAny(): bool
     {
         return Auth::user()->hasAnyRole(['admin', 'cashier']);
     }
 
-    /**
-     * This function now explicitly handles stock deduction and
-     * sanitizes the form data before saving the transaction.
-     */
     public static function mutateFormDataBeforeCreate(array $data): array
     {
         $totalAmount = collect($data['orderItems'] ?? [])
@@ -502,26 +771,11 @@ class TransactionResource extends Resource
         $data['total_amount'] = $totalAmount;
         $data['final_amount'] = $totalAmount;
 
-        return $data;
-    }
-
-    /**
-     * Deduct stock after the order is actually created. This is a crucial step for inventory management.
-     */
-    public static function afterCreate(Model $record): void
-    {
-        if ($record instanceof Order && $record->payment_status === 'paid') {
-            // Refresh the record to ensure orderItems are loaded.
-            $record->load('orderItems.productVariant');
-
-            try {
-                // Call the custom method to deduct stock for each ordered item.
-                $record->deductStock();
-            } catch (\Exception $e) {
-                // Log the error and rethrow the exception so the user sees a clear error message.
-                Log::error("Stock deduction failed: " . $e->getMessage());
-                throw $e; 
-            }
+        // FIX: Ensure payment status is included
+        if (isset($data['payment'])) {
+            $data['payment']['status'] = $data['payment']['status'] ?? 'unpaid';
         }
+
+        return $data;
     }
 }

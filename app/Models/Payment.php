@@ -4,7 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Payment extends Model
 {
@@ -21,19 +20,13 @@ class Payment extends Model
         'status',
     ];
 
-    /**
-     * Get the order that this payment belongs to.
-     */
-    public function order(): BelongsTo
+    public function paymentMethod()
     {
-        return $this->belongsTo(Order::class, 'orderID');
+        return $this->belongsTo(PaymentMethod::class, 'payment_methodID', 'payment_methodID');
     }
 
-    /**
-     * Get the payment method used for this payment.
-     */
-    public function paymentMethod(): BelongsTo
+    public function order()
     {
-        return $this->belongsTo(PaymentMethod::class, 'payment_methodID');
+        return $this->belongsTo(Order::class, 'orderID', 'orderID');
     }
 }
