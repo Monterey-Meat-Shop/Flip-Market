@@ -125,4 +125,5 @@ class Product extends Model
     // If it's a simple string
     return $this->image_url;
 }
+    
 }

@@ -7,6 +7,7 @@ use App\Livewire\Landingpage;
 
 use App\Livewire\ProductDetailPage;
 use App\Livewire\ProductPage;
+
 use Illuminate\Support\Facades\Route;
 use Livewire\Volt\Volt;
 
@@ -41,7 +42,7 @@ Route::get('/products', ProductPage::class);
 Route::get('/categories', CategoriesPage::class);
 Route::get('/brands', BrandPage::class);
 Route::get('/cart', CartPage::class);
-Route::get('/products/{product}', ProductDetailPage::class);
+Route::get('/product/{productId}', App\Livewire\ProductDetailPage::class)->name('product.detail');
 
 
 

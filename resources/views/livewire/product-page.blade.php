@@ -64,35 +64,61 @@
                 <!-- Products Grid -->
                 <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
                     @forelse($products as $product)
-                        <article class="rounded-xl bg-white p-3 shadow-lg hover:shadow-xl hover:scale-105 duration-300 transform">
-                            <div class="relative flex items-end overflow-hidden rounded-xl">
-                                <img 
-                                src="{{ $product->image_path ? asset('storage/' . $product->image_path) : 'https://via.placeholder.com/300' }}" 
-                                alt="{{ $product->name }}" 
-                                class="w-full h-48 object-cover rounded"
-                                />
-                                <!-- Optional: Add brand badge -->
-                                @if($product->brand)
-                                    <span class="absolute top-2 left-2 bg-black bg-opacity-70 text-white text-xs px-2 py-1 rounded">
-                                        {{ $product->brand->name }}
-                                    </span>
-                                @endif
-                            </div>
-
-                            <div class="mt-1 p-2">
-                                <h2 class="text-slate-700 font-semibold text-lg">{{ $product->name }}</h2>
-                                <p class="mt-1 text-sm text-slate-400">
-                                    {{ $product->category->name ?? 'No Category' }}
-                                </p>
-                                <div class="mt-3 flex items-end justify-between">
-                                    <p class="text-lg font-bold text-blue-500">₱{{ number_format($product->price, 2) }}</p>
-                                    <button class="flex items-center space-x-1.5 rounded-lg bg-blue-500 px-4 py-1.5 text-white hover:bg-blue-600 transition duration-200">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5m4.5-5a2 2 0 11-4 0 2 2 0 014 0zm6 0a2 2 0 11-4 0 2 2 0 014 0z"></path>
-                                        </svg>
-                                        <span>Add to Cart</span>
-                                    </button>
+                        <article class="rounded-xl bg-white shadow-lg hover:shadow-xl duration-300 overflow-hidden">
+                            <!-- Product Link (wraps image and content) -->
+                            <a href="{{ route('product.detail', $product->productID) }}" class="block hover:scale-105 transform transition duration-300">
+                                <div class="relative overflow-hidden">
+                                    <img 
+                                    src="{{ $product->image_path ? asset('storage/' . $product->image_path) : 'https://via.placeholder.com/300' }}" 
+                                    alt="{{ $product->name }}" 
+                                    class="w-full h-48 object-cover"
+                                    />
+                                    <!-- Optional: Add brand badge -->
+                                    @if($product->brand)
+                                        <span class="absolute top-2 left-2 bg-black bg-opacity-70 text-white text-xs px-2 py-1 rounded">
+                                            {{ $product->brand->name }}
+                                        </span>
+                                    @endif
+                                    
+                                    <!-- Stock Status Badge -->
+                                    @if($product->total_stock_quantity <= 0)
+                                        <span class="absolute top-2 right-2 bg-red-500 text-white text-xs px-2 py-1 rounded">
+                                            Out of Stock
+                                        </span>
+                                    {{-- @elseif($product->total_stock_quantity <= 5)
+                                        <span class="absolute top-2 right-2 bg-orange-500 text-white text-xs px-2 py-1 rounded">
+                                            Low Stock
+                                        </span> --}}
+                                    @endif
                                 </div>
+
+                                <div class="p-4">
+                                    <h2 class="text-slate-700 font-semibold text-lg mb-1">{{ $product->name }}</h2>
+                                    <p class="text-sm text-slate-400 mb-2">
+                                        {{ $product->category->name ?? 'No Category' }}
+                                    </p>
+                                    <p class="text-lg font-bold text-blue-500">₱{{ number_format($product->price, 2) }}</p>
+                                </div>
+                            </a>
+                            
+                            <!-- Add to Cart Button (separate from link) -->
+                            <div class="p-4 pt-0">
+                                <button 
+                                    onclick="addToCart({{ $product->productID }})"
+                                    @if($product->total_stock_quantity <= 0) disabled @endif
+                                    class="w-full flex items-center justify-center space-x-2 rounded-lg bg-blue-500 px-4 py-2 text-white hover:bg-blue-600 transition duration-200 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                                >
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5m4.5-5a2 2 0 11-4 0 2 2 0 014 0zm6 0a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                                    </svg>
+                                    <span>
+                                        @if($product->total_stock_quantity <= 0)
+                                            Out of Stock
+                                        @else
+                                            Add to Cart
+                                        @endif
+                                    </span>
+                                </button>
                             </div>
                         </article>
                     @empty
@@ -109,3 +135,24 @@
         </div>
     </section>
 </div>
+
+<!-- Add to Cart JavaScript (optional - for quick add to cart without going to detail page) -->
+<script>
+function addToCart(productId) {
+    // You can implement AJAX cart functionality here
+    // Or redirect to product detail page
+    window.location.href = `/product/${productId}`;
+    
+    // Alternative: AJAX call
+    // fetch('/cart/add', {
+    //     method: 'POST',
+    //     headers: {
+    //         'Content-Type': 'application/json',
+    //         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+    //     },
+    //     body: JSON.stringify({product_id: productId, quantity: 1})
+    // }).then(response => {
+    //     // Handle response
+    // });
+}
+</script>
