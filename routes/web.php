@@ -2,6 +2,7 @@
 
 use App\Livewire\CartPage;
 use App\Livewire\CategoriesPage;
+use App\Livewire\BrandPage;
 use App\Livewire\Landingpage;
 
 use App\Livewire\ProductDetailPage;
@@ -38,6 +39,7 @@ require __DIR__.'/auth.php';
 Route::get('/', Landingpage::class);
 Route::get('/products', ProductPage::class);
 Route::get('/categories', CategoriesPage::class);
+Route::get('/brands', BrandPage::class);
 Route::get('/cart', CartPage::class);
 Route::get('/products/{product}', ProductDetailPage::class);
 

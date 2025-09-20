@@ -103,4 +103,26 @@ class Product extends Model
     {
         return $this->belongsToMany(Discount::class, 'discount_product', 'product_id', 'discount_id');
     }
+
+    public function getImagePathAttribute()
+{
+    // Check if image_url exists and is not null
+    if (!$this->image_url) {
+        return null;
+    }
+
+    // If image_url is stored as JSON array
+    if (is_string($this->image_url)) {
+        $decoded = json_decode($this->image_url, true);
+        return is_array($decoded) && isset($decoded[0]) ? $decoded[0] : $this->image_url;
+    }
+
+    // If image_url is already an array (due to casting)
+    if (is_array($this->image_url) && isset($this->image_url[0])) {
+        return $this->image_url[0];
+    }
+
+    // If it's a simple string
+    return $this->image_url;
+}
 }
