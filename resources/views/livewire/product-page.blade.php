@@ -1,337 +1,158 @@
+<div class="bg-gray-100 min-h-screen pt-10 pb-20">
+    <h1 class="text-center text-2xl font-bold text-gray-800 mb-8">All Products</h1>
 
+    <section class="py-10 bg-gray-100">
+        <div class="mx-auto max-w-7xl px-6 grid grid-cols-1 lg:grid-cols-4 gap-8">
 
-<div>
-<!-- Title -->
-<div class=" bg-gray-100 h-screen pt-10">
-<h1 class="text-center text-2xl font-bold text-gray-800">All Products</h1>
+            <!-- Filter Sidebar -->
+            <aside class="bg-white rounded-xl p-4 shadow-md lg:col-span-1 h-fit sticky top-4">
+                <h2 class="text-lg font-bold text-gray-700 mb-4">Filters</h2>
 
+                <!-- Category Filter -->
+                <div class="mb-6">
+                    <h3 class="text-sm font-semibold text-gray-600 mb-2">Category</h3>
+                    <ul class="space-y-2 text-gray-700">
+                        @foreach($categories as $category)
+                            <li>
+                                <label class="flex items-center cursor-pointer hover:bg-gray-50 p-1 rounded">
+                                    <input type="checkbox" wire:model="selectedCategories" value="{{ $category->id }}" class="mr-2">
+                                    {{ $category->name }}
+                                </label>
+                            </li>
+                        @endforeach
+                    </ul>
+                </div>
 
+                <!-- Brand Filter -->
+                <div class="mb-6">
+                    <h3 class="text-sm font-semibold text-gray-600 mb-2">Brand</h3>
+                    <ul class="space-y-2 text-gray-700">
+                        @foreach($brands as $brand)
+                            <li>
+                                <label class="flex items-center cursor-pointer hover:bg-gray-50 p-1 rounded">
+                                    <input type="checkbox" wire:model="selectedBrands" value="{{ $brand->id }}" class="mr-2">
+                                    {{ $brand->name }}
+                                </label>
+                            </li>
+                        @endforeach
+                    </ul>
+                </div>
 
+                <!-- Price Filter -->
+                <div class="mb-6">
+                    <h3 class="text-sm font-semibold text-gray-600 mb-2">Price</h3>
+                    <input type="range" min="100" max="10000" wire:model="maxPrice" class="w-full accent-blue-500">
+                    <p class="text-sm text-gray-500 mt-1">Up to ₱{{ number_format($maxPrice) }}</p>
+                </div>
 
-<!-- Product List -->
-<section class="py-10 bg-gray-100">
-    <div class="mx-auto max-w-7xl px-6 grid grid-cols-1 lg:grid-cols-4 gap-8">
+                <!-- Clear Filters Button -->
+                <button 
+                    wire:click="clearFilters" 
+                    class="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium py-2 px-4 rounded-lg transition duration-200"
+                >
+                    Clear All Filters
+                </button>
+            </aside>
 
-   <!-- Filter Sidebar -->
-      <aside class="bg-white rounded-xl p-4 shadow-md lg:col-span-1">
-        <h2 class="text-lg font-bold text-gray-700 mb-4">Filters</h2>
-        
-        <!-- Category Filter -->
-        <div class="mb-6">
-          <h3 class="text-sm font-semibold text-gray-600 mb-2">Category</h3>
-          <ul class="space-y-2 text-gray-700">
-            <li><label><input type="checkbox" class="mr-2"> Shoes</label></li>
-            <li><label><input type="checkbox" class="mr-2"> Laptops</label></li>
-            <li><label><input type="checkbox" class="mr-2"> Clothes</label></li>
-            <li><label><input type="checkbox" class="mr-2"> Smartphones</label></li>
-          </ul>
-        </div>
+            <!-- Product List -->
+            <div class="lg:col-span-3">
+                <!-- Results Count -->
+                <div class="mb-6">
+                    <p class="text-gray-600">Showing {{ $products->count() }} products</p>
+                </div>
 
-        <!-- Price Filter -->
-        <div class="mb-6">
-          <h3 class="text-sm font-semibold text-gray-600 mb-2">Price</h3>
-          <input type="range" min="100" max="1000" class="w-full accent-blue-500">
-          <p class="text-sm text-gray-500 mt-1">Up to 1000</p>
-        </div>
+                <!-- Products Grid -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                    @forelse($products as $product)
+                        <article class="rounded-xl bg-white shadow-lg hover:shadow-xl duration-300 overflow-hidden">
+                            <!-- Product Link (wraps image and content) -->
+                            <a href="{{ route('product.detail', $product->productID) }}" class="block hover:scale-105 transform transition duration-300">
+                                <div class="relative overflow-hidden">
+                                    <img 
+                                    src="{{ $product->image_path ? asset('storage/' . $product->image_path) : 'https://via.placeholder.com/300' }}" 
+                                    alt="{{ $product->name }}" 
+                                    class="w-full h-48 object-cover"
+                                    />
+                                    <!-- Optional: Add brand badge -->
+                                    @if($product->brand)
+                                        <span class="absolute top-2 left-2 bg-black bg-opacity-70 text-white text-xs px-2 py-1 rounded">
+                                            {{ $product->brand->name }}
+                                        </span>
+                                    @endif
+                                    
+                                    <!-- Stock Status Badge -->
+                                    @if($product->total_stock_quantity <= 0)
+                                        <span class="absolute top-2 right-2 bg-red-500 text-white text-xs px-2 py-1 rounded">
+                                            Out of Stock
+                                        </span>
+                                    {{-- @elseif($product->total_stock_quantity <= 5)
+                                        <span class="absolute top-2 right-2 bg-orange-500 text-white text-xs px-2 py-1 rounded">
+                                            Low Stock
+                                        </span> --}}
+                                    @endif
+                                </div>
 
-        <!-- Rating Filter -->
-        <div class="mb-6">
-          <h3 class="text-sm font-semibold text-gray-600 mb-2">Brands</h3>
-        
-        </div>
-
-        <button class="w-full py-2 mt-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-          Apply Filters
-        </button>
-      </aside>
-
-
-      <div class="lg:col-span-3 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-
-    <article class="rounded-xl bg-white p-3 shadow-lg hover:shadow-xl hover:transform hover:scale-105 duration-300 ">
-      <a href="/products/product_one">
-        <div class="relative flex items-end overflow-hidden rounded-xl">
-          <img src="https://images.unsplash.com/photo-1515955656352-a1fa3ffcd111?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80" alt="Hotel Photo" />
-          <div class="flex items-center space-x-1.5 rounded-lg bg-blue-500 px-4 py-1.5 text-white duration-100 hover:bg-blue-600">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-4 w-4">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z" />
-            </svg>
-            <button class="text-sm">Add to cart</button>
-          </div>
-        </div>
-
-        <div class="mt-1 p-2">
-          <h2 class="text-slate-700">Adobe Photoshop CC 2022</h2>
-          <p class="mt-1 text-sm text-slate-400">Lisbon, Portugal</p>
-
-          <div class="mt-3 flex items-end justify-between">
-              <p class="text-lg font-bold text-blue-500">$850</p>
-
-            <div class="flex items-center space-x-1.5 rounded-lg bg-blue-500 px-4 py-1.5 text-white duration-100 hover:bg-blue-600">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-4 w-4">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z" />
-              </svg>
-
-              <button class="text-sm">Add to cart</button>
+                                <div class="p-4">
+                                    <h2 class="text-slate-700 font-semibold text-lg mb-1">{{ $product->name }}</h2>
+                                    <p class="text-sm text-slate-400 mb-2">
+                                        {{ $product->category->name ?? 'No Category' }}
+                                    </p>
+                                    <p class="text-lg font-bold text-blue-500">₱{{ number_format($product->price, 2) }}</p>
+                                </div>
+                            </a>
+                            
+                            <!-- Add to Cart Button (separate from link) -->
+                            <div class="p-4 pt-0">
+                                <button 
+                                    onclick="addToCart({{ $product->productID }})"
+                                    @if($product->total_stock_quantity <= 0) disabled @endif
+                                    class="w-full flex items-center justify-center space-x-2 rounded-lg bg-blue-500 px-4 py-2 text-white hover:bg-blue-600 transition duration-200 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                                >
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5m4.5-5a2 2 0 11-4 0 2 2 0 014 0zm6 0a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                                    </svg>
+                                    <span>
+                                        @if($product->total_stock_quantity <= 0)
+                                            Out of Stock
+                                        @else
+                                            Add to Cart
+                                        @endif
+                                    </span>
+                                </button>
+                            </div>
+                        </article>
+                    @empty
+                        <div class="col-span-3 text-center py-12">
+                            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2 2v-5m16 0h-2M4 13h2m-2 0v9a2 2 0 002 2h2M6 9h12m-6-4v4"></path>
+                            </svg>
+                            <p class="text-gray-500 text-lg mt-4">No products found matching your filters.</p>
+                            <p class="text-gray-400 text-sm mt-2">Try adjusting your search criteria or clearing filters.</p>
+                        </div>
+                    @endforelse
+                </div>
             </div>
-          </div>
         </div>
-      </a>
-    </article>
-    <article class="rounded-xl bg-white p-3 shadow-lg hover:shadow-xl hover:transform hover:scale-105 duration-300 ">
-      <a href="#">
-        <div class="relative flex items-end overflow-hidden rounded-xl">
-          <img src="https://images.unsplash.com/photo-1511556532299-8f662fc26c06?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80" alt="Hotel Photo" />
-          <div class="absolute bottom-3 left-3 inline-flex items-center rounded-lg bg-white p-2 shadow-md">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
-              <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-            </svg>
-            <span class="ml-1 text-sm text-slate-400">4.9</span>
-          </div>
-        </div>
+    </section>
+</div>
 
-        <div class="mt-1 p-2">
-          <h2 class="text-slate-700">The Hilton Hotel</h2>
-          <p class="mt-1 text-sm text-slate-400">Lisbon, Portugal</p>
-
-          <div class="mt-3 flex items-end justify-between">
-              <p class="text-lg font-bold text-blue-500">$850</p>
-   
-
-            <div class="flex items-center space-x-1.5 rounded-lg bg-blue-500 px-4 py-1.5 text-white duration-100 hover:bg-blue-600">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-4 w-4">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z" />
-              </svg>
-
-              <button class="text-sm">Add to cart</button>
-            </div>
-          </div>
-        </div>
-      </a>
-    </article>
-
-    <article class="rounded-xl bg-white p-3 shadow-lg hover:shadow-xl hover:transform hover:scale-105 duration-300 ">
-      <a href="#">
-        <div class="relative flex items-end overflow-hidden rounded-xl">
-          <img src="https://images.unsplash.com/photo-1542291026-7eec264c27ff?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80" alt="Hotel Photo" />
-          <div class="flex items-center space-x-1.5 rounded-lg bg-blue-500 px-4 py-1.5 text-white duration-100 hover:bg-blue-600">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-4 w-4">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z" />
-            </svg>
-
-            <button class="text-sm">Add to cart</button>
-          </div>
-        </div>
-
-        <div class="mt-1 p-2">
-          <h2 class="text-slate-700">The Hilton Hotel</h2>
-          <p class="mt-1 text-sm text-slate-400">Lisbon, Portugal</p>
-
-          <div class="mt-3 flex items-end justify-between">
-              <p class="text-lg font-bold text-blue-500">$450</p>
-            <div class="flex items-center space-x-1.5 rounded-lg bg-blue-500 px-4 py-1.5 text-white duration-100 hover:bg-blue-600">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-4 w-4">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z" />
-              </svg>
-
-              <button class="text-sm">Add to cart</button>
-            </div>
-          </div>
-        </div>
-      </a>
-    </article>
-
-    <article class="rounded-xl bg-white p-3 shadow-lg hover:shadow-xl hover:transform hover:scale-105 duration-300 ">
-      <a href="#">
-        <div class="relative flex items-end overflow-hidden rounded-xl">
-          <img src="https://images.unsplash.com/flagged/photo-1556637640-2c80d3201be8?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80" alt="Hotel Photo" />
-          <div class="flex items-center space-x-1.5 rounded-lg bg-blue-500 px-4 py-1.5 text-white duration-100 hover:bg-blue-600">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-4 w-4">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z" />
-            </svg>
-
-            <button class="text-sm">Add to cart</button>
-          </div>
-        </div>
-
-        <div class="mt-1 p-2">
-          <h2 class="text-slate-700">The Hilton Hotel</h2>
-          <p class="mt-1 text-sm text-slate-400">Lisbon, Portugal</p>
-
-          <div class="mt-3 flex items-end justify-between">
-              <p class="text-lg font-bold text-blue-500">$450</p>
-            <div class="flex items-center space-x-1.5 rounded-lg bg-blue-500 px-4 py-1.5 text-white duration-100 hover:bg-blue-600">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-4 w-4">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z" />
-              </svg>
-
-              <button class="text-sm">Add to cart</button>
-            </div>
-          </div>
-        </div>
-      </a>
-    </article>
-    <article class="rounded-xl bg-white p-3 shadow-lg hover:shadow-xl hover:transform hover:scale-105 duration-300 ">
-      <a href="#">
-        <div class="relative flex items-end overflow-hidden rounded-xl">
-          <img src="https://images.unsplash.com/photo-1520256862855-398228c41684?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1169&q=80" alt="Hotel Photo" />
-          <div class="flex items-center space-x-1.5 rounded-lg bg-blue-500 px-4 py-1.5 text-white duration-100 hover:bg-blue-600">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-4 w-4">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z" />
-            </svg>
-
-            <button class="text-sm">Add to cart</button>
-          </div>
-        </div>
-
-        <div class="mt-1 p-2">
-          <h2 class="text-slate-700">The Hilton Hotel</h2>
-          <p class="mt-1 text-sm text-slate-400">Lisbon, Portugal</p>
-
-          <div class="mt-3 flex items-end justify-between">
-              <p class="text-lg font-bold text-blue-500">$450</p>
-            <div class="flex items-center space-x-1.5 rounded-lg bg-blue-500 px-4 py-1.5 text-white duration-100 hover:bg-blue-600">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-4 w-4">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z" />
-              </svg>
-
-              <button class="text-sm">Add to cart</button>
-            </div>
-          </div>
-        </div>
-      </a>
-    </article>
-    <article class="rounded-xl bg-white p-3 shadow-lg hover:shadow-xl hover:transform hover:scale-105 duration-300 ">
-      <a href="#">
-        <div class="relative flex items-end overflow-hidden rounded-xl">
-          <img src="https://images.unsplash.com/photo-1551107696-a4b0c5a0d9a2?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1112&q=80" alt="Hotel Photo" />
-          <div class="flex items-center space-x-1.5 rounded-lg bg-blue-500 px-4 py-1.5 text-white duration-100 hover:bg-blue-600">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-4 w-4">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z" />
-            </svg>
-
-            <button class="text-sm">Add to cart</button>
-          </div>
-        </div>
-
-        <div class="mt-1 p-2">
-          <h2 class="text-slate-700">The Hilton Hotel</h2>
-          <p class="mt-1 text-sm text-slate-400">Lisbon, Portugal</p>
-
-          <div class="mt-3 flex items-end justify-between">
-              <p class="text-lg font-bold text-blue-500">$450</p>
-
-            <div class="flex items-center space-x-1.5 rounded-lg bg-blue-500 px-4 py-1.5 text-white duration-100 hover:bg-blue-600">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-4 w-4">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z" />
-              </svg>
-
-              <button class="text-sm">Add to cart</button>
-            </div>
-          </div>
-        </div>
-      </a>
-    </article>
-    <article class="rounded-xl bg-white p-3 shadow-lg hover:shadow-xl hover:transform hover:scale-105 duration-300 ">
-      <a href="#">
-        <div class="relative flex items-end overflow-hidden rounded-xl">
-          <img src="https://images.unsplash.com/photo-1539185441755-769473a23570?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1171&q=80" alt="Hotel Photo" />
-          <div class="flex items-center space-x-1.5 rounded-lg bg-blue-500 px-4 py-1.5 text-white duration-100 hover:bg-blue-600">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-4 w-4">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z" />
-            </svg>
-
-            <button class="text-sm">Add to cart</button>
-          </div>
-        </div>
-
-        <div class="mt-1 p-2">
-          <h2 class="text-slate-700">The Hilton Hotel</h2>
-          <p class="mt-1 text-sm text-slate-400">Lisbon, Portugal</p>
-
-          <div class="mt-3 flex items-end justify-between">
-              <p class="text-lg font-bold text-blue-500">$450</p>
-
-            <div class="flex items-center space-x-1.5 rounded-lg bg-blue-500 px-4 py-1.5 text-white duration-100 hover:bg-blue-600">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-4 w-4">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z" />
-              </svg>
-
-              <button class="text-sm">Add to cart</button>
-            </div>
-          </div>
-        </div>
-      </a>
-    </article>
-    <article class="rounded-xl bg-white p-3 shadow-lg hover:shadow-xl hover:transform hover:scale-105 duration-300 ">
-      <a href="#">
-        <div class="relative flex items-end overflow-hidden rounded-xl">
-          <img src="https://images.unsplash.com/photo-1549298916-b41d501d3772?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1112&q=80" alt="Hotel Photo" />
-          <div class="flex items-center space-x-1.5 rounded-lg bg-blue-500 px-4 py-1.5 text-white duration-100 hover:bg-blue-600">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-4 w-4">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z" />
-            </svg>
-
-            <button class="text-sm">Add to cart</button>
-          </div>
-        </div>
-
-        <div class="mt-1 p-2">
-          <h2 class="text-slate-700">The Hilton Hotel</h2>
-          <p class="mt-1 text-sm text-slate-400">Lisbon, Portugal</p>
-
-          <div class="mt-3 flex items-end justify-between">
-              <p class="text-lg font-bold text-blue-500">$450</p>
-
-            <div class="flex items-center space-x-1.5 rounded-lg bg-blue-500 px-4 py-1.5 text-white duration-100 hover:bg-blue-600">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-4 w-4">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z" />
-              </svg>
-
-              <button class="text-sm">Add to cart</button>
-            </div>
-          </div>
-        </div>
-      </a>
-    </article>
-
-
-    <article class="rounded-xl bg-white p-3 shadow-lg hover:shadow-xl hover:transform hover:scale-105 duration-300 ">
-      <a href="#">
-        <div class="relative flex items-end overflow-hidden rounded-xl">
-          <img src="https://images.unsplash.com/photo-1549298916-b41d501d3772?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1112&q=80" alt="Hotel Photo" />
-          <div class="flex items-center space-x-1.5 rounded-lg bg-blue-500 px-4 py-1.5 text-white duration-100 hover:bg-blue-600">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-4 w-4">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z" />
-            </svg>
-
-            <button class="text-sm">Add to cart</button>
-          </div>
-        </div>
-
-        <div class="mt-1 p-2">
-          <h2 class="text-slate-700">The Hilton Hotel</h2>
-          <p class="mt-1 text-sm text-slate-400">Lisbon, Portugal</p>
-
-          <div class="mt-3 flex items-end justify-between">
-              <p class="text-lg font-bold text-blue-500">$450</p>
-
-            <div class="flex items-center space-x-1.5 rounded-lg bg-blue-500 px-4 py-1.5 text-white duration-100 hover:bg-blue-600">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-4 w-4">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z" />
-              </svg>
-
-              <button class="text-sm">Add to cart</button>
-            </div>
-          </div>
-        </div>
-      </a>
-    </article>
-
+<!-- Add to Cart JavaScript (optional - for quick add to cart without going to detail page) -->
+<script>
+function addToCart(productId) {
+    // You can implement AJAX cart functionality here
+    // Or redirect to product detail page
+    window.location.href = `/product/${productId}`;
     
-
-    </div>
-</section>
-</div>
-
-</div>
+    // Alternative: AJAX call
+    // fetch('/cart/add', {
+    //     method: 'POST',
+    //     headers: {
+    //         'Content-Type': 'application/json',
+    //         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+    //     },
+    //     body: JSON.stringify({product_id: productId, quantity: 1})
+    // }).then(response => {
+    //     // Handle response
+    // });
+}
+</script>
