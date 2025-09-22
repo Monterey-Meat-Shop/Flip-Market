@@ -8,40 +8,45 @@
             <aside class="bg-white rounded-xl p-4 shadow-md lg:col-span-1 h-fit sticky top-4">
                 <h2 class="text-lg font-bold text-gray-700 mb-4">Filters</h2>
 
-                <!-- Category Filter -->
-                <div class="mb-6">
-                    <h3 class="text-sm font-semibold text-gray-600 mb-2">Category</h3>
-                    <ul class="space-y-2 text-gray-700">
-                        @foreach($categories as $category)
-                            <li>
-                                <label class="flex items-center cursor-pointer hover:bg-gray-50 p-1 rounded">
-                                    <input type="checkbox" wire:model="selectedCategories" value="{{ $category->id }}" class="mr-2">
-                                    {{ $category->name }}
-                                </label>
-                            </li>
-                        @endforeach
-                    </ul>
-                </div>
 
-                <!-- Brand Filter -->
-                <div class="mb-6">
-                    <h3 class="text-sm font-semibold text-gray-600 mb-2">Brand</h3>
-                    <ul class="space-y-2 text-gray-700">
-                        @foreach($brands as $brand)
-                            <li>
-                                <label class="flex items-center cursor-pointer hover:bg-gray-50 p-1 rounded">
-                                    <input type="checkbox" wire:model="selectedBrands" value="{{ $brand->id }}" class="mr-2">
-                                    {{ $brand->name }}
-                                </label>
-                            </li>
-                        @endforeach
-                    </ul>
-                </div>
+            <!-- Category Filter -->
+            <div class="mb-6">
+                <h3 class="text-sm font-semibold text-gray-600 mb-2">Category</h3>
+                <ul class="space-y-2 text-gray-700">
+                    @foreach($categories as $category)
+                        <li wire:key="category-{{ $category->CategoryID }}">
+                        <input type="checkbox"
+                        id="category-{{ $category->CategoryID }}"
+                        wire:model.live="selectedCategories"
+                        value="{{ $category->CategoryID }}"
+                        class="mr-2">
+                        <label for="category-{{ $category->CategoryID }}">{{ $category->name }}</label>
+                        </li>
+                    @endforeach
+                </ul>
+            </div>
+
+            <!-- Brand Filter -->
+            <div class="mb-6">
+                <h3 class="text-sm font-semibold text-gray-600 mb-2">Brand</h3>
+                <ul class="space-y-2 text-gray-700">
+                    @foreach($brands as $brand)
+                        <li wire:key="brand-{{ $brand->BrandID }}">
+                        <input type="checkbox"
+                        id="brand-{{ $brand->BrandID }}"
+                        wire:model.live="selectedBrands"
+                        value="{{ $brand->BrandID }}"
+                        class="mr-2">
+                        <label for="brand-{{ $brand->BrandID }}">{{ $brand->name }}</label>
+                        </li>
+                    @endforeach
+                </ul>
+            </div>
 
                 <!-- Price Filter -->
                 <div class="mb-6">
                     <h3 class="text-sm font-semibold text-gray-600 mb-2">Price</h3>
-                    <input type="range" min="100" max="10000" wire:model="maxPrice" class="w-full accent-blue-500">
+                    <input type="range" min="100" max="10000" wire:model.live="maxPrice" class="w-full accent-blue-500">
                     <p class="text-sm text-gray-500 mt-1">Up to ₱{{ number_format($maxPrice) }}</p>
                 </div>
 
@@ -153,6 +158,9 @@ function addToCart(productId) {
     //     body: JSON.stringify({product_id: productId, quantity: 1})
     // }).then(response => {
     //     // Handle response
+    //     // Show success message, update cart count, etc.
+    // }).catch(error => {
+    //     console.error('Error adding to cart:', error);
     // });
 }
 </script>
