@@ -60,19 +60,22 @@
 
         <!-- Body -->
         <div class="px-6 pb-6">
-          <form class="space-y-4">
-            <!-- Email / Username -->
+          <form class="space-y-4" method="POST" action="{{ route('login') }}">
+            @csrf
+
+            <!-- Email -->
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Email or Username</label>
-              <input type="text" placeholder="you@example.com" required autocomplete="username"
+              <label class="block text-sm font-medium text-gray-700 mb-1" for="login_email">Email</label>
+              <input id="login_email" name="email" type="email" value="{{ old('email') }}" placeholder="you@example.com" required autocomplete="username"
                 class="w-full rounded-lg border border-gray-300 bg-white text-gray-900 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
+              @error('email') <p class="text-xs text-red-600 mt-1">{{ $message }}</p> @enderror
             </div>
 
             <!-- Password -->
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+              <label class="block text-sm font-medium text-gray-700 mb-1" for="loginPassword">Password</label>
               <div class="relative">
-                <input type="password" id="loginPassword" placeholder="••••••••" required autocomplete="current-password"
+                <input id="loginPassword" name="password" type="password" placeholder="••••••••" required autocomplete="current-password"
                   class="w-full rounded-lg border border-gray-300 bg-white text-gray-900 px-3 py-2 text-sm pr-10 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
                 <button type="button" onclick="togglePassword('loginPassword')" class="absolute inset-y-0 right-2.5 flex items-center text-gray-500 hover:text-gray-700" aria-label="Toggle password visibility">
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -81,15 +84,16 @@
                   </svg>
                 </button>
               </div>
+              @error('password') <p class="text-xs text-red-600 mt-1">{{ $message }}</p> @enderror
             </div>
 
             <!-- Remember + Forgot -->
             <div class="flex items-center justify-between">
               <label class="flex items-center gap-2 text-sm text-gray-600">
-                <input type="checkbox" class="rounded border-gray-300 text-blue-600 focus:ring-blue-600">
+                <input name="remember" type="checkbox" class="rounded border-gray-300 text-blue-600 focus:ring-blue-600">
                 Remember me
               </label>
-              <a href="#" class="text-sm font-medium text-blue-700 hover:text-blue-600">Forgot password?</a>
+              <a href="{{ route('password.request') }}" class="text-sm font-medium text-blue-700 hover:text-blue-600">Forgot password?</a>
             </div>
 
             <!-- Submit -->
@@ -107,10 +111,10 @@
 
           <!-- Social (Google only) -->
           <div>
-            <button type="button" class="w-full rounded-lg py-2.5 flex items-center justify-center gap-2 border border-gray-300 bg-white text-gray-800 hover:bg-gray-50">
+            <a href="{{ url('/auth/google/redirect') }}" class="w-full rounded-lg py-2.5 flex items-center justify-center gap-2 border border-gray-300 bg-white text-gray-800 hover:bg-gray-50">
               <img alt="Google" class="w-5 h-5" src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/google.svg">
               <span class="text-sm font-medium">Continue with Google</span>
-            </button>
+            </a>
           </div>
 
           <!-- Footer -->
@@ -139,55 +143,57 @@
         </div>
 
         <div class="px-6 pb-6">
-          <form class="space-y-4">
+          <form class="space-y-4" method="POST" action="{{ url('/register') }}">
+            @csrf
+
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">First Name</label>
-                <input type="text" placeholder="Juan" required
+                <label class="block text-sm font-medium text-gray-700 mb-1" for="first_name">First Name</label>
+                <input id="first_name" name="first_name" type="text" value="{{ old('first_name') }}" placeholder="Juan" required
                   class="w-full rounded-lg border border-gray-300 bg-white text-gray-900 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
+                @error('first_name') <p class="text-xs text-red-600 mt-1">{{ $message }}</p> @enderror
               </div>
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
-                <input type="text" placeholder="Dela Cruz" required
+                <label class="block text-sm font-medium text-gray-700 mb-1" for="last_name">Last Name</label>
+                <input id="last_name" name="last_name" type="text" value="{{ old('last_name') }}" placeholder="Dela Cruz" required
                   class="w-full rounded-lg border border-gray-300 bg-white text-gray-900 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
+                @error('last_name') <p class="text-xs text-red-600 mt-1">{{ $message }}</p> @enderror
               </div>
             </div>
 
+            <!-- Email -->
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Address</label>
-              <textarea placeholder="Street, City, Province" required
-                class="w-full rounded-lg border border-gray-300 bg-white text-gray-900 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600"></textarea>
-            </div>
-
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-              <input type="email" placeholder="you@example.com" required autocomplete="email"
+              <label class="block text-sm font-medium text-gray-700 mb-1" for="email">Email</label>
+              <input id="email" name="email" type="email" value="{{ old('email') }}" placeholder="you@example.com" required autocomplete="email"
                 class="w-full rounded-lg border border-gray-300 bg-white text-gray-900 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
+              @error('email') <p class="text-xs text-red-600 mt-1">{{ $message }}</p> @enderror
             </div>
 
+            <!-- Passwords -->
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                <label class="block text-sm font-medium text-gray-700 mb-1" for="password">Password</label>
                 <div class="relative">
-                  <input type="password" id="signupPassword" placeholder="Min. 8 characters" required autocomplete="new-password"
+                  <input id="password" name="password" type="password" placeholder="Min. 8 characters" required autocomplete="new-password"
                     class="w-full rounded-lg border border-gray-300 bg-white text-gray-900 px-3 py-2 text-sm pr-10 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
-                  <button type="button" onclick="togglePassword('signupPassword')" class="absolute inset-y-0 right-2.5 flex items-center text-gray-500 hover:text-gray-700" aria-label="Toggle password visibility">
+                  <button type="button" onclick="togglePassword('password')" class="absolute inset-y-0 right-2.5 flex items-center text-gray-500 hover:text-gray-700" aria-label="Toggle password visibility">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.477 0 8.268 2.943 9.542 7-1.274 4.057-5.065 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                     </svg>
                   </button>
                 </div>
+                @error('password') <p class="text-xs text-red-600 mt-1">{{ $message }}</p> @enderror
               </div>
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Confirm Password</label>
+                <label class="block text-sm font-medium text-gray-700 mb-1" for="password_confirmation">Confirm Password</label>
                 <div class="relative">
-                  <input type="password" id="signupPasswordConfirm" placeholder="Re-enter password" required autocomplete="new-password"
+                  <input id="password_confirmation" name="password_confirmation" type="password" placeholder="Re-enter password" required autocomplete="new-password"
                     class="w-full rounded-lg border border-gray-300 bg-white text-gray-900 px-3 py-2 text-sm pr-10 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
-                  <button type="button" onclick="togglePassword('signupPasswordConfirm')" class="absolute inset-y-0 right-2.5 flex items-center text-gray-500 hover:text-gray-700" aria-label="Toggle password visibility">
+                  <button type="button" onclick="togglePassword('password_confirmation')" class="absolute inset-y-0 right-2.5 flex items-center text-gray-500 hover:text-gray-700" aria-label="Toggle password visibility">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.477 0 8.268 2.943 9.542 7-1.274 4.057-5.065 7-9.542 7-4.477 0-8.268-2.943-9-542-7z" />
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.477 0 8.268 2.943 9.542 7-1.274 4.057-5.065 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                     </svg>
                   </button>
                 </div>
@@ -196,9 +202,10 @@
 
             <!-- Terms -->
             <label class="flex items-start gap-2 text-sm text-gray-600">
-              <input type="checkbox" required class="mt-0.5 rounded border-gray-300 text-blue-600 focus:ring-blue-600">
+              <input type="checkbox" name="terms" class="mt-0.5 rounded border-gray-300 text-blue-600 focus:ring-blue-600" {{ old('terms') ? 'checked' : '' }} required>
               <span>I agree to the <a href="#" class="text-blue-700 hover:text-blue-600 font-medium">Terms</a> and <a href="#" class="text-blue-700 hover:text-blue-600 font-medium">Privacy Policy</a>.</span>
             </label>
+            @error('terms') <p class="text-xs text-red-600 -mt-2">{{ $message }}</p> @enderror
 
             <!-- Submit -->
             <button type="submit" class="w-full py-2.5 rounded-lg bg-blue-700 text-white text-sm font-semibold hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600">
@@ -215,10 +222,10 @@
 
           <!-- Social (Google only) -->
           <div>
-            <button type="button" class="w-full rounded-lg py-2.5 flex items-center justify-center gap-2 border border-gray-300 bg-white text-gray-800 hover:bg-gray-50">
+            <a href="{{ url('/auth/google/redirect') }}" class="w-full rounded-lg py-2.5 flex items-center justify-center gap-2 border border-gray-300 bg-white text-gray-800 hover:bg-gray-50">
               <img alt="Google" class="w-5 h-5" src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/google.svg">
               <span class="text-sm font-medium">Sign up with Google</span>
-            </button>
+            </a>
           </div>
 
           <!-- Footer -->
@@ -234,6 +241,16 @@
     </div>
   </div>
 </div>
+
+<!-- Auto-open signup modal if there are validation errors from /register -->
+@if ($errors->any())
+<script>
+  window.addEventListener('load', () => {
+    const modal = document.getElementById('signupModal');
+    if (modal) { modal.classList.remove('hidden'); modal.classList.add('flex'); }
+  });
+</script>
+@endif
 
 <script>
   const loginModal = document.getElementById('loginModal');
@@ -343,8 +360,3 @@
     lastFocused?.focus?.();
   }
 </script>
-
-<!-- Tailwind animation (optional)
-<style>
-@keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
-</style> -->
