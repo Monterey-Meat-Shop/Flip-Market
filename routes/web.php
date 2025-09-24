@@ -1,5 +1,7 @@
 <?php
 
+use App\Livewire\Auth\LoginPage;
+use App\Livewire\Auth\RegisterPage;
 use App\Livewire\CartPage;
 use App\Livewire\CategoriesPage;
 use App\Livewire\BrandPage;
@@ -43,6 +45,11 @@ Route::get('/categories', CategoriesPage::class);
 Route::get('/brands', BrandPage::class);
 Route::get('/cart', CartPage::class);
 Route::get('/product/{productId}', App\Livewire\ProductDetailPage::class)->name('product.detail');
+
+
+// lOGIN
+Route::get('/login', LoginPage::class);
+Route::get('/register', RegisterPage::class);
 
 
 
