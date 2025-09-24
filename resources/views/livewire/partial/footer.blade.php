@@ -3,7 +3,7 @@
     <!-- Grid -->
     <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
       <div class="col-span-full lg:col-span-1">
-        <a class="flex-none text-xl font-semibold text-white" href="#" aria-label="Brand">E-Commerce</a>
+        <a class="flex-none text-xl font-semibold text-white" href="#" aria-label="Brand">Flip Market</a>
       </div>
       <!-- End Col -->
 
@@ -49,7 +49,7 @@
 
     <div class="mt-5 sm:mt-12 grid gap-y-2 sm:gap-y-0 sm:flex sm:justify-between sm:items-center">
       <div class="flex justify-between items-center">
-        <p class="text-sm text-gray-400">© 2024 E-Commerce-rezerdire. All rights reserved.</p>
+        <p class="text-sm text-gray-400">© 2024 Flip Market. All rights reserved.</p>
       </div>
       <!-- End Col -->
 
