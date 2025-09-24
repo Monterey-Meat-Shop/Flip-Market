@@ -44,6 +44,8 @@ use Illuminate\Support\Facades\Log;
 use Filament\Forms\Get;
 use Filament\Forms\Set;
 use Illuminate\Database\Eloquent\Model;
+use Filament\Notifications\Notification;
+
 
 class TransactionResource extends Resource
 {
@@ -189,123 +191,152 @@ class TransactionResource extends Resource
                                 ])->columns(2),
 
                             // Product Selection
-                            Section::make('Add Products')
-                                ->schema([
-                                    Forms\Components\Grid::make(2)
-                                        ->schema([
-                                            Select::make('temp_productID')
-                                                ->label('Select Product')
-                                                ->options(
-                                                    Product::whereNotIn('status', ['pre_order', 'out_of_stock'])
-                                                        ->pluck('name', 'productID')
-                                                        ->toArray()
-                                                )
-                                                ->searchable()
-                                                ->preload()
-                                                ->live()
-                                                ->afterStateUpdated(function (Set $set) {
-                                                    $set('temp_variant_id', null);
-                                                    $set('temp_quantity', 1);
-                                                }),
+                Section::make('Add Products')
+                 ->schema([
 
-                                            Select::make('temp_variant_id')
-                                                ->label('Size')
-                                                ->options(function (Get $get): array {
-                                                    $productID = $get('temp_productID');
-                                                    if ($productID) {
-                                                        return ProductVariant::where('product_id', $productID)
-                                                            ->pluck('size', 'id')
-                                                            ->toArray();
-                                                    }
-                                                    return [];
-                                                })
-                                                ->visible(fn (Get $get) => filled($get('temp_productID')))
-                                                ->live()
-                                                ->required(),
-                                        ]),
+                    // --- Product & Variant Selection ---
+                    Forms\Components\Grid::make(2)
+                        ->schema([
+                            Select::make('temp_productID')
+                                ->label('Select Product')
+                                ->options(
+                                    Product::whereNotIn('status', ['pre_order', 'out_of_stock'])
+                                        ->pluck('name', 'productID')
+                                                    ->toArray()
+                                )
+                                ->searchable()
+                                ->preload()
+                                ->live()
+                                ->afterStateUpdated(function (Set $set) {
+                                    $set('temp_variant_id', null);
+                                    $set('temp_quantity', 1);
+                                }),
 
-                                    Forms\Components\Grid::make(3)
-                                        ->schema([
-                                            TextInput::make('temp_quantity')
-                                                ->label('Quantity')
-                                                ->numeric()
-                                                ->default(1)
-                                                ->minValue(1)
-                                                ->visible(fn (Get $get) => filled($get('temp_productID')))
-                                                ->rules([
-                                                    function (Get $get) {
-                                                        return function (string $attribute, $value, Closure $fail) use ($get) {
-                                                            $variantId = $get('temp_variant_id');
-                                                            if ($variantId) {
-                                                                $variant = ProductVariant::find($variantId);
-                                                                if ($variant && $value > $variant->stock_quantity) {
-                                                                    $fail("Only {$variant->stock_quantity} items available in stock.");
-                                                                }
-                                                            }
-                                                        };
-                                                    },
-                                                ]),
+                            Select::make('temp_variant_id')
+                                ->label('Size')
+                                ->options(function (Get $get): array {
+                                    $productID = $get('temp_productID');
 
-                                            Placeholder::make('stock_info')
-                                                ->label('Available Stock')
-                                                ->content(function (Get $get) {
-                                                    $variantId = $get('temp_variant_id');
-                                                    if ($variantId) {
-                                                        $variant = ProductVariant::find($variantId);
-                                                        return $variant ? "{$variant->stock_quantity} available" : '';
-                                                    }
-                                                    return '';
-                                                })
-                                                ->visible(fn (Get $get) => filled($get('temp_variant_id')))
-                                                ->live(),
+                                    if ($productID) {
+                                        return ProductVariant::where('product_id', $productID)
+                                            ->pluck('size', 'id')
+                                            ->toArray();
+                                    }
 
-                                            Forms\Components\Actions::make([
-                                                Forms\Components\Actions\Action::make('addToCart')
-                                                    ->label('Add to Cart')
-                                                    ->icon('heroicon-m-plus')
-                                                    ->color('success')
-                                                    ->size('lg')
-                                                    ->visible(fn (Get $get) => filled($get('temp_productID')) && filled($get('temp_variant_id')))
-                                                    ->action(function (Get $get, Set $set) {
-                                                        $productID = $get('temp_productID');
-                                                        $variantId = $get('temp_variant_id');
-                                                        $quantity = $get('temp_quantity') ?? 1;
-                                                        
-                                                        // Validate all required fields
-                                                        if (!$productID || !$variantId || $quantity < 1) {
-                                                            return;
-                                                        }
+                                    return [];
+                                })
+                                ->visible(fn (Get $get) => filled($get('temp_productID')))
+                                ->live()
+                                ->required(),
+                        ]),
 
-                                                        $product = Product::find($productID);
-                                                        $variant = ProductVariant::find($variantId);
-                                                        
-                                                        if (!$product || !$variant) {
-                                                            return;
-                                                        }
+        // --- Colorway Info (read-only) ---
+        Placeholder::make('colorway_info')
+            ->label('Colorway')
+            ->content(function (Get $get) {
+                $variantId = $get('temp_variant_id');
 
-                                                        // Check stock — show notification if insufficient and do not add
-                                                        if ($quantity > $variant->stock_quantity) {
-                                                            \Filament\Notifications\Notification::make()
-                                                                ->title("Only {$variant->stock_quantity} items available in stock.")
-                                                                ->danger()
-                                                                ->send();
+                if ($variantId) {
+                    $variant = ProductVariant::find($variantId);
+                    return $variant ? $variant->colorway : '-';
+                }
 
-                                                            return;
-                                                        }
+                return '-';
+            })
+            ->visible(fn (Get $get) => filled($get('temp_variant_id')))
+            ->columnSpanFull(),
 
-                                                        $orderItems = $get('orderItems') ?? [];
-                                                        $existingIndex = null;
-                                                        
-                                                        // Check for existing item
-                                                        foreach ($orderItems as $index => $item) {
-                                                            if (isset($item['productID']) && isset($item['product_variant_id']) 
-                                                                && $item['productID'] == $productID 
-                                                                && $item['product_variant_id'] == $variantId) {
-                                                                $existingIndex = $index;
-                                                                break;
-                                                            }
-                                                        }
+        // --- Quantity, Stock & Add Button ---
+        Forms\Components\Grid::make(3)
+            ->schema([
+                // Quantity
+                TextInput::make('temp_quantity')
+                    ->label('Quantity')
+                    ->numeric()
+                    ->default(1)
+                    ->minValue(1)
+                    ->visible(fn (Get $get) => filled($get('temp_productID')))
+                    ->rules([
+                        function (Get $get) {
+                            return function (string $attribute, $value, Closure $fail) use ($get) {
+                                $variantId = $get('temp_variant_id');
 
+                                if ($variantId) {
+                                    $variant = ProductVariant::find($variantId);
+
+                                    if ($variant && $value > $variant->stock_quantity) {
+                                        $fail("Only {$variant->stock_quantity} items available in stock.");
+                                    }
+                                }
+                            };
+                        },
+                    ]),
+
+                // Stock Info
+                Placeholder::make('stock_info')
+                    ->label('Available Stock')
+                    ->content(function (Get $get) {
+                        $variantId = $get('temp_variant_id');
+
+                        if ($variantId) {
+                            $variant = ProductVariant::find($variantId);
+                            return $variant ? "{$variant->stock_quantity} available" : '';
+                        }
+
+                        return '';
+                    })
+                    ->visible(fn (Get $get) => filled($get('temp_variant_id')))
+                    ->live(),
+
+                // Add to Cart Button
+                Forms\Components\Actions::make([
+                    Forms\Components\Actions\Action::make('addToCart')
+                        ->label('Add to Cart')
+                        ->icon('heroicon-m-plus')
+                        ->color('success')
+                        ->size('lg')
+                        ->visible(fn (Get $get) =>
+                            filled($get('temp_productID')) && filled($get('temp_variant_id'))
+                        )
+                        ->action(function (Get $get, Set $set) {
+                            $productID = $get('temp_productID');
+                            $variantId = $get('temp_variant_id');
+                            $quantity  = $get('temp_quantity') ?? 1;
+
+                            if (!$productID || !$variantId || $quantity < 1) {
+                                return;
+                            }
+
+                            $product = Product::find($productID);
+                            $variant = ProductVariant::find($variantId);
+
+                            if (!$product || !$variant) {
+                                return;
+                            }
+
+                            // Check stock
+                            if ($quantity > $variant->stock_quantity) {
+                                \Filament\Notifications\Notification::make()
+                                    ->title("Only {$variant->stock_quantity} items available in stock.")
+                                    ->danger()
+                                    ->send();
+
+                                return;
+                            }
+
+                            $orderItems    = $get('orderItems') ?? [];
+                            $existingIndex = null;
+
+                            foreach ($orderItems as $index => $item) {
+                                if (
+                                    isset($item['productID'], $item['product_variant_id'])
+                                    && $item['productID'] == $productID
+                                    && $item['product_variant_id'] == $variantId
+                                ) {
+                                    $existingIndex = $index;
+                                    break;
+                                }
+                            }
                                                         // Calculate prices with discount
                                                         $originalPrice = $product->price;
                                                         $finalPrice = $originalPrice;
@@ -475,10 +506,85 @@ class TransactionResource extends Resource
                                         })
                                         ->dehydrated(true),
 
-                                    TextInput::make('amount')
-                                        ->numeric()
-                                        ->required()
-                                        ->dehydrated(true),
+                                //    TextInput::make('amount')
+                                //     ->label('Amount')
+                                //     ->numeric()
+                                //     ->required()
+                                //     ->default('0.00')
+                                //     ->reactive()
+                                //     ->afterStateHydrated(function ($state, callable $set) {
+                                //         // Format when loading from DB
+                                //         $set('amount', number_format((float) $state, 2, '.', ''));
+                                //     })
+                                //     ->afterStateUpdated(function ($state, callable $set) {
+                                //         // Format only when the user finishes typing (on blur)
+                                //         if ($state !== null && $state !== '') {
+                                //             $set('amount', number_format((float) $state, 2, '.', ''));
+                                //         } else {
+                                //             $set('amount', '0.00');
+                                //         }
+                                //     })
+                                //     ->live(onBlur: true), // <-- only triggers after leaving the field
+
+                                //         TextInput::make('change')
+                                //             ->label('Change')
+                                //             ->numeric()
+                                //             ->default('0.00')
+                                //             ->disabled(), // read-only field
+                                   
+                                                    TextInput::make('amount')
+    ->label('Amount')
+    ->numeric()
+    ->required()
+    ->default('0.00')
+    ->reactive()
+    ->afterStateHydrated(function ($state, callable $set) {
+        $set('amount', number_format((float) $state, 2, '.', ''));
+    })
+    ->afterStateUpdated(function ($state, callable $set, callable $get) {
+        if ($state !== null && $state !== '') {
+            $set('amount', number_format((float) $state, 2, '.', ''));
+        } else {
+            $set('amount', '0.00');
+        }
+
+        $amount   = (float) $get('amount');
+        $subtotal = (float) $get('subtotal');
+
+        // Live UI update for change
+        if ($amount >= $subtotal) {
+            $change = $amount - $subtotal;
+            $set('change', number_format($change, 2, '.', ''));
+        } else {
+            $set('change', '0.00');
+        }
+    })
+    ->live(onBlur: true)
+    ->rule(function (callable $get) {
+        return function (string $attribute, $value, $fail) use ($get) {
+            $subtotal = (float) $get('subtotal');
+            $amount   = (float) $value;
+
+            if ($amount < $subtotal) {
+                $fail('The transaction cannot proceed. Amount is less than the subtotal.');
+
+                // Show popup too
+                Notification::make()
+                    ->title('Payment Error')
+                    ->body('The transaction cannot proceed because the amount is not enough to cover the subtotal.')
+                    ->danger()
+                    ->send();
+            }
+        };
+    }),
+
+TextInput::make('change')
+    ->label('Change')
+    ->numeric()
+    ->default('0.00')
+    ->disabled(),
+
+
 
                                     Select::make('status')
                                         ->label('Payment Status')
