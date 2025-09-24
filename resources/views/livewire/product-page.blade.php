@@ -163,4 +163,5 @@ function addToCart(productId) {
     //     console.error('Error adding to cart:', error);
     // });
 }
+//new update, eto na chan
 </script>
