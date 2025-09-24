@@ -34,6 +34,11 @@
               <span class="mr-1">Cart</span>
               <span class="py-0.5 px-1.5 rounded-full text-xs font-medium bg-blue-50 border border-blue-200 text-blue-700">4</span>
             </a>
+
+            <!-- Admin login button -->
+            <a href="{{ url('/admin/login') }}" class="ml-3 inline-flex items-center justify-center px-3 py-1.5 rounded-md text-sm bg-gray-100 border border-gray-200 text-gray-800 hover:bg-gray-200">
+              Login
+            </a>
           </div>
         </div>
       </div>
