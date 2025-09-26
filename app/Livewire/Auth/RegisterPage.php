@@ -2,10 +2,84 @@
 
 namespace App\Livewire\Auth;
 
+use App\Models\Address;
+use App\Models\Customer;
+use App\Models\User;
+use Illuminate\Support\Facades\Hash;
 use Livewire\Component;
 
 class RegisterPage extends Component
 {
+    public $firstname;
+     public $lastname;
+    public $email;
+    public $password;
+
+
+    public $phone;
+    public $address_line_1;
+    public $address_line_2;
+    public $city;
+    public $province;
+    public $postal_code;
+
+    // validation using livewire :<<
+    public function register(){
+        $this->validate([
+            'firstname' => 'required|max:255',
+            'lastname' => 'required|max:255',
+            'email' => 'required|email|unique:users,email|max:255', //kupal kasi eh need pa tuloy check sa user table ung email kung unique
+            'password' => 'required|min:8|max:255',
+            
+            'postal_code' => 'required|max:255',
+            'address_line_1' => 'required|max:255',
+            'address_line_2' => 'required|max:255',
+            'city' => 'required|max:255',
+            'province' => 'required|max:255',
+            'phone'     => [
+            'required',
+            'regex:/^[0-9]{10,11}$/',
+            // 'unique:customers,phone',
+    
+
+        ],
+
+        ]);
+
+    
+            $user = User::create([
+                'name' => $this->firstname . ' ' . $this->lastname,
+                'email' => $this->email,
+                'password' => bcrypt($this->password),
+                'is_active' => true,
+            ]);
+
+            $user->assignRole('customer'); //automatically assign the user role na customer pahirap sa backend c kupal
+            
+            $customer = Customer::create([
+            'user_id' => $user->id,
+            'first_name' => $this->firstname,
+            'last_name' => $this->lastname,
+            'phone' => $this->phone,
+            'is_active' => true,
+             ]);
+
+
+           $address = Address::create([
+            'customerID' => $customer->customerID,  
+            'address_line_1' => $this->address_line_1,
+            'address_line_2' => $this->address_line_2,
+            'city' => $this->city,
+            'province' => $this->province,
+            'postal_code' => $this->postal_code,
+        ]);
+
+        return redirect()->intended();
+    }
+
+
+    
+
     public function render()
     {
         return view('livewire.auth.register-page');
