@@ -48,8 +48,10 @@ class RegisterPage extends Component
 
     
             $user = User::create([
-                'name' => $this->firstname . ' ' . $this->lastname,
+                'name' => $this->firstname,
+                'last_name' => $this->lastname,
                 'email' => $this->email,
+                'phone' => $this->phone,
                 'password' => bcrypt($this->password),
                 'is_active' => true,
             ]);
