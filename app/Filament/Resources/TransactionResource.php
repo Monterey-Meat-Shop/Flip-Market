@@ -30,11 +30,6 @@ use Filament\Tables\Actions\ForceDeleteAction;
 use Filament\Tables\Actions\RestoreAction;
 use Filament\Tables\Actions\ViewAction;
 use Filament\Tables\Columns\TextColumn;
-use Filament\Tables\Filters\TrashedFilter;
-use Filament\Tables\Filters\SelectFilter;
-use Filament\Tables\Filters\Filter;
-use Filament\Forms\Components\DatePicker;
-use Filament\Tables\Filters\Indicator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
 use Filament\Forms\Get;
@@ -257,6 +252,7 @@ class TransactionResource extends Resource
                                         $finalPrice = $originalPrice;
                                         $discountName = null;
                                         $discountAmount = 0;
+                                        $discountLabel = null;
 
                                         $discountID = $get('discountID');
                                         if ($discountID) {
@@ -265,6 +261,9 @@ class TransactionResource extends Resource
                                                 $finalPrice = $discount->getFinalPrice($originalPrice);
                                                 $discountName = $discount->name;
                                                 $discountAmount = $originalPrice - $finalPrice;
+                                                $discountLabel = $discount->type === 'percentage'
+                                                    ? "{$discountName} ({$discount->value}%)"
+                                                    : "{$discountName} (₱{$discount->value} OFF)";
                                             }
                                         }
 
@@ -272,6 +271,7 @@ class TransactionResource extends Resource
                                             $orderItems[$existingIndex]['quantity'] += $quantity;
                                             $orderItems[$existingIndex]['sub_total'] =
                                                 $finalPrice * $orderItems[$existingIndex]['quantity'];
+                                            $orderItems[$existingIndex]['discount_label'] = $discountLabel;
                                         } else {
                                             $orderItems[] = [
                                                 'productID' => $productID,
@@ -282,6 +282,7 @@ class TransactionResource extends Resource
                                                 'original_price' => $originalPrice,
                                                 'discount_name' => $discountName,
                                                 'discount_amount' => $discountAmount,
+                                                'discount_label' => $discountLabel,
                                                 'unit_price' => $finalPrice,
                                                 'sub_total' => $finalPrice * $quantity,
                                             ];
@@ -325,6 +326,7 @@ class TransactionResource extends Resource
                                     $finalPrice = $originalPrice;
                                     $discountName = null;
                                     $discountAmount = 0;
+                                    $discountLabel = null;
 
                                     if ($state) {
                                         $discount = Discount::find($state);
@@ -332,12 +334,16 @@ class TransactionResource extends Resource
                                             $finalPrice = $discount->getFinalPrice($originalPrice);
                                             $discountName = $discount->name;
                                             $discountAmount = $originalPrice - $finalPrice;
+                                            $discountLabel = $discount->type === 'percentage'
+                                                ? "{$discountName} ({$discount->value}%)"
+                                                : "{$discountName} (₱{$discount->value} OFF)";
                                         }
                                     }
 
                                     $orderItems[$index]['original_price'] = $originalPrice;
                                     $orderItems[$index]['discount_name'] = $discountName;
                                     $orderItems[$index]['discount_amount'] = $discountAmount;
+                                    $orderItems[$index]['discount_label'] = $discountLabel;
                                     $orderItems[$index]['unit_price'] = $finalPrice;
                                     $orderItems[$index]['sub_total'] = $finalPrice * $item['quantity'];
                                 }
@@ -383,7 +389,7 @@ class TransactionResource extends Resource
                                 ->numeric()
                                 ->required()
                                 ->prefix('₱')
-                                ->disabled() // user can't edit
+                                ->disabled()
                                 ->dehydrated(true)
                                 ->afterStateHydrated(fn ($component, $state, Get $get) =>
                                     $component->state(number_format($get('final_amount') ?? 0, 2, '.', ''))
@@ -421,6 +427,16 @@ class TransactionResource extends Resource
                                         ->extraAttributes(['class' => 'text-sm text-gray-600']),
                                 ]),
 
+                                // NEW: show discount info
+                                Placeholder::make('discount_info')
+                                    ->content(fn (Get $get) =>
+                                        $get('discount_label') 
+                                            ? "Discount: " . $get('discount_label')
+                                            : "No Discount"
+                                    )
+                                    ->extraAttributes(['class' => 'text-sm text-blue-500 font-medium'])
+                                    ->columnSpanFull(),
+
                                 TextInput::make('quantity')
                                     ->numeric()
                                     ->minValue(1)
@@ -451,6 +467,7 @@ class TransactionResource extends Resource
                                 Hidden::make('original_price'),
                                 Hidden::make('discount_name'),
                                 Hidden::make('discount_amount'),
+                                Hidden::make('discount_label'),
                             ])
                             ->addable(false)
                             ->reorderable(false)
@@ -490,96 +507,95 @@ class TransactionResource extends Resource
     }
 
     // ================= TABLE =================
-   // ================= TABLE =================
-public static function table(Table $table): Table
-{
-    return $table
-        ->defaultSort('orderID', 'desc')
-        ->columns([
-            TextColumn::make('customer.first_name')->label('Customer Name'),
-            TextColumn::make('orderItems.product.name')->label('Products')->listWithLineBreaks(),
-            TextColumn::make('payment.paymentMethod.method_name')->label('Payment Method'),
-            TextColumn::make('payment.amount')
-                ->label('Paid Amount')
-                ->money('PHP')
-                ->sortable(),
-            TextColumn::make('payment.change')
-                ->label('Change')
-                ->money('PHP')
-                ->sortable()
-                ->toggleable(isToggledHiddenByDefault: true),
-            TextColumn::make('total_amount')->label('Total Amount')->money('PHP'),
-            TextColumn::make('order_status')->label('Order Status')->badge(),
-            TextColumn::make('created_at')->label('Order Date')->dateTime(),
-        ])
-        ->actions([
-            ActionGroup::make([
-                ViewAction::make()
-                    ->form([
-                        Section::make('Customer Information')->schema([
-                            Forms\Components\Placeholder::make('customer_name')
-                                ->label('Customer')
-                                ->content(fn ($record) =>
-                                    $record->customer
-                                        ? "{$record->customer->first_name} {$record->customer->last_name}"
-                                        : 'Guest'
-                                ),
-                            Forms\Components\Placeholder::make('order_date')
-                                ->label('Order Date')
-                                ->content(fn ($record) =>
-                                    $record->order_date?->format('M d, Y H:i')
-                                ),
-                        ]),
+    public static function table(Table $table): Table
+    {
+        return $table
+            ->defaultSort('orderID', 'desc')
+            ->columns([
+                TextColumn::make('customer.first_name')->label('Customer Name'),
+                TextColumn::make('orderItems.product.name')->label('Products')->listWithLineBreaks(),
+                TextColumn::make('payment.paymentMethod.method_name')->label('Payment Method'),
+                TextColumn::make('payment.amount')
+                    ->label('Paid Amount')
+                    ->money('PHP')
+                    ->sortable(),
+                TextColumn::make('payment.change')
+                    ->label('Change')
+                    ->money('PHP')
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+                TextColumn::make('total_amount')->label('Total Amount')->money('PHP'),
+                TextColumn::make('order_status')->label('Order Status')->badge(),
+                TextColumn::make('created_at')->label('Order Date')->dateTime(),
+            ])
+            ->actions([
+                ActionGroup::make([
+                    ViewAction::make()
+                        ->form([
+                            Section::make('Customer Information')->schema([
+                                Forms\Components\Placeholder::make('customer_name')
+                                    ->label('Customer')
+                                    ->content(fn ($record) =>
+                                        $record->customer
+                                            ? "{$record->customer->first_name} {$record->customer->last_name}"
+                                            : 'Guest'
+                                    ),
+                                Forms\Components\Placeholder::make('order_date')
+                                    ->label('Order Date')
+                                    ->content(fn ($record) =>
+                                        $record->order_date?->format('M d, Y H:i')
+                                    ),
+                            ]),
 
-                        Section::make('Cart')->schema([
-                            Forms\Components\Placeholder::make('items')
-                                ->label('Products')
-                                ->content(fn ($record) =>
-                                    $record->orderItems
-                                        ->map(fn ($i) =>
-                                            "{$i->quantity} × {$i->product->name} ({$i->size}/{$i->colorway}) - ₱" .
-                                            number_format($i->sub_total, 2)
-                                        )
-                                        ->implode("\n")
-                                )
-                                ->columnSpanFull(),
-                            Forms\Components\Placeholder::make('total')
-                                ->label('Total')
-                                ->content(fn ($record) =>
-                                    '₱' . number_format($record->final_amount, 2)
-                                )
-                                ->extraAttributes(['class' => 'font-bold text-green-600']),
-                        ]),
+                            Section::make('Cart')->schema([
+                                Forms\Components\Placeholder::make('items')
+                                    ->label('Products')
+                                    ->content(fn ($record) =>
+                                        $record->orderItems
+                                            ->map(fn ($i) =>
+                                                "{$i->quantity} × {$i->product->name} ({$i->size}/{$i->colorway})"
+                                                . ($i->discount_label ? " - Discount: {$i->discount_label}" : "")
+                                                . " - ₱" . number_format($i->sub_total, 2)
+                                            )
+                                            ->implode("\n")
+                                    )
+                                    ->columnSpanFull(),
+                                Forms\Components\Placeholder::make('total')
+                                    ->label('Total')
+                                    ->content(fn ($record) =>
+                                        '₱' . number_format($record->final_amount, 2)
+                                    )
+                                    ->extraAttributes(['class' => 'font-bold text-green-600']),
+                            ]),
 
-                        Section::make('Payment Information')->schema([
-                            Forms\Components\Placeholder::make('method')
-                                ->label('Payment Method')
-                                ->content(fn ($record) =>
-                                    $record->payment?->paymentMethod?->method_name ?? '-'
-                                ),
-                            Forms\Components\Placeholder::make('amount')
-                                ->label('Amount Paid')
-                                ->content(fn ($record) =>
-                                    $record->payment
-                                        ? '₱' . number_format($record->payment->amount, 2)
-                                        : '₱0.00'
-                                ),
-                            Forms\Components\Placeholder::make('status')
-                                ->label('Payment Status')
-                                ->content(fn ($record) =>
-                                    ucfirst($record->payment?->status ?? 'unpaid')
-                                ),
+                            Section::make('Payment Information')->schema([
+                                Forms\Components\Placeholder::make('method')
+                                    ->label('Payment Method')
+                                    ->content(fn ($record) =>
+                                        $record->payment?->paymentMethod?->method_name ?? '-'
+                                    ),
+                                Forms\Components\Placeholder::make('amount')
+                                    ->label('Amount Paid')
+                                    ->content(fn ($record) =>
+                                        $record->payment
+                                            ? '₱' . number_format($record->payment->amount, 2)
+                                            : '₱0.00'
+                                    ),
+                                Forms\Components\Placeholder::make('status')
+                                    ->label('Payment Status')
+                                    ->content(fn ($record) =>
+                                        ucfirst($record->payment?->status ?? 'unpaid')
+                                    ),
+                            ]),
                         ]),
-                    ]),
-                EditAction::make(),
-                DeleteAction::make(),
-                RestoreAction::make(),
-                ForceDeleteAction::make(),
-            ]),
-        ])
-        ->bulkActions([BulkActionGroup::make([DeleteBulkAction::make()])]);
-}
-
+                    EditAction::make(),
+                    DeleteAction::make(),
+                    RestoreAction::make(),
+                    ForceDeleteAction::make(),
+                ]),
+            ])
+            ->bulkActions([BulkActionGroup::make([DeleteBulkAction::make()])]);
+    }
 
     public static function getRelations(): array
     {
