@@ -2,12 +2,19 @@
 
 namespace App\Livewire;
 
+use App\Models\Brand;
+use App\Models\Category;
 use Livewire\Component;
 
 class Landingpage extends Component
 {
     public function render()
     {
-        return view('livewire.landingpage');
+
+        $brands = Brand::where('is_active', operator: 1)->get();
+        return view('livewire.landingpage', [
+            'brands' => $brands,
+        
+        ]);
     }
 }
