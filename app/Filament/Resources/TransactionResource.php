@@ -490,29 +490,96 @@ class TransactionResource extends Resource
     }
 
     // ================= TABLE =================
-    public static function table(Table $table): Table
-    {
-        return $table
-            ->defaultSort('orderID', 'desc')
-            ->columns([
-                TextColumn::make('customer.first_name')->label('Customer Name'),
-                TextColumn::make('orderItems.product.name')->label('Products')->listWithLineBreaks(),
-                TextColumn::make('payment.paymentMethod.method_name')->label('Payment Method'),
-                TextColumn::make('total_amount')->label('Total Amount')->money('PHP'),
-                TextColumn::make('order_status')->label('Order Status')->badge(),
-                TextColumn::make('created_at')->label('Order Date')->dateTime(),
-            ])
-            ->actions([
-                ActionGroup::make([
-                    ViewAction::make(),
-                    EditAction::make(),
-                    DeleteAction::make(),
-                    RestoreAction::make(),
-                    ForceDeleteAction::make(),
-                ])
-            ])
-            ->bulkActions([BulkActionGroup::make([DeleteBulkAction::make()])]);
-    }
+   // ================= TABLE =================
+public static function table(Table $table): Table
+{
+    return $table
+        ->defaultSort('orderID', 'desc')
+        ->columns([
+            TextColumn::make('customer.first_name')->label('Customer Name'),
+            TextColumn::make('orderItems.product.name')->label('Products')->listWithLineBreaks(),
+            TextColumn::make('payment.paymentMethod.method_name')->label('Payment Method'),
+            TextColumn::make('payment.amount')
+                ->label('Paid Amount')
+                ->money('PHP')
+                ->sortable(),
+            TextColumn::make('payment.change')
+                ->label('Change')
+                ->money('PHP')
+                ->sortable()
+                ->toggleable(isToggledHiddenByDefault: true),
+            TextColumn::make('total_amount')->label('Total Amount')->money('PHP'),
+            TextColumn::make('order_status')->label('Order Status')->badge(),
+            TextColumn::make('created_at')->label('Order Date')->dateTime(),
+        ])
+        ->actions([
+            ActionGroup::make([
+                ViewAction::make()
+                    ->form([
+                        Section::make('Customer Information')->schema([
+                            Forms\Components\Placeholder::make('customer_name')
+                                ->label('Customer')
+                                ->content(fn ($record) =>
+                                    $record->customer
+                                        ? "{$record->customer->first_name} {$record->customer->last_name}"
+                                        : 'Guest'
+                                ),
+                            Forms\Components\Placeholder::make('order_date')
+                                ->label('Order Date')
+                                ->content(fn ($record) =>
+                                    $record->order_date?->format('M d, Y H:i')
+                                ),
+                        ]),
+
+                        Section::make('Cart')->schema([
+                            Forms\Components\Placeholder::make('items')
+                                ->label('Products')
+                                ->content(fn ($record) =>
+                                    $record->orderItems
+                                        ->map(fn ($i) =>
+                                            "{$i->quantity} × {$i->product->name} ({$i->size}/{$i->colorway}) - ₱" .
+                                            number_format($i->sub_total, 2)
+                                        )
+                                        ->implode("\n")
+                                )
+                                ->columnSpanFull(),
+                            Forms\Components\Placeholder::make('total')
+                                ->label('Total')
+                                ->content(fn ($record) =>
+                                    '₱' . number_format($record->final_amount, 2)
+                                )
+                                ->extraAttributes(['class' => 'font-bold text-green-600']),
+                        ]),
+
+                        Section::make('Payment Information')->schema([
+                            Forms\Components\Placeholder::make('method')
+                                ->label('Payment Method')
+                                ->content(fn ($record) =>
+                                    $record->payment?->paymentMethod?->method_name ?? '-'
+                                ),
+                            Forms\Components\Placeholder::make('amount')
+                                ->label('Amount Paid')
+                                ->content(fn ($record) =>
+                                    $record->payment
+                                        ? '₱' . number_format($record->payment->amount, 2)
+                                        : '₱0.00'
+                                ),
+                            Forms\Components\Placeholder::make('status')
+                                ->label('Payment Status')
+                                ->content(fn ($record) =>
+                                    ucfirst($record->payment?->status ?? 'unpaid')
+                                ),
+                        ]),
+                    ]),
+                EditAction::make(),
+                DeleteAction::make(),
+                RestoreAction::make(),
+                ForceDeleteAction::make(),
+            ]),
+        ])
+        ->bulkActions([BulkActionGroup::make([DeleteBulkAction::make()])]);
+}
+
 
     public static function getRelations(): array
     {
