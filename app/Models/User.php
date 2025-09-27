@@ -60,6 +60,11 @@ class User extends Authenticatable implements FilamentUser
             return false;
         }
 
-        return $this->hasAnyRole(['admin', 'manager', 'cashier', 'customer']);
+        return $this->hasAnyRole(['admin', 'manager', 'cashier']);
+    }
+
+    public function isCustomer()
+    {
+        return $this->role === 'customer';
     }
 }

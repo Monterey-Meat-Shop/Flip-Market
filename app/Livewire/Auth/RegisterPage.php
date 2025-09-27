@@ -33,20 +33,17 @@ class RegisterPage extends Component
             
             'postal_code' => 'required|max:255',
             'address_line_1' => 'required|max:255',
-            'address_line_2' => 'required|max:255',
+            'address_line_2' => 'max:255',
             'city' => 'required|max:255',
             'province' => 'required|max:255',
             'phone'     => [
             'required',
             'regex:/^[0-9]{10,11}$/',
             // 'unique:customers,phone',
-    
-
         ],
 
         ]);
 
-    
             $user = User::create([
                 'name' => $this->firstname,
                 'last_name' => $this->lastname,
@@ -56,7 +53,7 @@ class RegisterPage extends Component
                 'is_active' => true,
             ]);
 
-            $user->assignRole('customer'); //automatically assign the user role na customer pahirap sa backend c kupal
+            $user->assignRole('customer'); //automatically assign the user as a customer
             
             $customer = Customer::create([
             'user_id' => $user->id,
@@ -76,7 +73,7 @@ class RegisterPage extends Component
             'postal_code' => $this->postal_code,
         ]);
 
-        return redirect()->intended();
+        return redirect()->route('login')->with('message', 'Account created successfully! Please login.');
     }
 
 

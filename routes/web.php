@@ -6,6 +6,7 @@ use App\Livewire\CartPage;
 use App\Livewire\CategoriesPage;
 use App\Livewire\BrandPage;
 use App\Livewire\Landingpage;
+use App\Livewire\CheckoutPage;
 
 use App\Livewire\ProductDetailPage;
 use App\Livewire\ProductPage;
@@ -39,17 +40,32 @@ require __DIR__.'/auth.php';
 
 
 // Customer Side product page
-Route::get('/', Landingpage::class);
-Route::get('/products', ProductPage::class);
-Route::get('/categories', CategoriesPage::class);
-Route::get('/brands', BrandPage::class);
-Route::get('/cart', CartPage::class);
-Route::get('/product/{productId}', App\Livewire\ProductDetailPage::class)->name('product.detail');
-
+Route::get('/', Landingpage::class)->name('landingpage');
+Route::get('/products', ProductPage::class)->name('products');
+Route::get('/categories', CategoriesPage::class)->name('categories');
+Route::get('/brands', BrandPage::class)->name('brands');
+Route::get('/cart', CartPage::class)->name('cart');
+Route::get('/product/{productId}', ProductDetailPage::class)->name('product.detail');
 
 // lOGIN
-Route::get('/login', LoginPage::class);
-Route::get('/register', RegisterPage::class);
+Route::get('/login', LoginPage::class)->name('login');
+Route::get('/register', RegisterPage::class)->name('register');
+
+// Auth
+Route::get('/login', LoginPage::class)->name('login');
+Route::get('/register', RegisterPage::class)->name('register');
+
+// Cart Actions (must be logged in)
+Route::middleware(['auth'])->group(function () {
+    Route::post('/cart/add/{productId}', [CartController::class, 'addToCart'])->name('cart.add');
+    Route::post('/cart/remove/{itemId}', [CartController::class, 'removeFromCart'])->name('cart.remove');
+    Route::post('/cart/update/{itemId}', [CartController::class, 'updateQuantity'])->name('cart.update');
+});
+
+// Customer Orders Page
+// Route::middleware(['auth'])->group(function () {
+//     Route::get('/orders', [OrderController::class, 'index'])->name('orders');
+// });
 
 
 

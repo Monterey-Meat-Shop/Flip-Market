@@ -40,29 +40,20 @@
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="flex-shrink-0 w-5 h-5 mr-1">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5V6a3.75 3.75 0 1 0-7.5 0v4.5m11.356-1.993 1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 0 1-1.12-1.243l1.264-12A1.125 1.125 0 0 1 5.513 7.5h12.974c.576 0 1.059.435 1.119 1.007ZM8.625 10.5a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm7.5 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
               </svg>
-                <livewire:cart-counter />
+              <span class="mr-1">Cart</span> <span class="py-0.5 px-1.5 rounded-full text-xs font-medium bg-blue-50 border border-blue-200 text-blue-600">4</span>
             </a>
 
             <div class="pt-3 md:pt-0">
-              @guest
-                <a wire:navigate  
-                  class="py-2.5 px-4 inline-flex items-center gap-x-2 text-sm font-semibold rounded-lg 
-                         border border-transparent bg-blue-600 text-white hover:bg-blue-700 
-                         disabled:opacity-50 disabled:pointer-events-none 
-                         dark:focus:outline-none dark:focus:ring-1 dark:focus:ring-gray-600" 
-                  href="/login">
-                  <svg class="flex-shrink-0 w-4 h-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" 
-                       viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" 
-                       stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
-                    <circle cx="12" cy="7" r="4" />
-                  </svg>
-                  Log in
-                </a>
-              @endguest
+              <a wire:navigate  class="py-2.5 px-4 inline-flex items-center gap-x-2 text-sm font-semibold rounded-lg border border-transparent bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:pointer-events-none dark:focus:outline-none dark:focus:ring-1 dark:focus:ring-gray-600" href="/login">
+                <svg class="flex-shrink-0 w-4 h-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+                  <circle cx="12" cy="7" r="4" />
+                </svg>
+                Log in
+              </a>
             </div>
 
-            {{-- <div class="hs-dropdown [--strategy:static] md:[--strategy:fixed] [--adaptive:none] md:[--trigger:hover] md:py-4">
+            <div class="hs-dropdown [--strategy:static] md:[--strategy:fixed] [--adaptive:none] md:[--trigger:hover] md:py-4">
               <button type="button" class="flex items-center w-full text-gray-500 hover:text-gray-400 font-medium dark:text-gray-400 dark:hover:text-gray-500">
                 User Name
             <svg class="ms-2 w-4 h-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -81,45 +72,6 @@
               <a class="flex items-center gap-x-3.5 py-2 px-3 rounded-lg text-sm text-gray-800 hover:bg-gray-100 focus:ring-2 focus:ring-blue-500 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-300 dark:focus:outline-none dark:focus:ring-1 dark:focus:ring-gray-600" href="#">
                 Logout
               </a>
-            </div>
-          </div> --}}
-
-          <div x-data="{ open: false }" class="relative">
-          <!-- Temporary -->
-            <button @click="open = !open"
-              class="flex items-center w-full text-gray-700 hover:text-gray-900 font-medium 
-            dark:text-gray-300 dark:hover:text-white focus:outline-none"
-              aria-haspopup="true" :aria-expanded="open">
-            <span>{{ Auth::user()->name ?? 'User' }}</span>
-            <svg class="ml-2 w-4 h-4 transition-transform duration-200"
-                 :class="{ 'rotate-180': open }"
-                 xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 9l6 6 6-6"/>
-            </svg>
-            </button>
-
-            <!-- Dropdown Menu -->
-            <div x-show="open" @click.outside="open = false" x-transition
-                 class="absolute right-0 mt-2 w-48 bg-white shadow-md rounded-lg py-2 
-               dark:bg-gray-800 border dark:border-gray-700 z-50">
-              {{-- <a href="{{ route('customer.orders') }}"
-                 class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 
-               dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white">
-                 My Orders
-              </a>
-              <a href="{{ route('customer.account') }}"
-                 class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 
-               dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white"> --}}
-                 My Account
-              </a>
-              <form method="POST" action="{{ route('logout') }}">
-                @csrf
-                <button type="submit"
-                  class="w-full text-left block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 
-                dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white">
-                  Logout
-                </button>
-              </form>
             </div>
           </div>
 
