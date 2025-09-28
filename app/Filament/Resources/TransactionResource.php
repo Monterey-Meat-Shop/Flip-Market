@@ -35,6 +35,7 @@ use Illuminate\Support\Facades\Auth;
 use Filament\Forms\Get;
 use Filament\Forms\Set;
 use Illuminate\Database\Eloquent\Model;
+use Filament\Notifications\Notification;
 
 class TransactionResource extends Resource
 {
@@ -204,7 +205,21 @@ class TransactionResource extends Resource
                                     $variantId = $get('temp_variant_id');
                                     if ($variantId) {
                                         $variant = ProductVariant::find($variantId);
-                                        return $variant ? "{$variant->stock_quantity} available" : '';
+                                        $stock = $variant ? $variant->stock_quantity : 0;
+                                        
+                                        if ($stock <= 0) {
+                                            return new \Illuminate\Support\HtmlString(
+                                                '<span class="text-red-600 font-semibold">Out of Stock</span>'
+                                            );
+                                        } elseif ($stock <= 5) {
+                                            return new \Illuminate\Support\HtmlString(
+                                                '<span class="text-orange-600 font-semibold">' . $stock . ' available (Low Stock)</span>'
+                                            );
+                                        } else {
+                                            return new \Illuminate\Support\HtmlString(
+                                                '<span class="text-green-600 font-semibold">' . $stock . ' available</span>'
+                                            );
+                                        }
                                     }
                                     return '';
                                 })
@@ -234,9 +249,32 @@ class TransactionResource extends Resource
                                             return;
                                         }
 
+                                        // CHECK STOCK AVAILABILITY
+                                        if ($variant->stock_quantity <= 0) {
+                                            Notification::make()
+                                                ->title('Out of Stock')
+                                                ->body("Sorry, {$product->name} (Size: {$variant->size}) is currently out of stock.")
+                                                ->danger()
+                                                ->duration(5000)
+                                                ->send();
+                                            return;
+                                        }
+
+                                        // CHECK IF REQUESTED QUANTITY IS AVAILABLE
+                                        if ($quantity > $variant->stock_quantity) {
+                                            Notification::make()
+                                                ->title('Insufficient Stock')
+                                                ->body("Only {$variant->stock_quantity} units of {$product->name} (Size: {$variant->size}) are available.")
+                                                ->warning()
+                                                ->duration(5000)
+                                                ->send();
+                                            return;
+                                        }
+
                                         $orderItems = $get('orderItems') ?? [];
                                         $existingIndex = null;
 
+                                        // CHECK IF ITEM ALREADY EXISTS IN CART
                                         foreach ($orderItems as $index => $item) {
                                             if (
                                                 isset($item['productID'], $item['product_variant_id'])
@@ -245,6 +283,20 @@ class TransactionResource extends Resource
                                             ) {
                                                 $existingIndex = $index;
                                                 break;
+                                            }
+                                        }
+
+                                        // CHECK STOCK WHEN ADDING TO EXISTING CART ITEM
+                                        if ($existingIndex !== null) {
+                                            $newTotalQuantity = $orderItems[$existingIndex]['quantity'] + $quantity;
+                                            if ($newTotalQuantity > $variant->stock_quantity) {
+                                                Notification::make()
+                                                    ->title('Insufficient Stock')
+                                                    ->body("Cannot add {$quantity} more units. You already have {$orderItems[$existingIndex]['quantity']} in cart. Only {$variant->stock_quantity} units available.")
+                                                    ->warning()
+                                                    ->duration(6000)
+                                                    ->send();
+                                                return;
                                             }
                                         }
 
@@ -295,6 +347,14 @@ class TransactionResource extends Resource
                                         $set('total_amount', $total);
                                         $set('final_amount', $total);
                                         $set('payment.amount', number_format($total, 2, '.', ''));
+
+                                        // SUCCESS NOTIFICATION
+                                        Notification::make()
+                                            ->title('Item Added Successfully')
+                                            ->body("{$quantity} × {$product->name} (Size: {$variant->size}) added to cart.")
+                                            ->success()
+                                            ->duration(3000)
+                                            ->send();
 
                                         $set('temp_productID', null);
                                         $set('temp_variant_id', null);
@@ -372,17 +432,33 @@ class TransactionResource extends Resource
                                 ->required()
                                 ->preload()
                                 ->dehydrated(true)
-                                ->live(),
+                                ->live()
+                                ->afterStateUpdated(function (Set $set, $state) {
+                                    // Clear reference number when payment method changes
+                                    $paymentMethod = PaymentMethod::find($state);
+                                    if (!$paymentMethod || $paymentMethod->method_name !== 'GCash') {
+                                        $set('reference_number', null);
+                                    }
+                                }),
 
                             TextInput::make('reference_number')
                                 ->label('Reference Number')
-                                ->visible(fn (Get $get) => 
-                                    PaymentMethod::find($get('payment_methodID'))?->method_name === 'GCash'
-                                )
-                                ->required(fn (Get $get) =>
-                                    PaymentMethod::find($get('payment_methodID'))?->method_name === 'GCash'
-                                )
-                                ->dehydrated(true),
+                                ->visible(function (Get $get) {
+                                    $paymentMethodId = $get('payment_methodID');
+                                    if (!$paymentMethodId) return false;
+                                    
+                                    $paymentMethod = PaymentMethod::find($paymentMethodId);
+                                    return $paymentMethod && $paymentMethod->method_name === 'GCash';
+                                })
+                                ->required(function (Get $get) {
+                                    $paymentMethodId = $get('payment_methodID');
+                                    if (!$paymentMethodId) return false;
+                                    
+                                    $paymentMethod = PaymentMethod::find($paymentMethodId);
+                                    return $paymentMethod && $paymentMethod->method_name === 'GCash';
+                                })
+                                ->dehydrated(true)
+                                ->placeholder('Enter GCash reference number'),
 
                             TextInput::make('amount')
                                 ->label('Amount')
@@ -427,7 +503,7 @@ class TransactionResource extends Resource
                                         ->extraAttributes(['class' => 'text-sm text-gray-600']),
                                 ]),
 
-                                // NEW: show discount info
+                                // Show discount info
                                 Placeholder::make('discount_info')
                                     ->content(fn (Get $get) =>
                                         $get('discount_label') 
@@ -442,10 +518,27 @@ class TransactionResource extends Resource
                                     ->minValue(1)
                                     ->live()
                                     ->afterStateUpdated(function (Set $set, Get $get, $state) {
+                                        // Validate stock when quantity is changed
+                                        $variantId = $get('product_variant_id');
+                                        if ($variantId) {
+                                            $variant = ProductVariant::find($variantId);
+                                            if ($variant && $state > $variant->stock_quantity) {
+                                                Notification::make()
+                                                    ->title('Insufficient Stock')
+                                                    ->body("Only {$variant->stock_quantity} units available.")
+                                                    ->warning()
+                                                    ->duration(4000)
+                                                    ->send();
+                                                
+                                                $set('quantity', $variant->stock_quantity);
+                                                $state = $variant->stock_quantity;
+                                            }
+                                        }
+
                                         $unitPrice = $get('unit_price');
                                         $set('sub_total', ($unitPrice && $state) ? $unitPrice * $state : 0);
 
-                                        // Sync totals
+                                        // Sync totals after quantity change
                                         $total = collect($get('../../orderItems') ?? [])->sum('sub_total');
                                         $set('../../total_amount', $total);
                                         $set('../../final_amount', $total);
@@ -473,7 +566,18 @@ class TransactionResource extends Resource
                             ->reorderable(false)
                             ->collapsed(false)
                             ->cloneable(false)
-                            ->defaultItems(0),
+                            ->defaultItems(0)
+                            ->deletable(true)
+                            ->afterStateUpdated(function (Set $set, Get $get, $state) {
+                                // This fires when items are deleted from the repeater
+                                // $state contains the updated orderItems array after deletion
+                                $total = collect($state ?? [])->sum('sub_total');
+                                
+                                $set('total_amount', $total);
+                                $set('final_amount', $total);
+                                $set('payment.amount', number_format($total, 2, '.', ''));
+                            })
+                            ->live(),
 
                         Forms\Components\Fieldset::make('Order Summary')->schema([
                             Placeholder::make('subtotal')
@@ -504,6 +608,28 @@ class TransactionResource extends Resource
                 ]),
             ]),
         ]);
+    }
+
+    // Helper method to sync totals
+    protected static function syncTotals(Set $set, Get $get): void
+    {
+        $orderItems = $get('../../orderItems') ?? [];
+        $total = collect($orderItems)->sum('sub_total');
+        
+        $set('../../total_amount', $total);
+        $set('../../final_amount', $total);
+        $set('../../payment.amount', number_format($total, 2, '.', ''));
+    }
+
+    // Helper method to sync totals after item deletion
+    protected static function syncTotalsAfterDelete(Set $set, Get $get, $state): void
+    {
+        // $state contains the updated orderItems array after deletion
+        $total = collect($state ?? [])->sum('sub_total');
+        
+        $set('total_amount', $total);
+        $set('final_amount', $total);
+        $set('payment.amount', number_format($total, 2, '.', ''));
     }
 
     // ================= TABLE =================
@@ -573,6 +699,14 @@ class TransactionResource extends Resource
                                     ->label('Payment Method')
                                     ->content(fn ($record) =>
                                         $record->payment?->paymentMethod?->method_name ?? '-'
+                                    ),
+                                Forms\Components\Placeholder::make('reference_number')
+                                    ->label('Reference Number')
+                                    ->content(fn ($record) =>
+                                        $record->payment?->reference_number ?? '-'
+                                    )
+                                    ->visible(fn ($record) =>
+                                        $record->payment?->paymentMethod?->method_name === 'GCash'
                                     ),
                                 Forms\Components\Placeholder::make('amount')
                                     ->label('Amount Paid')
