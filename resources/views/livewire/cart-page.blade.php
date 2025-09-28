@@ -66,10 +66,10 @@
               <dd class="text-base font-medium text-gray-900">₱{{ number_format($total ?? 0, 2) }}</dd>
             </dl>
 
-            <a href="{{ route('cart') }}" 
-   class="flex w-full items-center justify-center rounded-lg bg-blue-700 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-900">
-   Proceed to Checkout
-</a>
+            <a href="{{ route('checkout') }}" 
+               class="flex w-full items-center justify-center rounded-lg bg-blue-700 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-900">
+               Proceed to Checkout
+            </a>
             <a href="{{ route('products') }}" class="inline-flex items-center gap-2 text-sm underline mt-2">
               Continue Shopping
             </a>

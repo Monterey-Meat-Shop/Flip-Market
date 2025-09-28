@@ -64,66 +64,30 @@
               @endguest
             </div>
 
-            {{-- <div class="hs-dropdown [--strategy:static] md:[--strategy:fixed] [--adaptive:none] md:[--trigger:hover] md:py-4">
-              <button type="button" class="flex items-center w-full text-gray-500 hover:text-gray-400 font-medium dark:text-gray-400 dark:hover:text-gray-500">
-                User Name
+            @auth
+         <div class="hs-dropdown [--strategy:static] md:[--strategy:fixed] md:[--trigger:hover] md:py-4 relative inline-flex ">
+              <button type="button" class="flex items-center w-full text-gray-500 hover:text-gray-400 font-medium ">
+                {{ auth()->user()->name }}
             <svg class="ms-2 w-4 h-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="m6 9 6 6 6-6" />
             </svg>
             </button>
 
-            <div class="hs-dropdown-menu transition-[opacity,margin] duration-[0.1ms] md:duration-[150ms] hs-dropdown-open:opacity-100 opacity-0 md:w-48 hidden z-10 bg-white md:shadow-md rounded-lg p-2 dark:bg-gray-800 md:dark:border dark:border-gray-700 dark:divide-gray-700 before:absolute top-full md:border before:-top-5 before:start-0 before:w-full before:h-5">
-              <a class="flex items-center gap-x-3.5 py-2 px-3 rounded-lg text-sm text-gray-800 hover:bg-gray-100 focus:ring-2 focus:ring-blue-500 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-300 dark:focus:outline-none dark:focus:ring-1 dark:focus:ring-gray-600" href="#">
-                My Orders
+            <div class="hs-dropdown-menu transition-[opacity,margin] duration-[0.1ms] md:duration-[150ms] hs-dropdown-open:opacity-100 opacity-0 md:w-48 hidden z-10 bg-white md:shadow-md rounded-lg p-2  before:absolute top-full md:border border-gray-300 before:-top-5 before:start-0 before:w-full before:h-5">
+              <a class="flex items-center gap-x-3.5 py-2 px-3 rounded-lg text-sm text-gray-800 hover:bg-gray-100 focus:ring-2 focus:ring-blue-500" 
+                 href="{{ route('my.orders') }}">
+                 My Orders
               </a>
 
-              <a class="flex items-center gap-x-3.5 py-2 px-3 rounded-lg text-sm text-gray-800 hover:bg-gray-100 focus:ring-2 focus:ring-blue-500 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-300 dark:focus:outline-none dark:focus:ring-1 dark:focus:ring-gray-600" href="#">
+              <a class="flex items-center gap-x-3.5 py-2 px-3 rounded-lg text-sm text-gray-800 hover:bg-gray-100 focus:ring-2 focus:ring-blue-500 "  href="#">
                 My Account
               </a>
-              <a class="flex items-center gap-x-3.5 py-2 px-3 rounded-lg text-sm text-gray-800 hover:bg-gray-100 focus:ring-2 focus:ring-blue-500 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-300 dark:focus:outline-none dark:focus:ring-1 dark:focus:ring-gray-600" href="#">
+              <a class="flex items-center gap-x-3.5 py-2 px-3 rounded-lg text-sm text-gray-800 hover:bg-gray-100 focus:ring-2 focus:ring-gray-500 " href="/logout">
                 Logout
               </a>
             </div>
-          </div> --}}
-
-          <div x-data="{ open: false }" class="relative">
-          <!-- Temporary -->
-            <button @click="open = !open"
-              class="flex items-center w-full text-gray-700 hover:text-gray-900 font-medium 
-            dark:text-gray-300 dark:hover:text-white focus:outline-none"
-              aria-haspopup="true" :aria-expanded="open">
-            <span>{{ Auth::user()->name ?? 'User' }}</span>
-            <svg class="ml-2 w-4 h-4 transition-transform duration-200"
-                 :class="{ 'rotate-180': open }"
-                 xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 9l6 6 6-6"/>
-            </svg>
-            </button>
-
-            <!-- Dropdown Menu -->
-            <div x-show="open" @click.outside="open = false" x-transition
-                 class="absolute right-0 mt-2 w-48 bg-white shadow-md rounded-lg py-2 
-               dark:bg-gray-800 border dark:border-gray-700 z-50">
-              {{-- <a href="{{ route('customer.orders') }}"
-                 class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 
-               dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white">
-                 My Orders
-              </a>
-              <a href="{{ route('customer.account') }}"
-                 class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 
-               dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white"> --}}
-                 My Account
-              </a>
-              <form method="POST" action="{{ route('logout') }}">
-                @csrf
-                <button type="submit"
-                  class="w-full text-left block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 
-                dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white">
-                  Logout
-                </button>
-              </form>
-            </div>
-          </div>
+        </div>
+      @endauth
 
           </div>
         </div>

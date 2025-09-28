@@ -1,0 +1,194 @@
+<?php
+
+namespace App\Livewire;
+
+use Livewire\Component;
+use App\Models\Order;
+use App\Models\Customer;
+use Illuminate\Support\Facades\Auth;
+use Livewire\WithPagination;
+
+class MyOrderPage extends Component
+{
+    use WithPagination;
+
+    public $activeTab = 'all';
+    public $searchQuery = '';
+    public $customer;
+
+    protected $queryString = array(
+        'activeTab' => array('except' => 'all'),
+        'searchQuery' => array('except' => ''),
+    );
+
+    public function mount()
+    {
+        if (!Auth::check()) {
+            return redirect()->route('login');
+        }
+
+        $this->customer = Customer::where('user_id', Auth::id())->first();
+        
+        if (!$this->customer) {
+            session()->flash('error', 'Customer profile not found.');
+            return redirect()->route('profile');
+        }
+    }
+
+    public function setActiveTab($tab)
+    {
+        $this->activeTab = $tab;
+        $this->resetPage();
+    }
+
+    public function updatedSearchQuery()
+    {
+        $this->resetPage();
+    }
+
+    public function getOrdersProperty()
+    {
+        if (!$this->customer) {
+            return collect();
+        }
+
+        $query = Order::where('customerID', $this->customer->customerID)
+            ->with(array('orderItems.product', 'orderItems.variant', 'payment', 'shipping'))
+            ->orderBy('order_date', 'desc');
+
+        // Apply search filter
+        if (!empty($this->searchQuery)) {
+            $query->where(function($q) {
+                $q->where('orderID', 'like', '%' . $this->searchQuery . '%')
+                  ->orWhereHas('orderItems.product', function($productQuery) {
+                      $productQuery->where('name', 'like', '%' . $this->searchQuery . '%');
+                  });
+            });
+        }
+
+        // Apply status filter
+        switch ($this->activeTab) {
+            case 'to_pay':
+                $query->whereIn('order_status', array('Pending'))
+                      ->whereHas('payment', function($paymentQuery) {
+                          $paymentQuery->where('status', '!=', 'Cash on Delivery');
+                      });
+                break;
+            case 'to_ship':
+                $query->whereIn('order_status', array('Processing', 'Confirmed'));
+                break;
+            case 'to_receive':
+                $query->whereHas('shipping', function($shippingQuery) {
+                    $shippingQuery->where('shipping_status', 'shipped');
+                });
+                break;
+            case 'completed':
+                $query->where('order_status', 'Completed');
+                break;
+            case 'cancelled':
+                $query->where('order_status', 'Cancelled');
+                break;
+            default: // 'all'
+                break;
+        }
+
+        return $query->paginate(10);
+    }
+
+    public function getStatusColor($order)
+    {
+        switch (strtolower($order->order_status)) {
+            case 'pending':
+                // Check if it's cash on delivery or needs payment
+                if ($order->payment && $order->payment->status === 'Cash on Delivery') {
+                    return array('bg-blue-100', 'text-blue-600', 'To Ship');
+                } else {
+                    return array('bg-orange-100', 'text-orange-600', 'To Pay');
+                }
+            case 'processing':
+            case 'confirmed':
+                return array('bg-yellow-100', 'text-yellow-600', 'To Ship');
+            case 'shipped':
+                return array('bg-purple-100', 'text-purple-600', 'To Receive');
+            case 'completed':
+            case 'delivered':
+                return array('bg-green-100', 'text-green-600', 'Completed');
+            case 'cancelled':
+                return array('bg-red-100', 'text-red-600', 'Cancelled');
+            default:
+                return array('bg-gray-100', 'text-gray-600', 'Unknown');
+        }
+    }
+
+    public function viewOrderDetails($orderId)
+    {
+        return redirect()->route('orders.show', $orderId);
+    }
+
+    public function cancelOrder($orderId)
+    {
+        $order = Order::where('orderID', $orderId)
+            ->where('customerID', $this->customer->customerID)
+            ->first();
+
+        if (!$order) {
+            session()->flash('error', 'Order not found.');
+            return;
+        }
+
+        // Only allow cancellation for pending orders
+        if ($order->order_status !== 'Pending') {
+            session()->flash('error', 'This order cannot be cancelled.');
+            return;
+        }
+
+        // Return stock to products/variants
+        foreach ($order->orderItems as $item) {
+            if ($item->variant) {
+                $item->variant->increment('stock_quantity', $item->quantity);
+            } else {
+                $item->product->increment('total_stock_quantity', $item->quantity);
+            }
+        }
+
+        // Update order status
+        $order->update(array('order_status' => 'Cancelled'));
+
+        // Update payment status if needed
+        if ($order->payment) {
+            $order->payment->update(array('status' => 'Cancelled'));
+        }
+
+        session()->flash('success', 'Order cancelled successfully.');
+        $this->resetPage();
+    }
+
+    public function requestReturn($orderId)
+    {
+        $order = Order::where('orderID', $orderId)
+            ->where('customerID', $this->customer->customerID)
+            ->first();
+
+        if (!$order) {
+            session()->flash('error', 'Order not found.');
+            return;
+        }
+
+        // Only allow returns for completed orders
+        if ($order->order_status !== 'Completed' && $order->order_status !== 'Delivered') {
+            session()->flash('error', 'Only completed orders can be returned.');
+            return;
+        }
+
+        // Here you would typically create a return request record
+        // For now, we'll just show a success message
+        session()->flash('success', 'Return request submitted. We will contact you soon.');
+    }
+
+    public function render()
+    {
+        return view('livewire.my-order-page', array(
+            'orders' => $this->orders,
+        ));
+    }
+}

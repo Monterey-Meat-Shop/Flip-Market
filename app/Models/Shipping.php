@@ -17,14 +17,48 @@ class Shipping extends Model
         'orderID',
         'shipping_method',
         'shipping_status',
+        'shipping_fee',
     ];
 
     protected $attributes = [
         'shipping_status' => 'processing',
     ];
 
+    // Define shipping method constants
+    const SHIPPING_METHODS = [
+        'JNT' => [
+            'name' => 'J&T Express',
+            'fee' => 70,
+            'description' => '3-5 business days delivery',
+        ],
+        'LALAMOVE' => [
+            'name' => 'Lalamove',
+            'fee' => 120,
+            'description' => 'Same day delivery',
+        ],
+    ];
+
     public function order()
     {
         return $this->belongsTo(Order::class, 'orderID', 'orderID');
+    }
+
+    // Get shipping method details
+    public function getShippingMethodDetails()
+    {
+        return self::SHIPPING_METHODS[$this->shipping_method] ?? null;
+    }
+
+    // Get shipping fee
+    public function getShippingFee()
+    {
+        $details = $this->getShippingMethodDetails();
+        return $details ? $details['fee'] : 70; // Default to 70 if method not found
+    }
+
+    // Static method to get all shipping methods
+    public static function getAvailableShippingMethods()
+    {
+        return self::SHIPPING_METHODS;
     }
 }
