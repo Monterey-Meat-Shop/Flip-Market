@@ -5,7 +5,7 @@
         <div class="mx-auto max-w-7xl px-6 grid grid-cols-1 lg:grid-cols-4 gap-8">
 
             <!-- Filter Sidebar -->
-            <aside class="bg-white rounded-xl p-4 shadow-md lg:col-span-1 h-fit sticky top-4">
+            <aside class="bg-white rounded-xl p-4 shadow-md lg:col-span-1 h-fit top-4">
                 <h2 class="text-lg font-bold text-gray-700 mb-4">Filters</h2>
 
 

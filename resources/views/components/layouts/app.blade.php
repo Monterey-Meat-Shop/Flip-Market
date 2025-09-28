@@ -17,6 +17,7 @@
     </main>
         @livewire('partial.footer')
         @livewireScripts
+        <script src="https://unpkg.com/preline/dist/preline.js"></script>
         
     </body> 
 </html>

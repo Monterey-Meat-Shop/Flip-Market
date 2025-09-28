@@ -19,6 +19,8 @@ return new class extends Migration
             $table->foreign('orderID')->references('orderID')->on('orders')->onDelete('cascade');
             
             $table->string('shipping_method'); //Lalamove, JNT, 
+
+            $table->decimal('shipping_fee', 8, 2)->default(70.00);
             
             // Corrected enum and default value
             $table->enum('shipping_status', ['pending', 'processing', 'shipped', 'delivered'])->default('pending');
