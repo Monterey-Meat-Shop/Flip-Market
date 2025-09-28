@@ -17,6 +17,7 @@ use Filament\Tables\Actions\ActionGroup;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Hash;
 use Spatie\Permission\Models\Role;
+use Filament\Forms\Get;
 
 class UserResource extends Resource
 {
@@ -36,12 +37,13 @@ class UserResource extends Resource
             ->schema([
                 Card::make("User Information")->schema([
 
-                    // First Name (for customers only)
+                    // First Name
                     TextInput::make('name')
                         ->label('First Name')
-                        ->maxLength(255),
+                        ->maxLength(255)
+                        ->required(),
 
-                    // Last Name (for customers only)
+                    // Last Name
                     TextInput::make('last_name')
                         ->label('Last Name')
                         ->maxLength(255),
@@ -59,10 +61,29 @@ class UserResource extends Resource
 
                     TextInput::make('password')
                         ->password()
+                        ->revealable()
                         ->dehydrateStateUsing(fn ($state) => filled($state) ? Hash::make($state) : null)
                         ->dehydrated(fn ($state) => filled($state))
                         ->required(fn (string $operation): bool => $operation === 'create')
-                        ->maxLength(255),
+                        ->maxLength(255)
+                        ->same('password_confirmation')
+                        ->validationAttribute('password'),
+
+                    TextInput::make('password_confirmation')
+                        ->label('Confirm Password')
+                        ->password()
+                        ->revealable()
+                        ->required(fn (string $operation): bool => $operation === 'create')
+                        ->maxLength(255)
+                        ->dehydrated(false)
+                        ->validationAttribute('password confirmation')
+                        ->rules([
+                            fn (Get $get): \Closure => function (string $attribute, $value, \Closure $fail) use ($get) {
+                                if ($get('password') !== $value) {
+                                    $fail('The password confirmation does not match.');
+                                }
+                            },
+                        ]),
 
                     Select::make('roles')
                         ->relationship(
@@ -72,52 +93,40 @@ class UserResource extends Resource
                         )
                         ->preload()
                         ->required()
-                        ->reactive(),
+                        ->live(),
                 ])
                 ->columns(2),
 
-                // Address fields (for customers only)
+                // Address fields (for customers only) - Now using direct user fields
                 Card::make("Customer Information")
                     ->schema([
                         TextInput::make('phone')
-                        ->label('Phone')
-                        ->tel()
-                        ->maxLength(20),
+                            ->label('Phone')
+                            ->tel()
+                            ->maxLength(20),
 
                         TextInput::make('postal_code')
                             ->label('Postal Code')
-                            ->afterStateHydrated(fn ($component, $record) =>
-                                $component->state($record?->customer?->address?->first()?->postal_code ?? '')
-                            ),
+                            ->maxLength(10),
 
                         TextInput::make('address_line_1')
                             ->label('Address Line 1')
-                            ->afterStateHydrated(fn ($component, $record) =>
-                                $component->state($record?->customer?->address?->first()?->address_line_1 ?? '')
-                            ),
+                            ->maxLength(255),
 
                         TextInput::make('city')
                             ->label('City')
-                            ->afterStateHydrated(fn ($component, $record) =>
-                                $component->state($record?->customer?->address?->first()?->city ?? '')
-                            ),
+                            ->maxLength(100),
 
                         TextInput::make('address_line_2')
                             ->label('Address Line 2')
-                            ->afterStateHydrated(fn ($component, $record) =>
-                                $component->state($record?->customer?->address?->first()?->address_line_2 ?? '')
-                            ),
+                            ->maxLength(255),
 
                         TextInput::make('province')
                             ->label('Province')
-                            ->afterStateHydrated(fn ($component, $record) =>
-                                $component->state($record?->customer?->address?->first()?->province ?? '')
-                            ),
-
-                        
+                            ->maxLength(100),
                     ])
                     ->columns(2)
-                    ->visible(fn (callable $get) => self::isCustomerRole($get)),
+                    ->visible(fn (Get $get) => self::isCustomerRole($get)),
             ]);
     }
 
@@ -125,59 +134,96 @@ class UserResource extends Resource
     {
         return $table
             ->columns([
-                
                 TextColumn::make('name')
                     ->label('Name')
                     ->searchable(),
 
-                // Phone from customers table
-                // TextColumn::make('customer.phone')
-                //     ->label('Phone')
-                //     ->searchable(),
+                TextColumn::make('last_name')
+                    ->label('Last Name')
+                    ->searchable()
+                    ->toggleable(),
 
-                TextColumn::make('email')->searchable(),
+                TextColumn::make('email')
+                    ->searchable(),
+
+                TextColumn::make('phone')
+                    ->label('Phone')
+                    ->searchable()
+                    ->toggleable(),
 
                 TextColumn::make('roles.name')
                     ->label('Roles')
+                    ->badge()
                     ->getStateUsing(fn (User $record): string => $record->roles->pluck('name')->implode(', ')),
 
-                // Address (show first address only)
-                // TextColumn::make('customer.address.address_line_1')
-                //     ->label('Address')
-                //     ->getStateUsing(fn (User $record): string =>
-                //         $record->customer?->address->first()?->address_line_1 ?? 'N/A'
-                //     ),
+                TextColumn::make('address_line_1')
+                    ->label('Address')
+                    ->limit(30)
+                    ->toggleable(isToggledHiddenByDefault: true),
 
-                // TextColumn::make('customer.address.city')
-                //     ->label('City')
-                //     ->getStateUsing(fn (User $record): string =>
-                //         $record->customer?->address->first()?->city ?? 'N/A'
-                //     ),
+                TextColumn::make('city')
+                    ->label('City')
+                    ->toggleable(isToggledHiddenByDefault: true),
 
-                // TextColumn::make('customer.address.province')
-                //     ->label('Province')
-                //     ->getStateUsing(fn (User $record): string =>
-                //         $record->customer?->address->first()?->province ?? 'N/A'
-                //     ),
+                TextColumn::make('province')
+                    ->label('Province')
+                    ->toggleable(isToggledHiddenByDefault: true),
 
-                // TextColumn::make('customer.address.postal_code')
-                //     ->label('Postal Code')
-                //     ->getStateUsing(fn (User $record): string =>
-                //         $record->customer?->address->first()?->postal_code ?? 'N/A'
-                //     ),
+                TextColumn::make('postal_code')
+                    ->label('Postal Code')
+                    ->toggleable(isToggledHiddenByDefault: true),
 
-                TextColumn::make('email_verified_at')->dateTime()->sortable(),
-                TextColumn::make('created_at')->dateTime()->sortable(),
-                TextColumn::make('updated_at')->dateTime()->sortable(),
+                TextColumn::make('email_verified_at')
+                    ->dateTime()
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+
+                TextColumn::make('is_active')
+                    ->label('Status')
+                    ->badge()
+                    ->getStateUsing(fn (User $record): string => $record->is_active ? 'Active' : 'Inactive')
+                    ->colors([
+                        'success' => fn ($state): bool => $state === 'Active',
+                        'danger' => fn ($state): bool => $state === 'Inactive',
+                    ]),
+
+                TextColumn::make('created_at')
+                    ->dateTime()
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+
+                TextColumn::make('updated_at')
+                    ->dateTime()
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+
                 TextColumn::make('deleted_at')
                     ->dateTime()
                     ->sortable()
-                    ->hidden(fn ($livewire) => $livewire->activeTab !== 'archived'),
+                    ->toggleable(isToggledHiddenByDefault: true)
+                    ->visible(fn () => request()->routeIs('*.trashed')),
+            ])
+            ->filters([
+                Tables\Filters\TrashedFilter::make(),
+                
+                Tables\Filters\SelectFilter::make('roles')
+                    ->relationship('roles', 'name')
+                    ->multiple(),
+
+                Tables\Filters\TernaryFilter::make('is_active')
+                    ->label('Status')
+                    ->trueLabel('Active users only')
+                    ->falseLabel('Inactive users only')
+                    ->native(false),
+
+                Tables\Filters\Filter::make('email_verified')
+                    ->query(fn (Builder $query): Builder => $query->whereNotNull('email_verified_at'))
+                    ->label('Email Verified'),
             ])
             ->actions([
                 ActionGroup::make([
-                    Tables\Actions\EditAction::make(),
                     Tables\Actions\ViewAction::make(),
+                    Tables\Actions\EditAction::make(),
                     Tables\Actions\DeleteAction::make(),
                     Tables\Actions\RestoreAction::make(),
                     Tables\Actions\ForceDeleteAction::make(),
@@ -189,7 +235,8 @@ class UserResource extends Resource
                     Tables\Actions\RestoreBulkAction::make(),
                     Tables\Actions\ForceDeleteBulkAction::make(),
                 ]),
-            ]);
+            ])
+            ->defaultSort('created_at', 'desc');
     }
 
     public static function getRelations(): array
@@ -208,7 +255,8 @@ class UserResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        return parent::getEloquentQuery()->with(['customer.address']);
+        return parent::getEloquentQuery()
+            ->withTrashed(); // Include soft deleted records for admin
     }
 
     public static function resolveRecordRouteBinding(int | string $key): ?\App\Models\User
@@ -219,7 +267,7 @@ class UserResource extends Resource
     /**
      * Helper: check if selected role is customer
      */
-    private static function isCustomerRole(callable $get): bool
+    private static function isCustomerRole(Get $get): bool
     {
         $roleIds = $get('roles');
         

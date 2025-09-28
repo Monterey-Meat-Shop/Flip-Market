@@ -48,10 +48,10 @@ class User extends Authenticatable implements FilamentUser
     //         ->implode('');
     // }
 
-    public function customer()
-    {
-        return $this->hasOne(Customer::class, 'user_id', 'id');
-    }
+    // public function customer()
+    // {
+    //     return $this->hasOne(Customer::class, 'user_id', 'id');
+    // }
 
     public function canAccessPanel(Panel $panel): bool
     {

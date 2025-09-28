@@ -757,4 +757,4 @@ class TransactionResource extends Resource
     {
         return Auth::user()->hasAnyRole(['admin', 'cashier']);
     }
-}
+} 
