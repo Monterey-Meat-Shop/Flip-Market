@@ -330,7 +330,7 @@ class ProductResource extends Resource
             Notification::make()
                 ->title('Duplicate Sizes Merged')
                 ->body('Same sizes have been combined and their stock quantities added together.')
-                ->success()
+                ->warning() // use warning color to indicate automatic adjustment
                 ->duration(4000)
                 ->send();
         }
