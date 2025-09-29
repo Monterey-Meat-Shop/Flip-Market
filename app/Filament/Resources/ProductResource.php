@@ -38,6 +38,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Illuminate\Support\Str;
 use Illuminate\Database\Eloquent\Model;
+use Filament\Notifications\Notification;
 
 class ProductResource extends Resource
 {
@@ -130,7 +131,13 @@ class ProductResource extends Resource
                         ->schema([
                             TextInput::make('size')
                                 ->required()
-                                ->maxLength(225),
+                                ->maxLength(225)
+                                ->live(onBlur: true)
+                                ->afterStateUpdated(function (Get $get, Set $set, $state) {
+                                    // Trigger merge check when size is changed
+                                    static::mergeDuplicateSizes($get, $set);
+                                }),
+                            
                             TextInput::make('stock_quantity')
                                 ->numeric()
                                 ->rule('integer')
@@ -141,6 +148,7 @@ class ProductResource extends Resource
                                     'integer' => 'The stock quantity must be a whole number.',
                                     'min' => 'The stock quantity cannot be less than 0.',
                                 ]),
+                            
                             Select::make('colorway')
                                 ->label('Colorway')
                                 ->options([
@@ -165,11 +173,29 @@ class ProductResource extends Resource
                                 ])
                                 ->multiple()
                                 ->dehydrateStateUsing(fn ($state) => is_array($state) ? implode(', ', $state) : $state)
-                                ->required(fn (string $operation): bool => $operation === 'create'), // ✅ required only when adding
+                                ->required(fn (string $operation): bool => $operation === 'create')
+                                ->default(function (Get $get) {
+                                    // Auto-fill colorway from first variant when adding new rows
+                                    $variants = $get('../../variants');
+                                    if (is_array($variants) && count($variants) > 0) {
+                                        $firstColorway = $variants[0]['colorway'] ?? null;
+                                        if ($firstColorway) {
+                                            return $firstColorway;
+                                        }
+                                    }
+                                    return null;
+                                }),
                         ])
                         ->defaultItems(1)
                         ->columns(3)
-                        ->columnSpanFull(),
+                        ->columnSpanFull()
+                        ->reorderable(false)
+                        ->afterStateUpdated(function (Get $get, Set $set) {
+                            // Trigger merge when items are added or removed
+                            static::mergeDuplicateSizes($get, $set);
+                        })
+                        ->addActionLabel('Add Size')
+                        ->live(),
                 ])->columns(2),
 
                 Section::make('Images')->schema([
@@ -229,6 +255,85 @@ class ProductResource extends Resource
                 ]),
             ])->columnSpan(1)
         ])->columns(3);
+    }
+
+    /**
+     * Merge duplicate sizes and combine their stock quantities
+     */
+    protected static function mergeDuplicateSizes(Get $get, Set $set): void
+    {
+        $variants = $get('variants');
+        
+        if (!is_array($variants) || empty($variants)) {
+            return;
+        }
+
+        $mergedVariants = [];
+        $sizeMap = [];
+        $hasDuplicates = false;
+
+        foreach ($variants as $index => $variant) {
+            $size = trim($variant['size'] ?? '');
+            
+            // Skip empty sizes
+            if (empty($size)) {
+                $mergedVariants[] = $variant;
+                continue;
+            }
+
+            $sizeLower = strtolower($size);
+
+            if (isset($sizeMap[$sizeLower])) {
+                // Found duplicate - merge stock quantities
+                $hasDuplicates = true;
+                $existingIndex = $sizeMap[$sizeLower];
+                
+                $existingStock = (int)($mergedVariants[$existingIndex]['stock_quantity'] ?? 0);
+                $newStock = (int)($variant['stock_quantity'] ?? 0);
+                $totalStock = $existingStock + $newStock;
+                
+                $mergedVariants[$existingIndex]['stock_quantity'] = $totalStock;
+                
+                // Keep the first colorway or merge if different
+                $existingColorway = $mergedVariants[$existingIndex]['colorway'] ?? '';
+                $newColorway = $variant['colorway'] ?? '';
+                
+                if ($newColorway && $newColorway !== $existingColorway) {
+                    // Merge colorways if they're different
+                    if (is_string($existingColorway)) {
+                        $existingColorwayArray = array_filter(explode(', ', $existingColorway));
+                    } else {
+                        $existingColorwayArray = is_array($existingColorway) ? $existingColorway : [];
+                    }
+                    
+                    if (is_string($newColorway)) {
+                        $newColorwayArray = array_filter(explode(', ', $newColorway));
+                    } else {
+                        $newColorwayArray = is_array($newColorway) ? $newColorway : [];
+                    }
+                    
+                    $combinedColorways = array_unique(array_merge($existingColorwayArray, $newColorwayArray));
+                    $mergedVariants[$existingIndex]['colorway'] = implode(', ', $combinedColorways);
+                }
+            } else {
+                // New size - add to merged list
+                $sizeMap[$sizeLower] = count($mergedVariants);
+                $mergedVariants[] = $variant;
+            }
+        }
+
+        // Only update if we found duplicates
+        if ($hasDuplicates) {
+            $set('variants', array_values($mergedVariants));
+            
+            // Show notification
+            Notification::make()
+                ->title('Duplicate Sizes Merged')
+                ->body('Same sizes have been combined and their stock quantities added together.')
+                ->success()
+                ->duration(4000)
+                ->send();
+        }
     }
 
     public static function table(Table $table): Table
