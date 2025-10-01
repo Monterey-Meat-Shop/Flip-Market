@@ -434,12 +434,47 @@ class TransactionResource extends Resource
                                 ->dehydrated(true)
                                 ->live()
                                 ->afterStateUpdated(function (Set $set, $state) {
-                                    // Clear reference number when payment method changes
                                     $paymentMethod = PaymentMethod::find($state);
                                     if (!$paymentMethod || $paymentMethod->method_name !== 'GCash') {
                                         $set('reference_number', null);
                                     }
                                 }),
+
+                            // STATIC QR CODE DISPLAY - Shows when GCash is selected
+                            Placeholder::make('gcash_qr_display')
+                                ->label('Scan to Pay')
+                                ->content(function () {
+                                    $qrUrl = asset('images/gshak.png');
+                                    return new \Illuminate\Support\HtmlString('
+                                        <div class="flex flex-col items-center gap-3 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                                            <img 
+                                                src="' . $qrUrl . '" 
+                                                alt="GCash QR Code" 
+                                                class="w-48 h-48 object-contain rounded-lg shadow-lg cursor-pointer transition-transform hover:scale-105"
+                                                onclick="
+                                                    const modal = document.createElement(\'div\');
+                                                    modal.className = \'fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75 cursor-pointer\';
+                                                    modal.onclick = () => modal.remove();
+                                                    modal.innerHTML = \'<img src=\\\'' . $qrUrl . '\\\' class=\\\'max-w-2xl max-h-screen rounded-lg shadow-2xl\\\'>\';
+                                                    document.body.appendChild(modal);
+                                                "
+                                                title="Click to enlarge"
+                                            />
+                                            <p class="text-sm text-gray-600 dark:text-gray-400 text-center font-medium">
+                                                Click image to enlarge<br>
+                                                Scan this QR code with GCash app
+                                            </p>
+                                        </div>
+                                    ');
+                                })
+                                ->visible(function (Get $get) {
+                                    $paymentMethodId = $get('payment_methodID');
+                                    if (!$paymentMethodId) return false;
+                                    
+                                    $paymentMethod = PaymentMethod::find($paymentMethodId);
+                                    return $paymentMethod && $paymentMethod->method_name === 'GCash';
+                                })
+                                ->columnSpanFull(),
 
                             TextInput::make('reference_number')
                                 ->label('Reference Number')
@@ -694,12 +729,41 @@ class TransactionResource extends Resource
                                     ->extraAttributes(['class' => 'font-bold text-green-600']),
                             ]),
 
-                            Section::make('Payment Information')->schema([
+                          Section::make('Payment Information')->schema([
                                 Forms\Components\Placeholder::make('method')
                                     ->label('Payment Method')
                                     ->content(fn ($record) =>
                                         $record->payment?->paymentMethod?->method_name ?? '-'
                                     ),
+                                Forms\Components\Placeholder::make('qr_code_view')
+                                    ->label('GCash QR Code')
+                                    ->content(function ($record) {
+                                        if ($record->payment?->paymentMethod?->method_name === 'GCash') {
+                                            $qrUrl = asset('images/gshak.png');
+                                            return new \Illuminate\Support\HtmlString(
+                                                '<div class="flex flex-col items-center gap-2">
+                                                    <img 
+                                                        src="' . $qrUrl . '" 
+                                                        alt="GCash QR Code" 
+                                                        class="w-48 h-48 object-contain rounded-lg shadow-md cursor-pointer hover:scale-105 transition-transform"
+                                                        onclick="
+                                                            const modal = document.createElement(\'div\');
+                                                            modal.className = \'fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75 cursor-pointer\';
+                                                            modal.onclick = () => modal.remove();
+                                                            modal.innerHTML = \'<img src=\\\'' . $qrUrl . '\\\' class=\\\'max-w-2xl max-h-screen rounded-lg shadow-2xl\\\'>\';
+                                                            document.body.appendChild(modal);
+                                                        "
+                                                    />
+                                                    <p class="text-xs text-gray-500">Click to enlarge</p>
+                                                </div>'
+                                            );
+                                        }
+                                        return '-';
+                                    })
+                                    ->visible(fn ($record) =>
+                                        $record->payment?->paymentMethod?->method_name === 'GCash'
+                                    )
+                                    ->columnSpanFull(),
                                 Forms\Components\Placeholder::make('reference_number')
                                     ->label('Reference Number')
                                     ->content(fn ($record) =>
@@ -757,4 +821,4 @@ class TransactionResource extends Resource
     {
         return Auth::user()->hasAnyRole(['admin', 'cashier']);
     }
-} 
+}
