@@ -228,6 +228,12 @@ class CheckoutPage extends Component
             $methodName = strtolower($paymentMethod->method_name);
             $this->showGcashReference = $methodName === 'gcash';
             $this->showBankTransferReference = $methodName === 'bank transfer' || $methodName === 'banktransfer';
+            
+            // Cash on Delivery doesn't need reference numbers
+            if ($methodName === 'cash on delivery') {
+                $this->showGcashReference = false;
+                $this->showBankTransferReference = false;
+            }
         }
         
         // Clear reference numbers when switching payment methods
@@ -286,12 +292,17 @@ class CheckoutPage extends Component
     public function validateStock()
     {
         foreach ($this->cartItems as $item) {
-            $availableStock = $item->variant 
-                ? $item->variant->stock_quantity 
-                : $item->product->total_stock_quantity;
-
+            // Based on your models, all products should have variants
+            // So we should always check variant stock, not product stock
+            if (!$item->variant) {
+                throw new \Exception("Product variant not found for {$item->product->name}. Please refresh and try again.");
+            }
+            
+            $variant = $item->variant->fresh();
+            $availableStock = $variant->stock_quantity;
+            
             if ($item->quantity > $availableStock) {
-                throw new \Exception("Insufficient stock for " . $item->product->name . ". Available: " . $availableStock . ", Required: " . $item->quantity);
+                throw new \Exception("Insufficient stock for {$item->product->name} (Size: {$variant->size}). Available: {$availableStock}, Required: {$item->quantity}");
             }
         }
     }
@@ -349,7 +360,9 @@ class CheckoutPage extends Component
                     'province' => $selectedAddress->province,
                 ));
 
+                // Create order items and deduct stock (variants only)
                 foreach ($this->cartItems as $cartItem) {
+                    // Create the order item first
                     OrderItem::create(array(
                         'orderID' => $order->orderID,
                         'productID' => $cartItem->productID,
@@ -361,20 +374,41 @@ class CheckoutPage extends Component
                         'sub_total' => $cartItem->sub_total,
                     ));
 
-                    if ($cartItem->variant) {
-                        $cartItem->variant->decrement('stock_quantity', $cartItem->quantity);
-                    } else {
-                        $cartItem->product->decrement('total_stock_quantity', $cartItem->quantity);
+                    // Only deduct from variants (since products don't have their own stock)
+                    if (!$cartItem->variant) {
+                        throw new \Exception("Product variant not found for {$cartItem->product->name}");
+                    }
+                    
+                    // Use atomic update with WHERE condition to prevent negative stock
+                    $affectedRows = DB::table('product_variants')
+                        ->where('id', $cartItem->product_variant_id)
+                        ->where('stock_quantity', '>=', $cartItem->quantity)
+                        ->update(array(
+                            'stock_quantity' => DB::raw("stock_quantity - {$cartItem->quantity}"),
+                            'updated_at' => now()
+                        ));
+                        
+                    if ($affectedRows === 0) {
+                        throw new \Exception("Could not update stock for {$cartItem->product->name}. Stock may have been sold out.");
                     }
                 }
 
-                $paymentStatus = 'Pending'; // All online payments are pending
-                $referenceNumber = null;
+                // Determine payment status and reference number
+                $paymentMethod = PaymentMethod::find($this->selectedPaymentMethod);
+                $methodName = strtolower($paymentMethod->method_name);
                 
-                if ($this->showGcashReference && $this->gcashReferenceNumber) {
-                    $referenceNumber = $this->gcashReferenceNumber;
-                } elseif ($this->showBankTransferReference && $this->bankTransferReferenceNumber) {
-                    $referenceNumber = $this->bankTransferReferenceNumber;
+                if ($methodName === 'cash on delivery') {
+                    $paymentStatus = 'cash_on_delivery';
+                    $referenceNumber = null;
+                } else {
+                    $paymentStatus = 'pending';
+                    $referenceNumber = null;
+                    
+                    if ($this->showGcashReference && $this->gcashReferenceNumber) {
+                        $referenceNumber = $this->gcashReferenceNumber;
+                    } elseif ($this->showBankTransferReference && $this->bankTransferReferenceNumber) {
+                        $referenceNumber = $this->bankTransferReferenceNumber;
+                    }
                 }
                 
                 Payment::create(array(
@@ -382,13 +416,13 @@ class CheckoutPage extends Component
                     'payment_methodID' => $this->selectedPaymentMethod,
                     'amount' => $this->totalAmount,
                     'reference_number' => $referenceNumber,
-                    'status' => $paymentStatus,
+                    'status' => 'unpaid',
                 ));
 
                 Shipping::create(array(
                     'orderID' => $order->orderID,
                     'shipping_method' => $this->selectedShippingMethod,
-                    'shipping_status' => 'Pending',
+                    'shipping_status' => 'pending',
                     'shipping_fee' => $this->deliveryFee,
                 ));
 

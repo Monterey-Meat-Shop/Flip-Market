@@ -3,11 +3,13 @@
 use App\Livewire\Auth\LoginPage;
 use App\Livewire\Auth\RegisterPage;
 use App\Livewire\CartPage;
-use App\Livewire\CategoriesPage;
-use App\Livewire\BrandPage;
+// use App\Livewire\CategoriesPage;
+// use App\Livewire\BrandPage;
 use App\Livewire\Landingpage;
 use App\Livewire\CheckoutPage;
 use App\Livewire\MyOrderPage;
+
+use App\Http\Controllers\OrderController;
 
 use App\Livewire\ProductDetailPage;
 use App\Livewire\ProductPage;
@@ -43,8 +45,8 @@ require __DIR__.'/auth.php';
 // Customer Side product page
 Route::get('/', Landingpage::class)->name('landingpage');
 Route::get('/products', ProductPage::class)->name('products');
-Route::get('/categories', CategoriesPage::class)->name('categories');
-Route::get('/brands', BrandPage::class)->name('brands');
+// Route::get('/categories', CategoriesPage::class)->name('categories');
+// Route::get('/brands', BrandPage::class)->name('brands');
 Route::get('/cart', CartPage::class)->name('cart');
 Route::get('/product/{productId}', ProductDetailPage::class)->name('product.detail');
 // Route::get('/checkout', CheckoutPage::class)->name('checkout');

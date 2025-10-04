@@ -24,13 +24,6 @@
 
             <a wire:navigate class="font-medium {{ request()->is('/') ? 'text-blue-600' : 'text-gray-500' }} " href="/" aria-current="page">Home</a>
 
-            <a wire:navigate class ="font-medium {{ request()->is('brands') ? 'text-blue-600' : 'text-gray-500' }}" href="/brands">
-              Brands
-            </a>
-
-            <a wire:navigate class="font-medium {{ request()->is('categories') ? 'text-blue-600' :'text-gray-500' }}  py-3 md:py-6   " href="/categories">
-              Categories
-            </a>
 
             <a wire:navigate class="font-medium {{ request()->is('products') ? 'text-blue-600' : 'text-gray-500' }} py-3 md:py-6    " href="/products">
               Products

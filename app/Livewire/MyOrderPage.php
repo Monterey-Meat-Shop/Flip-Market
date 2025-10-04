@@ -53,7 +53,7 @@ class MyOrderPage extends Component
         }
 
         $query = Order::where('customerID', $this->customer->customerID)
-            ->with(array('orderItems.product', 'orderItems.variant', 'payment', 'shipping'))
+            ->with(array('orderItems.product', 'orderItems.productVariant', 'payment', 'shipping'))
             ->orderBy('order_date', 'desc');
 
         // Apply search filter
@@ -144,8 +144,8 @@ class MyOrderPage extends Component
 
         // Return stock to products/variants
         foreach ($order->orderItems as $item) {
-            if ($item->variant) {
-                $item->variant->increment('stock_quantity', $item->quantity);
+            if ($item->productVariant) {
+                $item->productVariant->increment('stock_quantity', $item->quantity);
             } else {
                 $item->product->increment('total_stock_quantity', $item->quantity);
             }

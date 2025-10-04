@@ -84,21 +84,28 @@
         <div class="flex flex-col sm:flex-row sm:items-start sm:space-x-4 p-4 {{ !$loop->last ? 'border-b border-gray-100' : '' }}">
           <!-- Product Image -->
           <div class="shrink-0 mx-auto sm:mx-0">
-            <div class="w-24 h-24 bg-gray-200 rounded-md flex items-center justify-center">
-              <span class="text-gray-500 text-xs font-semibold">
-                {{ strtoupper(substr($item->product->name ?? 'Product', 0, 2)) }}
-              </span>
-            </div>
+            @if($item->product && $item->product->image_path)
+              <img src="{{ asset('storage/' . $item->product->image_path) }}" 
+                   alt="{{ $item->product->name }}"
+                   class="w-24 h-24 object-cover rounded-md">
+            @else
+              <div class="w-24 h-24 bg-gray-200 rounded-md flex items-center justify-center">
+                <span class="text-gray-500 text-xs font-semibold">
+                  {{ strtoupper(substr($item->product->name ?? 'Product', 0, 2)) }}
+                </span>
+              </div>
+            @endif
           </div>
           
           <!-- Product Details -->
           <div class="flex-1 mt-3 sm:mt-0">
-            <h3 class="text-sm font-medium text-gray-800">{{ $item->product->name ?? 'Product Name' }}</h3>
-            <p class="text-sm text-gray-500">
-              @if($item->colorway) {{ $item->colorway }} @endif
-              @if($item->size) | Size: {{ $item->size }} @endif
+            <h3 class="text-sm font-medium text-gray-800 mb-2">{{ $item->product->name ?? 'Product Name' }}</h3>
+            @if($item->colorway || $item->size)
+            <p class="text-sm text-gray-500 mb-3">
+              @if($item->colorway){{ $item->colorway }}@endif@if($item->colorway && $item->size) | @endif@if($item->size)Size: {{ $item->size }}@endif
             </p>
-            <div class="flex flex-wrap gap-2 mt-2">
+            @endif
+            <div class="flex flex-wrap gap-2">
               @if($item->product->brand)
                 <span class="text-xs text-blue-600 border border-blue-400 rounded px-2 py-0.5">{{ $item->product->brand->name }}</span>
               @endif
