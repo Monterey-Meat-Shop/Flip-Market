@@ -172,15 +172,35 @@ class ProductResource extends Resource
                                     'Multi-color' => 'Multi-color',
                                 ])
                                 ->multiple()
+                                ->searchable()
+                                ->afterStateHydrated(function ($component, $state, string $operation) {
+                                    // When editing, convert database string back to array
+                                    if ($operation === 'edit' && is_string($state) && !empty($state)) {
+                                        $colorwayArray = array_map('trim', explode(',', $state));
+                                        $component->state($colorwayArray);
+                                    }
+                                })
                                 ->dehydrateStateUsing(fn ($state) => is_array($state) ? implode(', ', $state) : $state)
-                                ->required(fn (string $operation): bool => $operation === 'create')
-                                ->default(function (Get $get) {
+                                ->required()
+                                ->default(function (Get $get, string $operation) {
+                                    // Only auto-fill for CREATE operation when adding new variant rows
+                                    if ($operation !== 'create') {
+                                        return null;
+                                    }
+                                    
                                     // Auto-fill colorway from first variant when adding new rows
                                     $variants = $get('../../variants');
                                     if (is_array($variants) && count($variants) > 0) {
                                         $firstColorway = $variants[0]['colorway'] ?? null;
                                         if ($firstColorway) {
-                                            return $firstColorway;
+                                            // If it's already an array, return as is
+                                            if (is_array($firstColorway)) {
+                                                return $firstColorway;
+                                            }
+                                            // If it's a string, convert to array
+                                            if (is_string($firstColorway)) {
+                                                return array_map('trim', explode(',', $firstColorway));
+                                            }
                                         }
                                     }
                                     return null;
@@ -330,7 +350,7 @@ class ProductResource extends Resource
             Notification::make()
                 ->title('Duplicate Sizes Merged')
                 ->body('Same sizes have been combined and their stock quantities added together.')
-                ->warning() // use warning color to indicate automatic adjustment
+                ->warning()
                 ->duration(4000)
                 ->send();
         }
@@ -343,15 +363,46 @@ class ProductResource extends Resource
                 TextColumn::make('name')
                     ->searchable()
                     ->sortable(),
+ImageColumn::make('image_url')
+    ->label('Image')
+    ->getStateUsing(fn ($record) => $record->image_url[0] ?? null)
+    ->extraImgAttributes([
+        'class' => 'cursor-pointer hover:scale-105 transition-transform duration-200',
+        'onclick' => "
+            event.stopPropagation();
+            const imgSrc = this.src;
 
-                ImageColumn::make('image_url')
-                    ->label('Image')
-                    ->getStateUsing(fn ($record) => $record->image_url[0] ?? null), 
+            // Create modal container
+            const modal = document.createElement('div');
+            modal.className = 'fixed inset-0 z-[9999] flex items-center justify-center bg-black bg-opacity-80 cursor-pointer';
+            modal.onclick = () => modal.remove();
 
-                TextColumn::make('brand.name')
-                    ->label('Brand')
-                    ->searchable()
-                    ->sortable(),
+            // Create image element
+            const img = document.createElement('img');
+            img.src = imgSrc;
+            img.className = 'max-w-2xl max-h-[80vh] w-auto h-auto rounded-lg shadow-2xl object-contain';
+            img.onclick = (e) => e.stopPropagation();
+
+            modal.appendChild(img);
+            document.body.appendChild(modal);
+
+            // Listen for ESC key to close
+            const closeOnEsc = (e) => {
+                if (e.key === 'Escape') {
+                    modal.remove();
+                    document.removeEventListener('keydown', closeOnEsc);
+                }
+            };
+            document.addEventListener('keydown', closeOnEsc);
+        ",
+    ])
+    ->disableClick(), // prevents row navigation
+
+
+TextColumn::make('brand.name')
+    ->label('Brand')
+    ->searchable()
+    ->sortable(),
 
                 TextColumn::make('category.name')
                     ->label('Category')
@@ -371,15 +422,26 @@ class ProductResource extends Resource
                 TextColumn::make('size_stocks')
                     ->label('Sizes & Stock')
                     ->getStateUsing(function ($record) {
-                        $output = '';
                         if ($record->variants && $record->variants->isNotEmpty()) {
-                            $sizes = $record->variants->map(function ($variant) {
+                            return $record->variants->map(function ($variant) {
                                 return "Size {$variant->size}: {$variant->stock_quantity}";
-                            })->implode(', ');
-                            $output = $sizes;
+                            })->implode(' | ');
                         }
-                        return $output;
-                    }),
+                        return '-';
+                    })
+                    ->wrap(),
+
+                TextColumn::make('colorways')
+                    ->label('Colorways')
+                    ->getStateUsing(function ($record) {
+                        if ($record->variants && $record->variants->isNotEmpty()) {
+                            $colorways = $record->variants->pluck('colorway')->filter()->unique()->implode(' | ');
+                            return $colorways ?: '-';
+                        }
+                        return '-';
+                    })
+                    ->wrap()
+                    ->lineClamp(2),
 
                 TextColumn::make('price')
                     ->money('PHP')
@@ -451,6 +513,8 @@ class ProductResource extends Resource
                     Tables\Actions\RestoreBulkAction::make(),
                     Tables\Actions\ForceDeleteBulkAction::make(),
                 ]),
+
+                
             ]);
     }
 
