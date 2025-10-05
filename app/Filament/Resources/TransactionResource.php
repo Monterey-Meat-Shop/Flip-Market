@@ -128,10 +128,10 @@ class TransactionResource extends Resource
                             ->relationship(
                                 name: 'customer',
                                 titleAttribute: 'first_name',
-                                modifyQueryUsing: fn (Builder $query) =>
-                                    $query->where('first_name', 'guest')->orderBy('first_name')
+                                modifyQueryUsing: fn(Builder $query) =>
+                                $query->where('first_name', 'guest')->orderBy('first_name')
                             )
-                            ->getOptionLabelFromRecordUsing(fn (Model $record) =>
+                            ->getOptionLabelFromRecordUsing(fn(Model $record) =>
                                 "{$record->first_name} {$record->last_name}")
                             ->searchable()
                             ->preload()
@@ -173,7 +173,7 @@ class TransactionResource extends Resource
                                     }
                                     return [];
                                 })
-                                ->visible(fn (Get $get) => filled($get('temp_productID')))
+                                ->visible(fn(Get $get) => filled($get('temp_productID')))
                                 ->live()
                                 ->required(),
                         ]),
@@ -188,7 +188,7 @@ class TransactionResource extends Resource
                                 }
                                 return '-';
                             })
-                            ->visible(fn (Get $get) => filled($get('temp_variant_id')))
+                            ->visible(fn(Get $get) => filled($get('temp_variant_id')))
                             ->columnSpanFull(),
 
                         Forms\Components\Grid::make(3)->schema([
@@ -197,7 +197,7 @@ class TransactionResource extends Resource
                                 ->numeric()
                                 ->default(1)
                                 ->minValue(1)
-                                ->visible(fn (Get $get) => filled($get('temp_productID'))),
+                                ->visible(fn(Get $get) => filled($get('temp_productID'))),
 
                             Placeholder::make('stock_info')
                                 ->label('Available Stock')
@@ -206,7 +206,7 @@ class TransactionResource extends Resource
                                     if ($variantId) {
                                         $variant = ProductVariant::find($variantId);
                                         $stock = $variant ? $variant->stock_quantity : 0;
-                                        
+
                                         if ($stock <= 0) {
                                             return new \Illuminate\Support\HtmlString(
                                                 '<span class="text-red-600 font-semibold">Out of Stock</span>'
@@ -223,7 +223,7 @@ class TransactionResource extends Resource
                                     }
                                     return '';
                                 })
-                                ->visible(fn (Get $get) => filled($get('temp_variant_id')))
+                                ->visible(fn(Get $get) => filled($get('temp_variant_id')))
                                 ->live(),
 
                             Forms\Components\Actions::make([
@@ -232,12 +232,12 @@ class TransactionResource extends Resource
                                     ->icon('heroicon-m-plus')
                                     ->color('success')
                                     ->size('lg')
-                                    ->visible(fn (Get $get) =>
+                                    ->visible(fn(Get $get) =>
                                         filled($get('temp_productID')) && filled($get('temp_variant_id')))
                                     ->action(function (Get $get, Set $set) {
                                         $productID = $get('temp_productID');
                                         $variantId = $get('temp_variant_id');
-                                        $quantity  = $get('temp_quantity') ?? 1;
+                                        $quantity = $get('temp_quantity') ?? 1;
 
                                         if (!$productID || !$variantId || $quantity < 1) {
                                             return;
@@ -368,7 +368,8 @@ class TransactionResource extends Resource
                     Section::make('Discounts')->schema([
                         Select::make('discountID')
                             ->label('Apply Discount')
-                            ->options(fn (Get $get): array => 
+                            ->options(
+                                fn(Get $get): array =>
                                 Discount::where('is_active', true)
                                     ->pluck('name', 'discountID')
                                     ->toArray()
@@ -380,7 +381,8 @@ class TransactionResource extends Resource
                                 $orderItems = $get('orderItems') ?? [];
                                 foreach ($orderItems as $index => $item) {
                                     $product = Product::find($item['productID']);
-                                    if (!$product) continue;
+                                    if (!$product)
+                                        continue;
 
                                     $originalPrice = $product->price;
                                     $finalPrice = $originalPrice;
@@ -426,8 +428,8 @@ class TransactionResource extends Resource
                                 ->relationship(
                                     name: 'paymentMethod',
                                     titleAttribute: 'method_name',
-                                    modifyQueryUsing: fn (Builder $query) =>
-                                        $query->whereIn('method_name', ['Cash', 'GCash'])
+                                    modifyQueryUsing: fn(Builder $query) =>
+                                    $query->whereIn('method_name', ['Cash', 'GCash'])
                                 )
                                 ->required()
                                 ->preload()
@@ -441,59 +443,72 @@ class TransactionResource extends Resource
                                 }),
 
                             // STATIC QR CODE DISPLAY - Shows when GCash is selected
+                            // ✅ QR Code Display and Reference Number – synchronized visibility
                             Placeholder::make('gcash_qr_display')
                                 ->label('Scan to Pay')
                                 ->content(function () {
-                                    $qrUrl = asset('images/gshak.png');
+                                    $qrUrl = asset('images/gshak.png'); // path to your uploaded QR
                                     return new \Illuminate\Support\HtmlString('
-                                        <div class="flex flex-col items-center gap-3 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                                            <img 
-                                                src="' . $qrUrl . '" 
-                                                alt="GCash QR Code" 
-                                                class="w-48 h-48 object-contain rounded-lg shadow-lg cursor-pointer transition-transform hover:scale-105"
-                                                onclick="
-                                                    const modal = document.createElement(\'div\');
-                                                    modal.className = \'fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75 cursor-pointer\';
-                                                    modal.onclick = () => modal.remove();
-                                                    modal.innerHTML = \'<img src=\\\'' . $qrUrl . '\\\' class=\\\'max-w-2xl max-h-screen rounded-lg shadow-2xl\\\'>\';
-                                                    document.body.appendChild(modal);
-                                                "
-                                                title="Click to enlarge"
-                                            />
-                                            <p class="text-sm text-gray-600 dark:text-gray-400 text-center font-medium">
-                                                Click image to enlarge<br>
-                                                Scan this QR code with GCash app
-                                            </p>
-                                        </div>
-                                    ');
+            <div class="flex flex-col items-center gap-3 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <img 
+                    src="' . $qrUrl . '" 
+                    alt="GCash QR Code" 
+                    class="w-32 h-32 md:w-48 md:h-48 object-contain rounded-lg shadow-lg cursor-pointer transition-transform hover:scale-105"
+                    onclick="
+                        const modal = document.createElement(\'div\');
+                        modal.className = \'fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75 cursor-pointer\';
+                        modal.onclick = () => modal.remove();
+                        modal.innerHTML = \'<img src=\\\'' . $qrUrl . '\\\' class=\\\'max-w-2xl max-h-screen rounded-lg shadow-2xl\\\'>\';
+                        document.body.appendChild(modal);
+
+                        // Enable ESC to close
+                        const closeOnEsc = (e) => {
+                            if (e.key === \'Escape\') {
+                                modal.remove();
+                                document.removeEventListener(\'keydown\', closeOnEsc);
+                            }
+                        };
+                        document.addEventListener(\'keydown\', closeOnEsc);
+                    "
+                    title="Click to enlarge"
+                />
+                <p class="text-sm text-gray-600 dark:text-gray-400 text-center font-medium">
+                    Click image to enlarge<br>
+                    Scan this QR code with GCash app
+                </p>
+            </div>
+        ');
                                 })
                                 ->visible(function (Get $get) {
                                     $paymentMethodId = $get('payment_methodID');
-                                    if (!$paymentMethodId) return false;
-                                    
-                                    $paymentMethod = PaymentMethod::find($paymentMethodId);
-                                    return $paymentMethod && $paymentMethod->method_name === 'GCash';
+                                    if (!$paymentMethodId)
+                                        return false;
+                                    $paymentMethod = \App\Models\PaymentMethod::find($paymentMethodId);
+                                    return $paymentMethod && strtolower($paymentMethod->method_name) === 'gcash';
                                 })
                                 ->columnSpanFull(),
 
                             TextInput::make('reference_number')
                                 ->label('Reference Number')
+                                ->placeholder('Enter GCash reference number')
                                 ->visible(function (Get $get) {
                                     $paymentMethodId = $get('payment_methodID');
-                                    if (!$paymentMethodId) return false;
-                                    
-                                    $paymentMethod = PaymentMethod::find($paymentMethodId);
-                                    return $paymentMethod && $paymentMethod->method_name === 'GCash';
+                                    if (!$paymentMethodId)
+                                        return false;
+                                    $paymentMethod = \App\Models\PaymentMethod::find($paymentMethodId);
+                                    return $paymentMethod && strtolower($paymentMethod->method_name) === 'gcash';
                                 })
                                 ->required(function (Get $get) {
                                     $paymentMethodId = $get('payment_methodID');
-                                    if (!$paymentMethodId) return false;
-                                    
-                                    $paymentMethod = PaymentMethod::find($paymentMethodId);
-                                    return $paymentMethod && $paymentMethod->method_name === 'GCash';
+                                    if (!$paymentMethodId)
+                                        return false;
+                                    $paymentMethod = \App\Models\PaymentMethod::find($paymentMethodId);
+                                    return $paymentMethod && strtolower($paymentMethod->method_name) === 'gcash';
                                 })
                                 ->dehydrated(true)
-                                ->placeholder('Enter GCash reference number'),
+                                ->live()
+                                ->columnSpanFull(),
+
 
                             TextInput::make('amount')
                                 ->label('Amount')
@@ -502,15 +517,16 @@ class TransactionResource extends Resource
                                 ->prefix('₱')
                                 ->disabled()
                                 ->dehydrated(true)
-                                ->afterStateHydrated(fn ($component, $state, Get $get) =>
+                                ->afterStateHydrated(
+                                    fn($component, $state, Get $get) =>
                                     $component->state(number_format($get('final_amount') ?? 0, 2, '.', ''))
                                 ),
 
                             Select::make('status')
                                 ->label('Payment Status')
                                 ->options([
-                                    'unpaid'   => 'Unpaid',
-                                    'paid'     => 'Paid',
+                                    'unpaid' => 'Unpaid',
+                                    'paid' => 'Paid',
                                     'verified' => 'Verified',
                                 ])
                                 ->default('paid')
@@ -526,13 +542,15 @@ class TransactionResource extends Resource
                             ->schema([
                                 Forms\Components\Grid::make(2)->schema([
                                     Placeholder::make('product_name')
-                                        ->content(fn (Get $get) =>
+                                        ->content(
+                                            fn(Get $get) =>
                                             Product::find($get('productID'))?->name ?? 'Unknown'
                                         )
                                         ->extraAttributes(['class' => 'font-semibold']),
 
                                     Placeholder::make('variant_details')
-                                        ->content(fn (Get $get) =>
+                                        ->content(
+                                            fn(Get $get) =>
                                             "Size: {$get('size')} • {$get('colorway')}"
                                         )
                                         ->extraAttributes(['class' => 'text-sm text-gray-600']),
@@ -540,10 +558,11 @@ class TransactionResource extends Resource
 
                                 // Show discount info
                                 Placeholder::make('discount_info')
-                                    ->content(fn (Get $get) =>
-                                        $get('discount_label') 
-                                            ? "Discount: " . $get('discount_label')
-                                            : "No Discount"
+                                    ->content(
+                                        fn(Get $get) =>
+                                        $get('discount_label')
+                                        ? "Discount: " . $get('discount_label')
+                                        : "No Discount"
                                     )
                                     ->extraAttributes(['class' => 'text-sm text-blue-500 font-medium'])
                                     ->columnSpanFull(),
@@ -564,7 +583,7 @@ class TransactionResource extends Resource
                                                     ->warning()
                                                     ->duration(4000)
                                                     ->send();
-                                                
+
                                                 $set('quantity', $variant->stock_quantity);
                                                 $state = $variant->stock_quantity;
                                             }
@@ -581,7 +600,8 @@ class TransactionResource extends Resource
                                     }),
 
                                 Placeholder::make('price_display')
-                                    ->content(fn (Get $get) =>
+                                    ->content(
+                                        fn(Get $get) =>
                                         '₱' . number_format($get('sub_total') ?? 0, 2)
                                     )
                                     ->live(),
@@ -607,7 +627,7 @@ class TransactionResource extends Resource
                                 // This fires when items are deleted from the repeater
                                 // $state contains the updated orderItems array after deletion
                                 $total = collect($state ?? [])->sum('sub_total');
-                                
+
                                 $set('total_amount', $total);
                                 $set('final_amount', $total);
                                 $set('payment.amount', number_format($total, 2, '.', ''));
@@ -617,23 +637,26 @@ class TransactionResource extends Resource
                         Forms\Components\Fieldset::make('Order Summary')->schema([
                             Placeholder::make('subtotal')
                                 ->label('Subtotal')
-                                ->content(fn (Get $get) =>
+                                ->content(
+                                    fn(Get $get) =>
                                     '₱' . number_format(collect($get('orderItems') ?? [])
-                                        ->sum(fn ($i) => ($i['original_price'] ?? 0) * ($i['quantity'] ?? 0)), 2)
+                                        ->sum(fn($i) => ($i['original_price'] ?? 0) * ($i['quantity'] ?? 0)), 2)
                                 )
                                 ->live(),
 
                             Placeholder::make('discount')
                                 ->label('Discount')
-                                ->content(fn (Get $get) =>
+                                ->content(
+                                    fn(Get $get) =>
                                     '-₱' . number_format(collect($get('orderItems') ?? [])
-                                        ->sum(fn ($i) => ($i['discount_amount'] ?? 0) * ($i['quantity'] ?? 0)), 2)
+                                        ->sum(fn($i) => ($i['discount_amount'] ?? 0) * ($i['quantity'] ?? 0)), 2)
                                 )
                                 ->live(),
 
                             Placeholder::make('total')
                                 ->label('Total')
-                                ->content(fn (Get $get) =>
+                                ->content(
+                                    fn(Get $get) =>
                                     '₱' . number_format($get('final_amount') ?? 0, 2)
                                 )
                                 ->live()
@@ -650,7 +673,7 @@ class TransactionResource extends Resource
     {
         $orderItems = $get('../../orderItems') ?? [];
         $total = collect($orderItems)->sum('sub_total');
-        
+
         $set('../../total_amount', $total);
         $set('../../final_amount', $total);
         $set('../../payment.amount', number_format($total, 2, '.', ''));
@@ -661,7 +684,7 @@ class TransactionResource extends Resource
     {
         // $state contains the updated orderItems array after deletion
         $total = collect($state ?? [])->sum('sub_total');
-        
+
         $set('total_amount', $total);
         $set('final_amount', $total);
         $set('payment.amount', number_format($total, 2, '.', ''));
@@ -696,14 +719,16 @@ class TransactionResource extends Resource
                             Section::make('Customer Information')->schema([
                                 Forms\Components\Placeholder::make('customer_name')
                                     ->label('Customer')
-                                    ->content(fn ($record) =>
+                                    ->content(
+                                        fn($record) =>
                                         $record->customer
-                                            ? "{$record->customer->first_name} {$record->customer->last_name}"
-                                            : 'Guest'
+                                        ? "{$record->customer->first_name} {$record->customer->last_name}"
+                                        : 'Guest'
                                     ),
                                 Forms\Components\Placeholder::make('order_date')
                                     ->label('Order Date')
-                                    ->content(fn ($record) =>
+                                    ->content(
+                                        fn($record) =>
                                         $record->order_date?->format('M d, Y H:i')
                                     ),
                             ]),
@@ -711,9 +736,11 @@ class TransactionResource extends Resource
                             Section::make('Cart')->schema([
                                 Forms\Components\Placeholder::make('items')
                                     ->label('Products')
-                                    ->content(fn ($record) =>
+                                    ->content(
+                                        fn($record) =>
                                         $record->orderItems
-                                            ->map(fn ($i) =>
+                                            ->map(
+                                                fn($i) =>
                                                 "{$i->quantity} × {$i->product->name} ({$i->size}/{$i->colorway})"
                                                 . ($i->discount_label ? " - Discount: {$i->discount_label}" : "")
                                                 . " - ₱" . number_format($i->sub_total, 2)
@@ -723,16 +750,18 @@ class TransactionResource extends Resource
                                     ->columnSpanFull(),
                                 Forms\Components\Placeholder::make('total')
                                     ->label('Total')
-                                    ->content(fn ($record) =>
+                                    ->content(
+                                        fn($record) =>
                                         '₱' . number_format($record->final_amount, 2)
                                     )
                                     ->extraAttributes(['class' => 'font-bold text-green-600']),
                             ]),
 
-                          Section::make('Payment Information')->schema([
+                            Section::make('Payment Information')->schema([
                                 Forms\Components\Placeholder::make('method')
                                     ->label('Payment Method')
-                                    ->content(fn ($record) =>
+                                    ->content(
+                                        fn($record) =>
                                         $record->payment?->paymentMethod?->method_name ?? '-'
                                     ),
                                 Forms\Components\Placeholder::make('qr_code_view')
@@ -760,28 +789,33 @@ class TransactionResource extends Resource
                                         }
                                         return '-';
                                     })
-                                    ->visible(fn ($record) =>
+                                    ->visible(
+                                        fn($record) =>
                                         $record->payment?->paymentMethod?->method_name === 'GCash'
                                     )
                                     ->columnSpanFull(),
                                 Forms\Components\Placeholder::make('reference_number')
                                     ->label('Reference Number')
-                                    ->content(fn ($record) =>
+                                    ->content(
+                                        fn($record) =>
                                         $record->payment?->reference_number ?? '-'
                                     )
-                                    ->visible(fn ($record) =>
+                                    ->visible(
+                                        fn($record) =>
                                         $record->payment?->paymentMethod?->method_name === 'GCash'
                                     ),
                                 Forms\Components\Placeholder::make('amount')
                                     ->label('Amount Paid')
-                                    ->content(fn ($record) =>
+                                    ->content(
+                                        fn($record) =>
                                         $record->payment
-                                            ? '₱' . number_format($record->payment->amount, 2)
-                                            : '₱0.00'
+                                        ? '₱' . number_format($record->payment->amount, 2)
+                                        : '₱0.00'
                                     ),
                                 Forms\Components\Placeholder::make('status')
                                     ->label('Payment Status')
-                                    ->content(fn ($record) =>
+                                    ->content(
+                                        fn($record) =>
                                         ucfirst($record->payment?->status ?? 'unpaid')
                                     ),
                             ]),
@@ -811,9 +845,9 @@ class TransactionResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index'  => Pages\ListTransactions::route('/'),
+            'index' => Pages\ListTransactions::route('/'),
             'create' => Pages\CreateTransaction::route('/create'),
-            'edit'   => Pages\EditTransaction::route('/{record}/edit'),
+            'edit' => Pages\EditTransaction::route('/{record}/edit'),
         ];
     }
 
