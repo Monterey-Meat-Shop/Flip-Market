@@ -698,7 +698,20 @@ class TransactionResource extends Resource
             ->columns([
                 TextColumn::make('customer.first_name')->label('Customer Name'),
                 TextColumn::make('orderItems.product.name')->label('Products')->listWithLineBreaks(),
-                TextColumn::make('payment.paymentMethod.method_name')->label('Payment Method'),
+                TextColumn::make('payment_reference')
+                    ->label('Payment Method')
+                    ->getStateUsing(function ($record) {
+                        $method = $record->payment?->paymentMethod?->method_name ?? '-';
+                        $reference = $record->payment?->reference_number ?? null;
+
+                        // Show "GCash/ReferenceNumber" only if method is GCash
+                        if (strtolower($method) === 'gcash' && $reference) {
+                            return "{$method}/{$reference}";
+                        }
+
+                        return $method; // Otherwise, just show the method name (e.g., Cash)
+                    }),
+
                 TextColumn::make('payment.amount')
                     ->label('Paid Amount')
                     ->money('PHP')
@@ -709,7 +722,16 @@ class TransactionResource extends Resource
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('total_amount')->label('Total Amount')->money('PHP'),
-                TextColumn::make('order_status')->label('Order Status')->badge(),
+                TextColumn::make('order_status')
+                ->label('Order Status')
+                ->badge()
+                ->colors([
+                    'success' => 'completed',     // ✅ Green for completed
+                    'warning' => 'pending',       // 🟡 Yellow for pending (optional)
+                    'danger'  => 'cancelled',     // 🔴 Red for cancelled (optional)
+                    'gray'    => 'processing',    // ⚪ Gray for processing (optional)
+                ]),
+
                 TextColumn::make('created_at')->label('Order Date')->dateTime(),
             ])
             ->actions([
