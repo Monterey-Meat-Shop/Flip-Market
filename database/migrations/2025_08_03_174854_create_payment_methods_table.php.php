@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('payment_methods', function (Blueprint $table) { // <-- add 's'
+        Schema::create('payment_methods', function (Blueprint $table) {
             $table->increments('payment_methodID');
             $table->string('method_name');
             $table->boolean('is_active')->default(true);
@@ -24,7 +24,8 @@ return new class extends Migration
      * Reverse the migrations.
      */
     public function down(): void
-    {
-        Schema::dropIfExists('payment_method');
-    }
+{
+    Schema::dropIfExists('payment_methods');
+}
+
 };
