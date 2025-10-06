@@ -177,41 +177,6 @@
         </div>
         @error('selectedShippingMethod') <span class="text-red-500 text-xs mt-2 block">{{ $message }}</span> @enderror
       </div>
-
-      {{-- <!-- Discount Code Section -->
-      <div class="bg-white p-6 rounded-2xl shadow">
-        <h3 class="text-lg font-semibold text-gray-900 mb-4">Discount Code</h3>
-        
-        @if (session()->has('discount_error'))
-        <div class="mb-4 bg-red-100 border border-red-400 text-red-700 px-3 py-2 rounded text-sm">
-          {{ session('discount_error') }}
-        </div>
-        @endif
-
-        @if (session()->has('discount_success'))
-        <div class="mb-4 bg-green-100 border border-green-400 text-green-700 px-3 py-2 rounded text-sm">
-          {{ session('discount_success') }}
-        </div>
-        @endif
-
-        @if($appliedDiscount)
-        <div class="mb-4 bg-blue-100 border border-blue-400 text-blue-700 px-3 py-2 rounded text-sm flex justify-between items-center">
-          <span>Discount "{{ $appliedDiscount->name }}" applied</span>
-          <button wire:click="removeDiscount" class="text-blue-600 hover:text-blue-800 font-semibold">Remove</button>
-        </div>
-        @else
-        <div class="flex gap-2">
-          <input type="text" wire:model="discountCode" 
-                 placeholder="Enter discount code"
-                 class="flex-1 py-2 px-3 rounded-lg border border-gray-300 text-gray-800 
-                        focus:border-blue-500 focus:ring-blue-500">
-          <button wire:click="applyDiscount" 
-                  class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-            Apply
-          </button>
-        </div>
-        @endif
-      </div> --}}
     </div>  
 
     <!-- Right Side (Order Summary) -->
@@ -222,11 +187,17 @@
       <div class="bg-white rounded-lg border border-gray-200 p-4 flex items-center gap-4">
         <!-- Image -->
         <a href="#" class="shrink-0">
-          <div class="h-20 w-20 bg-gray-200 rounded flex items-center justify-center">
-            <span class="text-gray-500 text-xs font-semibold">
-              {{ strtoupper(substr($item->product->name, 0, 2)) }}
-            </span>
-          </div>
+          @if($item->product && $item->product->image_path)
+            <img src="{{ asset('storage/' . $item->product->image_path) }}" 
+                 alt="{{ $item->product->name }}"
+                 class="h-20 w-20 object-cover rounded">
+          @else
+            <div class="h-20 w-20 bg-gray-200 rounded flex items-center justify-center">
+              <span class="text-gray-500 text-xs font-semibold">
+                {{ strtoupper(substr($item->product->name, 0, 2)) }}
+              </span>
+            </div>
+          @endif
         </a>
 
         <!-- Product Info -->

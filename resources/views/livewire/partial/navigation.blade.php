@@ -26,13 +26,6 @@
 
             <a wire:navigate class="font-medium {{ request()->is('/') ? 'text-blue-600' : 'text-gray-500' }} " href="/" aria-current="page">Home</a>
 
-            <a wire:navigate class ="font-medium {{ request()->is('brands') ? 'text-blue-600' : 'text-gray-500' }}" href="/brands">
-              Brands
-            </a>
-
-            <a wire:navigate class="font-medium {{ request()->is('categories') ? 'text-blue-600' :'text-gray-500' }}  py-3 md:py-6   " href="/categories">
-              Categories
-            </a>
 
             <a wire:navigate class="font-medium {{ request()->is('products') ? 'text-blue-600' : 'text-gray-500' }} py-3 md:py-6    " href="/products">
               Products
@@ -79,8 +72,8 @@
                  My Orders
               </a>
 
-              <a class="flex items-center gap-x-3.5 py-2 px-3 rounded-lg text-sm text-gray-800 hover:bg-gray-100 focus:ring-2 focus:ring-blue-500 "  href="#">
-                My Account
+              <a class="flex items-center gap-x-3.5 py-2 px-3 rounded-lg text-sm text-gray-800 hover:bg-gray-100 focus:ring-2 focus:ring-blue-500" href="{{ route('my.account') }}">
+                 My Account
               </a>
               <a class="flex items-center gap-x-3.5 py-2 px-3 rounded-lg text-sm text-gray-800 hover:bg-gray-100 focus:ring-2 focus:ring-gray-500 " href="/logout">
                 Logout

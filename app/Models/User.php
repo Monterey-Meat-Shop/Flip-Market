@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
+//use Illuminate\Contracts\Auth\MustVerifyEmail; //new added
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Str;
@@ -39,19 +40,10 @@ class User extends Authenticatable implements FilamentUser
         ];
     }
 
-    // public function initials(): string
-    // {
-    //     return Str::of($this->name)
-    //         ->explode(' ')
-    //         ->take(2)
-    //         ->map(fn ($word) => Str::substr($word, 0, 1))
-    //         ->implode('');
-    // }
-
-    // public function customer()
-    // {
-    //     return $this->hasOne(Customer::class, 'user_id', 'id');
-    // }
+    public function customer()
+    {
+        return $this->hasOne(Customer::class, 'user_id', 'id');
+    }
 
     public function canAccessPanel(Panel $panel): bool
     {
