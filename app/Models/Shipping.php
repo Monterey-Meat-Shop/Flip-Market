@@ -4,13 +4,13 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use App\Models\Order;
 
 class Shipping extends Model
 {
     use HasFactory;
 
     protected $table = 'shipping';
+
     protected $primaryKey = 'shippingID';
 
     protected $fillable = [
@@ -21,7 +21,7 @@ class Shipping extends Model
     ];
 
     protected $attributes = [
-        'shipping_status' => 'processing',
+        'shipping_status' => 'Pending',
     ];
 
     // Define shipping method constants
