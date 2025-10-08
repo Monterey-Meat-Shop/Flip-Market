@@ -44,25 +44,27 @@ class DiscountResource extends Resource
                             ->required()
                             ->maxLength(225),
 
-                        Select::make('products')
-                            ->label('Applies To Product')
-                            ->relationship('products', 'name', null, false, 'productID')
-                            ->searchable()
-                            ->multiple()
-                            ->preload()
-                            ->required()
-                            ->options(function (Get $get, ?Discount $record): array {
-                                $products = Product::whereDoesntHave('discounts', function (Builder $query) use ($record) {
-                                    $query->where('is_active', true);
-                                    if ($record) {
-                                        $query->where('discounts.discountID', '!=', $record->discountID);
-                                    }
-                                })
-                                ->pluck('name', 'productID')
-                                ->toArray();
+     Select::make('products')
+    ->label('Applies To Product')
+    ->relationship('products', 'name')
+    ->searchable()
+    ->multiple()
+    ->preload()
+    ->options(function (?Discount $record) {
+        $products = Product::pluck('name', 'productID')->toArray();
 
-                                return $products;
-                            }),
+        return ['__all' => '— Select All Products —'] + $products;
+    })
+    ->helperText('Optional — Leave blank to apply discount to all products, or select specific ones.')
+    ->afterStateUpdated(function ($state, callable $set, callable $get) {
+        if (in_array('__all', $state, true)) {
+            $allProductIds = Product::pluck('productID')->toArray();
+            $selected = array_unique(array_merge(array_diff($state, ['__all']), $allProductIds));
+            $set('products', $selected);
+        }
+    })
+    ->dehydrateStateUsing(fn ($state) => array_filter($state, fn ($id) => $id !== '__all')),
+
 
                         Select::make('discount_type')
                             ->label('Discount Type')
