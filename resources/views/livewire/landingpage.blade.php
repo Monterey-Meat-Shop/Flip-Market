@@ -60,33 +60,34 @@
   <div class="justify-center max-w-6xl px-4 py-4 mx-auto lg:py-0">
     <div class="grid grid-cols-1 gap-6 lg:grid-cols-4 md:grid-cols-2">
 
-@foreach ($brands->take(4) as $brand) 
-    <a href="#" wire:key="{{ $brand->id }}" class="block group">
-        <div class="bg-white rounded-lg shadow-md dark:bg-gray-800 overflow-hidden transition-all duration-300 group-hover:shadow-xl group-hover:bg-blue-500"> 
-            <!-- Image container with white background -->
-            <div class="bg-white p-4 group-hover:bg-white transition-all duration-300">
-                @if($brand->name == 'Vans') 
-                    <img src="{{ asset('images/vanslogo.png') }}" alt="Vans Logo" class="object-contain w-full h-64 transition-transform duration-300 group-hover:scale-110 mx-auto"> 
-                @elseif($brand->name == 'Adidas') 
-                    <img src="{{ asset('images/adidaslogo.png') }}" alt="Adidas Logo" class="object-contain w-full h-64 transition-transform duration-300 group-hover:scale-110 mx-auto"> 
-                @elseif($brand->name == 'Nike') 
-                    <img src="{{ asset('images/nikelogo.png') }}" alt="Nike Logo" class="object-contain w-full h-64 transition-transform duration-300 group-hover:scale-110 mx-auto"> 
-                @elseif($brand->name == 'Puma') 
-                    <img src="{{ asset('images/pumalogo.png') }}" alt="Puma Logo" class="object-contain w-full h-64 transition-transform duration-300 group-hover:scale-110 mx-auto"> 
-                @else 
-                    <img src="{{ asset('images/default-logo.png') }}" alt="{{ $brand->name }} Logo" class="object-contain w-full h-64 transition-transform duration-300 group-hover:scale-110 mx-auto"> 
-                @endif
-            </div>
- 
-            <!-- Text container -->
-            <div class="p-5 text-center transition-all duration-300"> 
-                <h3 class="text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-300 group-hover:text-white transition-all duration-300"> 
-                    {{ $brand->name }} 
-                </h3> 
-            </div> 
+@foreach ($brands->take(4) as $brand)
+    <div class="bg-white rounded-lg shadow-md dark:bg-gray-800">
+        <a href="#" class="" wire:key="{{ $brand->id }}">
+            <!-- Display the logo image dynamically from the public/images folder -->
+            @if($brand->name == 'Vans')
+                <img src="{{ asset('images/vanslogo.png') }}" alt="Vans Logo" class="object-contain w-full h-64 rounded-t-lg">
+            @elseif($brand->name == 'Adidas')
+                <img src="{{ asset('images/adidaslogo.png') }}" alt="Adidas Logo" class="object-contain w-full h-64 rounded-t-lg">
+            @elseif($brand->name == 'Nike')
+                <img src="{{ asset('images/nikelogo.png') }}" alt="Nike Logo" class="object-contain w-full h-64 rounded-t-lg">
+            @elseif($brand->name == 'Puma')
+                <img src="{{ asset('images/pumalogo.png') }}" alt="Puma Logo" class="object-contain w-full h-64 rounded-t-lg">
+            @else
+                <img src="{{ asset('images/default-logo.png') }}" alt="{{ $brand->name }} Logo" class="object-contain w-full h-64 rounded-t-lg">
+            @endif
+        </a>
+        <div class="p-5 text-center">
+            <a href="#" class="text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-300">
+                {{ $brand->name }}
+            </a>
         </div>
-    </a>
+    </div>
 @endforeach
+
+
+
+
+
     </div>
   </div>
 </section>
