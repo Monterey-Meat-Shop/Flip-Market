@@ -3,7 +3,17 @@
     <!-- Grid -->
     <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
       <div class="col-span-full lg:col-span-1">
-        <a class="flex-none text-xl font-semibold text-white" href="#" aria-label="Brand">Flip Market</a>
+        <!-- <a class="flex-none text-xl font-semibold text-white" href="" aria-label="Brand">FLIP MARKET</a> -->
+         <a href="/" aria-label="Brand">
+  <img src="{{ asset('images/logopng.png') }}" alt="Brand Logo" width="180" height="auto" class="invert-logo" />
+</a>
+
+<style>
+  .invert-logo {
+    filter: brightness(0) invert(1);
+  }
+</style>
+
       </div>
       <!-- End Col -->
 

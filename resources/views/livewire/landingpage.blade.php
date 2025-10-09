@@ -51,9 +51,9 @@
         </div>
       </div>
       <p class="mb-12 text-base text-center ">
-        Lorem ipsum, dolor sit amet consectetur adipisicing elit. Delectus magni eius eaque?
+        <!-- Lorem ipsum, dolor sit amet consectetur adipisicing elit. Delectus magni eius eaque?
         Pariatur
-        numquam, odio quod nobis ipsum ex cupiditate?
+        numquam, odio quod nobis ipsum ex cupiditate? -->
       </p>
     </div>
   </div>
