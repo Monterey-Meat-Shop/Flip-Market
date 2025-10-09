@@ -19,6 +19,15 @@
         @livewireScripts
         <script src="https://unpkg.com/preline/dist/preline.js"></script>
         
+
+        <head>
+    <!-- Add Montserrat font from Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600&display=swap" rel="stylesheet">
+</head>
+
+
+
+
     </body> 
 </html>
 
