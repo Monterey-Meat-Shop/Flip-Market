@@ -20,8 +20,8 @@
         <p class="mt-8 text-lg font-medium text-pretty text-gray-200 sm:text-xl/8">"Experience shopping that’s fast, seamless, and made for today’s lifestyle. From trending products to everyday essentials, we bring it all to your fingertips."</p>
           
         <div class="mt-10 flex items-center justify-center gap-x-6">
-          <a href="#" class="rounded-md bg-indigo-500 px-3.5 py-2.5 text-sm font-semibold text-white shadow-xs hover:bg-indigo-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500">Get started</a>
-          <a href="#" class="text-sm/6 font-semibold text-white">Learn more <span aria-hidden="true">→</span></a>
+          <!-- <a href="#" class="rounded-md bg-indigo-500 px-3.5 py-2.5 text-sm font-semibold text-white shadow-xs hover:bg-indigo-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500">Get started</a> -->
+          <!-- <a href="#" class="text-sm/6 font-semibold text-white">Learn more <span aria-hidden="true">→</span></a> -->
         </div>
       </div>
     </div>
