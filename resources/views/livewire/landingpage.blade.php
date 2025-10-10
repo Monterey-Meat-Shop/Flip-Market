@@ -17,7 +17,7 @@
       </div>
       <div class="text-center">
         <h1 class="text-5xl font-semibold tracking-tight text-balance text-white sm:text-7xl">Where Shopping Meets Convenience</h1>
-        <p class="mt-8 text-lg font-medium text-pretty text-gray-200 sm:text-xl/8">"Experience shopping that’s fast, seamless, and made for today’s lifestyle. From trending products to everyday essentials, we bring it all to your fingertips."</p>
+        <!-- <p class="mt-8 text-lg font-medium text-pretty text-gray-200 sm:text-xl/8">"Experience shopping that’s fast, seamless, and made for today’s lifestyle. From trending products to everyday essentials, we bring it all to your fingertips."</p> -->
           
         <div class="mt-10 flex items-center justify-center gap-x-6">
           <!-- <a href="#" class="rounded-md bg-indigo-500 px-3.5 py-2.5 text-sm font-semibold text-white shadow-xs hover:bg-indigo-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500">Get started</a> -->
@@ -33,66 +33,37 @@
 
 
 
-
-<!-- Brand start section -->
-<section class="bg-gray-100 py-20">
-  <div class="max-w-xl mx-auto">
-    <div class="text-center ">
+<!-- Brand Images Section -->
+<section class="bg-[#f2f3f4] py-20">
+  <div class="max-w-screen-xl mx-auto px-4">
+    <div class="text-center">
       <div class="relative flex flex-col items-center">
-        <h1 class="text-5xl font-bold dark:text-gray-200 "> Browse Popular<span class="text-blue-500"> Brands
-          </span> </h1>
-        <div class="flex w-40 mt-2 mb-6 overflow-hidden rounded">
-          <div class="flex-1 h-2 bg-blue-200">
-          </div>
-          <div class="flex-1 h-2 bg-blue-400">
-          </div>
-          <div class="flex-1 h-2 bg-blue-600">
-          </div>
+        <h1 class="text-4xl md:text-5xl font-extrabold text-gray-800 dark:text-gray-200">
+          Browse Popular <span class="text-blue-600">Brands</span>
+        </h1>
+        
+        <!-- Decorative Bar -->
+        <div class="flex w-40 mt-4 mb-6 overflow-hidden rounded-full mx-auto">
+          <div class="flex-1 h-2 bg-blue-300 transition-all duration-300 hover:bg-blue-400"></div>
+          <div class="flex-1 h-2 bg-blue-500 transition-all duration-300 hover:bg-blue-600"></div>
+          <div class="flex-1 h-2 bg-blue-700 transition-all duration-300 hover:bg-blue-800"></div>
         </div>
       </div>
-      <p class="mb-12 text-base text-center ">
-        <!-- Lorem ipsum, dolor sit amet consectetur adipisicing elit. Delectus magni eius eaque?
-        Pariatur
-        numquam, odio quod nobis ipsum ex cupiditate? -->
+
+      <!-- Description -->
+      <p class="mb-12 text-lg md:text-xl text-gray-600 dark:text-gray-300">
+        Explore a wide variety of top brands to find the perfect match for your needs. Discover quality and innovation in every product.
       </p>
-    </div>
-  </div>
-  <div class="justify-center max-w-6xl px-4 py-4 mx-auto lg:py-0">
-    <div class="grid grid-cols-1 gap-6 lg:grid-cols-4 md:grid-cols-2">
-
-@foreach ($brands->take(4) as $brand)
-    <div class="bg-white rounded-lg shadow-md dark:bg-gray-800">
-        <a href="#" class="" wire:key="{{ $brand->id }}">
-            <!-- Display the logo image dynamically from the public/images folder -->
-            @if($brand->name == 'Vans')
-                <img src="{{ asset('images/vanslogo.png') }}" alt="Vans Logo" class="object-contain w-full h-64 rounded-t-lg">
-            @elseif($brand->name == 'Adidas')
-                <img src="{{ asset('images/adidaslogo.png') }}" alt="Adidas Logo" class="object-contain w-full h-64 rounded-t-lg">
-            @elseif($brand->name == 'Nike')
-                <img src="{{ asset('images/nikelogo.png') }}" alt="Nike Logo" class="object-contain w-full h-64 rounded-t-lg">
-            @elseif($brand->name == 'Puma')
-                <img src="{{ asset('images/pumalogo.png') }}" alt="Puma Logo" class="object-contain w-full h-64 rounded-t-lg">
-            @else
-                <img src="{{ asset('images/default-logo.png') }}" alt="{{ $brand->name }} Logo" class="object-contain w-full h-64 rounded-t-lg">
-            @endif
-        </a>
-        <div class="p-5 text-center">
-            <a href="#" class="text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-300">
-                {{ $brand->name }}
-            </a>
-        </div>
-    </div>
-@endforeach
-
-
-
-
-
+      
+      <!-- Brand Names Section in a Single Row -->
+      <div class="flex overflow-x-auto gap-6 pb-4 scrollbar-hidden">
+        @foreach($brands as $brand)
+          <div class="flex justify-center items-center p-4 bg-white shadow-lg rounded-lg hover:scale-105 transform transition-all duration-300 ease-in-out hover:shadow-xl w-32 sm:w-40 md:w-48 {{ $brand->name == 'PUMA' || $brand->name == 'VANS' ? 'bg-yellow-200' : '' }}">
+            <!-- Brand Name -->
+            <span class="text-base sm:text-lg font-semibold text-gray-800">{{ $brand->name }}</span>
+          </div>
+        @endforeach
+      </div>
     </div>
   </div>
 </section>
-<!-- Brand end section -->
-
-
-</div>
-</div>
