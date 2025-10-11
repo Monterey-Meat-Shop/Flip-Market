@@ -25,11 +25,14 @@ return new class extends Migration
             $table->unsignedInteger('payment_methodID');
             $table->foreign('payment_methodID')
                   ->references('payment_methodID')
-                  ->on('payment_methods'); // <-- FIXED: use plural table name
+                  ->on('payment_methods');
 
             $table->decimal('amount', 8, 2)->default(0);
             $table->string('reference_number')->nullable();
+            $table->string('screenshot_path')->nullable();
+
             $table->enum('status', ['unpaid', 'verified', 'completed', 'failed'])->default('unpaid');
+
 
             $table->timestamps();
         });

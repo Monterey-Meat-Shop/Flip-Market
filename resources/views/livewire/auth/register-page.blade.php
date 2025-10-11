@@ -211,7 +211,7 @@
               @enderror
       </div>
 
-      <!-- Address Line 2 -->
+      {{-- <!-- Address Line 2 -->
       <div class="relative">
         <label for="address_line_2" class="block text-sm mb-2 text-gray-700">Address Line 2</label>
         <input type="text" id="address_line_2" wire:model="address_line_2"
@@ -231,7 +231,7 @@
               @error('address_line_2')
                   <p class="text-xs text-red-600 mt-2">{{ $message }}</p>
               @enderror
-      </div>
+      </div> --}}
 
       <!-- Province -->
       <div class="relative">

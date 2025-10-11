@@ -65,7 +65,7 @@
             <div class="w-full py-2 px-2 rounded-lg border border-gray-300 bg-gray-50 text-gray-500">
               No saved addresses found. Please add an address first.
             </div>
-            <a href="{{ route('profile') }}" class="text-blue-600 hover:text-blue-800 text-sm mt-2 inline-block">
+            <a href="{{ route('my.account') }}" class="text-blue-600 hover:text-blue-800 text-sm mt-2 inline-block">
               Add a new address →
             </a>
           @endif
@@ -76,10 +76,7 @@
         <div class="bg-gray-50 p-4 rounded-lg border">
           <h3 class="text-sm font-semibold text-gray-700 mb-2">Selected Address:</h3>
           <div class="text-sm text-gray-600 space-y-1">
-            <p><strong>Address Line 1:</strong> {{ $addressLine1 }}</p>
-            @if($addressLine2)
-              <p><strong>Address Line 2:</strong> {{ $addressLine2 }}</p>
-            @endif
+            <p><strong>Address:</strong> {{ $addressLine1 }}</p>
             <p><strong>City:</strong> {{ $city }}</p>
             <p><strong>Province:</strong> {{ $province }}</p>
             <p><strong>Postal Code:</strong> {{ $postalCode }}</p>
@@ -122,21 +119,98 @@
         </div>
         @error('selectedPaymentMethod') <span class="text-red-500 text-xs mt-2 block">{{ $message }}</span> @enderror
 
-        <!-- Reference Number Fields -->
+        <!-- GCash Payment Instructions -->
         @if($showGcashReference)
-        <div class="mt-4">
-          <label class="block text-sm mb-1">GCash Reference Number</label>
+        <div class="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <h4 class="font-semibold text-gray-800 mb-3">GCash Payment Instructions</h4>
+          
+          <div class="grid md:grid-cols-2 gap-4 mb-4">
+            <!-- QR Code -->
+            <div class="text-center">
+              <p class="text-sm text-gray-600 mb-2">Scan QR Code:</p>
+              <div class="bg-white p-3 rounded-lg inline-block">
+                <img src="{{ asset('storage/payment_qr/gcash.png') }}" 
+                     alt="GCash QR Code" 
+                     class="w-48 h-48 object-contain mx-auto">
+              </div>
+            </div>
+
+            <!-- Payment Details -->
+            <div class="space-y-2 text-sm">
+              <div>
+                <p class="text-gray-600">Account Name:</p>
+                <p class="font-semibold">Flip Market</p>
+              </div>
+              <div>
+                <p class="text-gray-600">GCash Number:</p>
+                <p class="font-semibold">0917-123-4567</p>
+              </div>
+              <div>
+                <p class="text-gray-600">Amount to Pay:</p>
+                <p class="font-semibold text-lg text-blue-600">₱{{ number_format($totalAmount, 2) }}</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="mb-3 p-3 bg-yellow-50 border border-yellow-200 rounded">
+            <p class="text-xs text-gray-700">
+              <strong>Note:</strong> Please send the exact amount and enter the reference number below after payment.
+            </p>
+          </div>
+
+          <label class="block text-sm mb-1 font-medium">GCash Reference Number <span class="text-red-500">*</span></label>
           <input type="text" wire:model="gcashReferenceNumber"
                  class="w-full py-2 px-2 rounded-lg border border-gray-300 text-gray-800 
                         focus:border-blue-500 focus:ring-blue-500 @error('gcashReferenceNumber') border-red-500 @enderror"
-                 placeholder="Enter your GCash reference number">
+                 placeholder="Enter the 13-digit reference number from GCash">
           @error('gcashReferenceNumber') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
         </div>
         @endif
 
+        <!-- Bank Transfer Payment Instructions -->
         @if($showBankTransferReference)
-        <div class="mt-4">
-          <label class="block text-sm mb-1">Bank Transfer Reference Number</label>
+        <div class="mt-4 bg-green-50 border border-green-200 rounded-lg p-4">
+          <h4 class="font-semibold text-gray-800 mb-3">Bank Transfer Payment Instructions</h4>
+          
+          <div class="grid md:grid-cols-2 gap-4 mb-4">
+            <!-- QR Code -->
+            <div class="text-center">
+              <p class="text-sm text-gray-600 mb-2">Scan QR Code:</p>
+              <div class="bg-white p-3 rounded-lg inline-block">
+                <img src="{{ asset('storage/payment_qr/bank_transfer.png') }}" 
+                     alt="Bank QR Code" 
+                     class="w-48 h-48 object-contain mx-auto">
+              </div>
+            </div>
+
+            <!-- Bank Details -->
+            <div class="space-y-2 text-sm">
+              <div>
+                <p class="text-gray-600">Bank Name:</p>
+                <p class="font-semibold">BDO / BPI / Metrobank</p>
+              </div>
+              <div>
+                <p class="text-gray-600">Account Name:</p>
+                <p class="font-semibold">Flip Market</p>
+              </div>
+              <div>
+                <p class="text-gray-600">Account Number:</p>
+                <p class="font-semibold">1234-5678-9012</p>
+              </div>
+              <div>
+                <p class="text-gray-600">Amount to Pay:</p>
+                <p class="font-semibold text-lg text-green-600">₱{{ number_format($totalAmount, 2) }}</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="mb-3 p-3 bg-yellow-50 border border-yellow-200 rounded">
+            <p class="text-xs text-gray-700">
+              <strong>Note:</strong> Please send the exact amount and enter the reference number from your bank receipt below.
+            </p>
+          </div>
+
+          <label class="block text-sm mb-1 font-medium">Bank Transfer Reference Number <span class="text-red-500">*</span></label>
           <input type="text" wire:model="bankTransferReferenceNumber"
                  class="w-full py-2 px-2 rounded-lg border border-gray-300 text-gray-800 
                         focus:border-blue-500 focus:ring-blue-500 @error('bankTransferReferenceNumber') border-red-500 @enderror"
@@ -262,6 +336,35 @@
         <a href="{{ route('cart') }}" class="block text-center text-blue-600 mt-4 underline hover:no-underline">
           Return to Cart
         </a>
+      </div>
+
+      <!-- Upload Screenshot Section -->
+      <div class="bg-white p-6 rounded-2xl shadow">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">Upload Payment Screenshot</h3>
+
+        <p class="text-sm text-gray-600 mb-3">
+          Please upload a screenshot of your payment as proof.
+        </p>
+
+        <input type="file"
+               wire:model="paymentScreenshot"
+               accept="image/*"
+               class="w-full text-sm text-gray-800 border border-gray-300 rounded-lg p-2 
+                      focus:ring-blue-500 focus:border-blue-500" />
+
+        @error('paymentScreenshot')
+          <span class="text-red-500 text-xs mt-1 block">{{ $message }}</span>
+        @enderror
+
+        <!-- Preview -->
+        @if ($paymentScreenshot)
+          <div class="mt-4 text-center">
+            <p class="text-sm text-gray-700 mb-2 font-medium">Preview:</p>
+            <img src="{{ $paymentScreenshot->temporaryUrl() }}" 
+                 alt="Screenshot Preview"
+                 class="mx-auto w-48 h-48 object-cover rounded-lg border shadow">
+          </div>
+        @endif
       </div>
     </div>
   </div>

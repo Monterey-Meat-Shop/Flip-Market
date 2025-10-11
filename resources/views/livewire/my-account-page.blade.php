@@ -66,63 +66,116 @@
             class="w-full py-3 px-4 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-blue-500 @error('email') border-red-500 @enderror">
           @error('email') <p class="text-xs text-red-600 mt-2">{{ $message }}</p> @enderror
         </div>
-      </div>   
-    </div>
 
-    <!-- Billing & Shipping -->
-    <div class="bg-white border border-gray-200 rounded-xl shadow-sm mb-6">
-      <div class="p-4 border-b border-gray-200">
-        <h2 class="text-gray-800 font-semibold">Billing & Shipping Information</h2>
-      </div>
-      
-      <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
         <!-- Phone -->
-        <div>
+        <div class="col-span-2">
           <label for="phone" class="block text-sm mb-2 text-gray-700">Phone</label>
           <input type="text" id="phone" wire:model="phone"
             class="w-full py-3 px-4 rounded-lg border border-gray-300 text-gray-800 focus:border-blue-500 focus:ring-blue-500 @error('phone') border-red-500 @enderror">
           @error('phone') <p class="text-xs text-red-600 mt-2">{{ $message }}</p> @enderror
         </div>
-        
-        <!-- Postal Code -->
-        <div>
-          <label for="postal_code" class="block text-sm mb-2 text-gray-700">Postal Code</label>
-          <input type="text" id="postal_code" wire:model="postal_code"
-            class="w-full py-3 px-4 rounded-lg border border-gray-300 text-gray-800 focus:border-blue-500 focus:ring-blue-500 @error('postal_code') border-red-500 @enderror">
-          @error('postal_code') <p class="text-xs text-red-600 mt-2">{{ $message }}</p> @enderror
+      </div>   
+    </div>
+
+    <!-- Billing & Shipping -->
+    <div class="bg-white border border-gray-200 rounded-xl shadow-sm mb-6">
+      <div class="p-4 border-b border-gray-200 flex justify-between items-center">
+        <h2 class="text-gray-800 font-semibold">Billing & Shipping Information</h2>
+        <button type="button" wire:click="showNewAddressForm" 
+                class="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700">
+          Add New Address
+        </button>
+      </div>
+      
+      <!-- Address Form (shown when adding/editing) -->
+      @if($showAddressForm)
+      <div class="p-6 border-b bg-gray-50">
+        <h3 class="text-sm font-semibold mb-4">{{ $editingAddressId ? 'Edit Address' : 'New Address' }}</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Address Line 1 -->
+          <div>
+            <label for="address_line_1" class="block text-sm mb-2 text-gray-700">Address <span class="text-red-500">*</span></label>
+            <input type="text" id="address_line_1" wire:model="address_line_1"
+              class="w-full py-3 px-4 rounded-lg border border-gray-300 text-gray-800 focus:border-blue-500 focus:ring-blue-500 @error('address_line_1') border-red-500 @enderror">
+            @error('address_line_1') <p class="text-xs text-red-600 mt-2">{{ $message }}</p> @enderror
+          </div>
+          
+          <!-- City -->
+          <div>
+            <label for="city" class="block text-sm mb-2 text-gray-700">City <span class="text-red-500">*</span></label>
+            <input type="text" id="city" wire:model="city"
+              class="w-full py-3 px-4 rounded-lg border border-gray-300 text-gray-800 focus:border-blue-500 focus:ring-blue-500 @error('city') border-red-500 @enderror">
+            @error('city') <p class="text-xs text-red-600 mt-2">{{ $message }}</p> @enderror
+          </div>
+          
+          {{-- <!-- Address Line 2 -->
+          <div>
+            <label for="address_line_2" class="block text-sm mb-2 text-gray-700">Address Line 2</label>
+            <input type="text" id="address_line_2" wire:model="address_line_2"
+              class="w-full py-3 px-4 rounded-lg border border-gray-300 text-gray-800 focus:border-blue-500 focus:ring-blue-500 @error('address_line_2') border-red-500 @enderror">
+            @error('address_line_2') <p class="text-xs text-red-600 mt-2">{{ $message }}</p> @enderror
+          </div> --}}
+          
+          <!-- Province -->
+          <div>
+            <label for="province" class="block text-sm mb-2 text-gray-700">Province <span class="text-red-500">*</span></label>
+            <input type="text" id="province" wire:model="province"
+              class="w-full py-3 px-4 rounded-lg border border-gray-300 text-gray-800 focus:border-blue-500 focus:ring-blue-500 @error('province') border-red-500 @enderror">
+            @error('province') <p class="text-xs text-red-600 mt-2">{{ $message }}</p> @enderror
+          </div>
+
+          <!-- Postal Code -->
+          <div>
+            <label for="postal_code" class="block text-sm mb-2 text-gray-700">Postal Code <span class="text-red-500">*</span></label>
+            <input type="text" id="postal_code" wire:model="postal_code"
+              class="w-full py-3 px-4 rounded-lg border border-gray-300 text-gray-800 focus:border-blue-500 focus:ring-blue-500 @error('postal_code') border-red-500 @enderror">
+            @error('postal_code') <p class="text-xs text-red-600 mt-2">{{ $message }}</p> @enderror
+          </div>
         </div>
-        
-        <!-- Address Line 1 -->
-        <div>
-          <label for="address_line_1" class="block text-sm mb-2 text-gray-700">Address Line 1</label>
-          <input type="text" id="address_line_1" wire:model="address_line_1"
-            class="w-full py-3 px-4 rounded-lg border border-gray-300 text-gray-800 focus:border-blue-500 focus:ring-blue-500 @error('address_line_1') border-red-500 @enderror">
-          @error('address_line_1') <p class="text-xs text-red-600 mt-2">{{ $message }}</p> @enderror
+
+        <div class="flex gap-2 mt-4">
+          <button type="button" wire:click="saveAddress" 
+                  class="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700">
+            Save Address
+          </button>
+          <button type="button" wire:click="cancelAddressForm" 
+                  class="px-4 py-2 bg-gray-300 text-gray-700 text-sm rounded-lg hover:bg-gray-400">
+            Cancel
+          </button>
         </div>
-        
-        <!-- City -->
-        <div>
-          <label for="city" class="block text-sm mb-2 text-gray-700">City</label>
-          <input type="text" id="city" wire:model="city"
-            class="w-full py-3 px-4 rounded-lg border border-gray-300 text-gray-800 focus:border-blue-500 focus:ring-blue-500 @error('city') border-red-500 @enderror">
-          @error('city') <p class="text-xs text-red-600 mt-2">{{ $message }}</p> @enderror
-        </div>
-        
-        <!-- Address Line 2 -->
-        <div>
-          <label for="address_line_2" class="block text-sm mb-2 text-gray-700">Address Line 2</label>
-          <input type="text" id="address_line_2" wire:model="address_line_2"
-            class="w-full py-3 px-4 rounded-lg border border-gray-300 text-gray-800 focus:border-blue-500 focus:ring-blue-500 @error('address_line_2') border-red-500 @enderror">
-          @error('address_line_2') <p class="text-xs text-red-600 mt-2">{{ $message }}</p> @enderror
-        </div>
-        
-        <!-- Province -->
-        <div>
-          <label for="province" class="block text-sm mb-2 text-gray-700">Province</label>
-          <input type="text" id="province" wire:model="province"
-            class="w-full py-3 px-4 rounded-lg border border-gray-300 text-gray-800 focus:border-blue-500 focus:ring-blue-500 @error('province') border-red-500 @enderror">
-          @error('province') <p class="text-xs text-red-600 mt-2">{{ $message }}</p> @enderror
-        </div>
+      </div>
+      @endif
+
+      <!-- Saved Addresses List -->
+      <div class="p-6">
+        @if($addresses && $addresses->count() > 0)
+          <div class="space-y-4">
+            @foreach($addresses as $address)
+            <div class="border border-gray-200 rounded-lg p-4 flex justify-between items-start">
+              <div>
+                <p class="font-medium text-gray-800">{{ $address->address_line_1 }}</p>
+                @if($address->address_line_2)
+                  <p class="text-sm text-gray-600">{{ $address->address_line_2 }}</p>
+                @endif
+                <p class="text-sm text-gray-600">{{ $address->city }}, {{ $address->province }} {{ $address->postal_code }}</p>
+              </div>
+              <div class="flex gap-2">
+                <button type="button" wire:click="editAddress({{ $address->addressID }})" 
+                        class="text-blue-600 hover:text-blue-800 text-sm">
+                  Edit
+                </button>
+                <button type="button" wire:click="deleteAddress({{ $address->addressID }})"
+                        wire:confirm="Are you sure you want to delete this address?"
+                        class="text-red-600 hover:text-red-800 text-sm">
+                  Delete
+                </button>
+              </div>
+            </div>
+            @endforeach
+          </div>
+        @else
+          <p class="text-gray-500 text-sm">No addresses saved yet. Click "Add New Address" to add one.</p>
+        @endif
       </div>
     </div>
 
