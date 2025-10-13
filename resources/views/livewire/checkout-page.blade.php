@@ -129,7 +129,7 @@
             <div class="text-center">
               <p class="text-sm text-gray-600 mb-2">Scan QR Code:</p>
               <div class="bg-white p-3 rounded-lg inline-block">
-                <img src="{{ asset('storage/payment_qr/gcash.png') }}" 
+                <img src="{{ asset('storage/payment_qr/gshak.png') }}" 
                      alt="GCash QR Code" 
                      class="w-48 h-48 object-contain mx-auto">
               </div>
@@ -177,7 +177,7 @@
             <div class="text-center">
               <p class="text-sm text-gray-600 mb-2">Scan QR Code:</p>
               <div class="bg-white p-3 rounded-lg inline-block">
-                <img src="{{ asset('storage/payment_qr/bank_transfer.png') }}" 
+                <img src="{{ asset('storage/payment_qr/gshak.png') }}" 
                      alt="Bank QR Code" 
                      class="w-48 h-48 object-contain mx-auto">
               </div>
