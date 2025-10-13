@@ -35,7 +35,7 @@
     <div x-data="{ 
       currentSlide: 0,
       slides: [
-        { title: 'Summer Collection 2024', description: 'Discover the latest trends in footwear', color: 'from-blue-500 to-purple-600' },
+        { title: 'Summer Collection 2025', description: 'Discover the latest trends in footwear', color: 'from-blue-500 to-purple-600' },
         { title: 'Athletic Performance', description: 'Gear up for your best performance yet', color: 'from-green-500 to-teal-600' },
         { title: 'Casual Comfort', description: 'Style meets comfort in every step', color: 'from-orange-500 to-red-600' },
         { title: 'Limited Edition', description: 'Exclusive designs you won\'t find anywhere else', color: 'from-pink-500 to-rose-600' }
