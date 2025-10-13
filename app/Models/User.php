@@ -59,4 +59,17 @@ class User extends Authenticatable implements FilamentUser
     {
         return $this->role === 'customer';
     }
+
+    public function orders()
+    {
+        return $this->hasManyThrough(
+            \App\Models\Order::class,     // Final model
+            \App\Models\Customer::class,  // Intermediate model
+            'user_id',     // Foreign key on customers table
+            'customerID',  // Foreign key on orders table
+            'id',          // Local key on users table
+            'customerID'   // Local key on customers table
+        );
+    }
+
 }
