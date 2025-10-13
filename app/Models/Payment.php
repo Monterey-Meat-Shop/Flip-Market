@@ -17,6 +17,7 @@ class Payment extends Model
         'payment_methodID',
         'amount',
         'reference_number',
+        'screenshot_path',
         'status',
     ];
 

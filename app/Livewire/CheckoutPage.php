@@ -3,6 +3,7 @@
 namespace App\Livewire;
 
 use Livewire\Component;
+use Livewire\WithFileUploads;
 use App\Models\CartItem;
 use App\Models\Customer;
 use App\Models\Order;
@@ -17,6 +18,9 @@ use Illuminate\Support\Facades\DB;
 
 class CheckoutPage extends Component
 {
+    use WithFileUploads;
+
+    public $paymentScreenshot;
     public $cartItems;
     public $subtotal = 0;
     public $deliveryFee = 70;
@@ -65,6 +69,7 @@ class CheckoutPage extends Component
         'gcashReferenceNumber' => 'nullable|string|max:50',
         'bankTransferReferenceNumber' => 'nullable|string|max:50',
         'discountCode' => 'nullable|string|max:50',
+        'paymentScreenshot' => 'nullable|image|max:2048',
     );
 
     protected $messages = array(
@@ -92,26 +97,26 @@ class CheckoutPage extends Component
     }
 
     public function loadCustomerData()
-    {
-        $this->customer = Customer::where('user_id', Auth::id())->first();
-        
-        if (!$this->customer) {
-            session()->flash('error', 'Customer profile not found. Please complete your profile first.');
-            return redirect()->route('profile');
-        }
-
-        $this->firstName = $this->customer->first_name;
-        $this->lastName = $this->customer->last_name;
-        $this->phone = $this->customer->phone;
-
-        $this->availableAddresses = $this->customer->address()->get();
-
-        if ($this->availableAddresses->isNotEmpty()) {
-            $latestAddress = $this->availableAddresses->first();
-            $this->selectedAddressId = $latestAddress->addressID;
-            $this->updateAddressFields();
-        }
+{
+    $this->customer = Customer::where('user_id', Auth::id())->first();
+    
+    if (!$this->customer) {
+        session()->flash('error', 'Customer profile not found. Please complete your profile first.');
+        return redirect()->route('profile');
     }
+
+    $this->firstName = $this->customer->first_name;
+    $this->lastName = $this->customer->last_name;
+    $this->phone = $this->customer->phone;
+
+    $this->availableAddresses = $this->customer->addresses()->get();
+
+    if ($this->availableAddresses->isNotEmpty()) {
+        $latestAddress = $this->availableAddresses->first();
+        $this->selectedAddressId = $latestAddress->addressID;
+        $this->updateAddressFields();
+    }
+}
 
     public function loadCartData()
     {
@@ -134,7 +139,6 @@ class CheckoutPage extends Component
 
     public function loadPaymentMethods()
     {
-        // Only exclude standalone "Cash" but keep "Cash on Delivery"
         $excludedMethods = array(
             'Cash',
             'cash',
@@ -292,8 +296,6 @@ class CheckoutPage extends Component
     public function validateStock()
     {
         foreach ($this->cartItems as $item) {
-            // Based on your models, all products should have variants
-            // So we should always check variant stock, not product stock
             if (!$item->variant) {
                 throw new \Exception("Product variant not found for {$item->product->name}. Please refresh and try again.");
             }
@@ -396,6 +398,11 @@ class CheckoutPage extends Component
                 // Determine payment status and reference number
                 $paymentMethod = PaymentMethod::find($this->selectedPaymentMethod);
                 $methodName = strtolower($paymentMethod->method_name);
+
+                $screenshotPath = null;
+                if ($this->paymentScreenshot) {
+                    $screenshotPath = $this->paymentScreenshot->store('screenshots', 'public');
+                }
                 
                 if ($methodName === 'cash on delivery') {
                     $paymentStatus = 'cash_on_delivery';
@@ -416,6 +423,7 @@ class CheckoutPage extends Component
                     'payment_methodID' => $this->selectedPaymentMethod,
                     'amount' => $this->totalAmount,
                     'reference_number' => $referenceNumber,
+                    'screenshot_path' => $screenshotPath,
                     'status' => 'unpaid',
                 ));
 

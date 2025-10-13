@@ -33,13 +33,13 @@ class Customer extends Model
         return $this->belongsTo(User::class, 'user_id', 'id');
     }
 
-    public function address()
+    public function addresses()
     {
         return $this->hasMany(Address::class, 'customerID', 'customerID');
     }
      
     public function cartItems()
-{
-    return $this->hasMany(CartItem::class, 'customerID', 'customerID');
-}
+    {
+       return $this->hasMany(CartItem::class, 'customerID', 'customerID');
+    }
 }

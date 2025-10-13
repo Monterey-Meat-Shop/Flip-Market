@@ -16,7 +16,7 @@ class MyAccountPage extends Component
     public $email = '';
     public $phone = '';
     
-    // Address fields
+    // Address fields for new/edit
     public $address_line_1 = '';
     public $address_line_2 = '';
     public $city = '';
@@ -29,17 +29,20 @@ class MyAccountPage extends Component
     public $confirm_password = '';
     
     public $customer;
+    public $addresses;
+    public $editingAddressId = null;
+    public $showAddressForm = false;
 
     protected $rules = [
         'firstname' => 'required|string|max:255',
         'lastname' => 'required|string|max:255',
         'email' => 'required|email|max:255',
         'phone' => 'nullable|string|max:20',
-        'address_line_1' => 'nullable|string|max:255',
+        'address_line_1' => 'required|string|max:255',
         'address_line_2' => 'nullable|string|max:255',
-        'city' => 'nullable|string|max:100',
-        'province' => 'nullable|string|max:100',
-        'postal_code' => 'nullable|string|max:20',
+        'city' => 'required|string|max:100',
+        'province' => 'required|string|max:100',
+        'postal_code' => 'required|string|max:20',
     ];
 
     public function mount()
@@ -51,7 +54,6 @@ class MyAccountPage extends Component
         $this->customer = Customer::where('user_id', Auth::id())->first();
         
         if (!$this->customer) {
-            // Create customer record if it doesn't exist
             $this->customer = Customer::create([
                 'user_id' => Auth::id(),
                 'first_name' => Auth::user()->name ?? '',
@@ -60,29 +62,33 @@ class MyAccountPage extends Component
             ]);
         }
 
-        // Load profile data
+        $this->loadProfile();
+        $this->loadAddresses();
+    }
+
+    public function loadProfile()
+    {
         $this->firstname = $this->customer->first_name ?? '';
         $this->lastname = $this->customer->last_name ?? '';
         $this->email = $this->customer->email ?? Auth::user()->email;
         $this->phone = $this->customer->phone ?? '';
+    }
 
-        // Load address data (get the first address if exists)
-        $address = $this->customer->address()->first();
-        if ($address) {
-            $this->address_line_1 = $address->address_line_1;
-            $this->address_line_2 = $address->address_line_2;
-            $this->city = $address->city;
-            $this->province = $address->province;
-            $this->postal_code = $address->postal_code;
-        }
+    public function loadAddresses()
+    {
+        $this->addresses = $this->customer->addresses()->get();
     }
 
     public function saveProfile()
     {
-        $this->validate();
+        $this->validate([
+            'firstname' => 'required|string|max:255',
+            'lastname' => 'required|string|max:255',
+            'email' => 'required|email|max:255',
+            'phone' => 'nullable|string|max:20',
+        ]);
 
         try {
-            // Update customer information
             $this->customer->update([
                 'first_name' => $this->firstname,
                 'last_name' => $this->lastname,
@@ -90,9 +96,44 @@ class MyAccountPage extends Component
                 'phone' => $this->phone,
             ]);
 
-            // Update or create address
-            $existingAddress = $this->customer->address()->first();
-            
+            session()->flash('success', 'Profile updated successfully!');
+        } catch (\Exception $e) {
+            session()->flash('error', 'Failed to update profile: ' . $e->getMessage());
+        }
+    }
+
+    public function showNewAddressForm()
+    {
+        $this->resetAddressForm();
+        $this->showAddressForm = true;
+        $this->editingAddressId = null;
+    }
+
+    public function editAddress($addressId)
+    {
+        $address = Address::find($addressId);
+        if ($address && $address->customerID === $this->customer->customerID) {
+            $this->editingAddressId = $addressId;
+            $this->address_line_1 = $address->address_line_1;
+            $this->address_line_2 = $address->address_line_2;
+            $this->city = $address->city;
+            $this->province = $address->province;
+            $this->postal_code = $address->postal_code;
+            $this->showAddressForm = true;
+        }
+    }
+
+    public function saveAddress()
+    {
+        $this->validate([
+            'address_line_1' => 'required|string|max:255',
+            'address_line_2' => 'nullable|string|max:255',
+            'city' => 'required|string|max:100',
+            'province' => 'required|string|max:100',
+            'postal_code' => 'required|string|max:20',
+        ]);
+
+        try {
             $addressData = [
                 'address_line_1' => $this->address_line_1,
                 'address_line_2' => $this->address_line_2,
@@ -101,16 +142,53 @@ class MyAccountPage extends Component
                 'postal_code' => $this->postal_code,
             ];
 
-            if ($existingAddress) {
-                $existingAddress->update($addressData);
+            if ($this->editingAddressId) {
+                $address = Address::find($this->editingAddressId);
+                if ($address && $address->customerID === $this->customer->customerID) {
+                    $address->update($addressData);
+                    session()->flash('success', 'Address updated successfully!');
+                }
             } else {
-                $this->customer->address()->create($addressData);
+                $this->customer->addresses()->create($addressData);
+                session()->flash('success', 'Address added successfully!');
             }
 
-            session()->flash('success', 'Profile updated successfully!');
+            $this->loadAddresses();
+            $this->resetAddressForm();
+            $this->showAddressForm = false;
         } catch (\Exception $e) {
-            session()->flash('error', 'Failed to update profile: ' . $e->getMessage());
+            session()->flash('error', 'Failed to save address: ' . $e->getMessage());
         }
+    }
+
+    public function deleteAddress($addressId)
+    {
+        try {
+            $address = Address::find($addressId);
+            if ($address && $address->customerID === $this->customer->customerID) {
+                $address->delete();
+                $this->loadAddresses();
+                session()->flash('success', 'Address deleted successfully!');
+            }
+        } catch (\Exception $e) {
+            session()->flash('error', 'Failed to delete address: ' . $e->getMessage());
+        }
+    }
+
+    public function cancelAddressForm()
+    {
+        $this->showAddressForm = false;
+        $this->resetAddressForm();
+    }
+
+    public function resetAddressForm()
+    {
+        $this->address_line_1 = '';
+        $this->address_line_2 = '';
+        $this->city = '';
+        $this->province = '';
+        $this->postal_code = '';
+        $this->editingAddressId = null;
     }
 
     public function changePassword()
@@ -124,18 +202,15 @@ class MyAccountPage extends Component
         try {
             $user = Auth::user();
 
-            // Verify current password
             if (!Hash::check($this->current_password, $user->password)) {
                 session()->flash('error', 'Current password is incorrect.');
                 return;
             }
 
-            // Update password
             $user->update([
                 'password' => Hash::make($this->new_password)
             ]);
 
-            // Clear password fields
             $this->current_password = '';
             $this->new_password = '';
             $this->confirm_password = '';

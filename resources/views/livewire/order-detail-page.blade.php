@@ -188,6 +188,44 @@
             </div>
           </div>
         </div>
+
+        <!-- Payment Information -->
+        <div class="bg-white overflow-x-auto rounded-lg shadow-md p-6 mb-4 border border-gray-200">
+          <h1 class="text-lg font-semibold text-gray-900 sm:text-lg mb-4">Payment Information</h1>
+          
+          <div class="space-y-3">
+            <div class="flex justify-between items-start">
+              <div>
+                <p class="text-sm text-gray-600">Payment Method:</p>
+                <p class="font-medium">{{ $order->payment->paymentMethod->method_name ?? 'N/A' }}</p>
+              </div>
+              <div>
+                <p class="text-sm text-gray-600">Status:</p>
+                <p class="font-medium capitalize">{{ $order->payment->status ?? 'Unpaid' }}</p>
+              </div>
+            </div>
+
+            @if($order->payment && $order->payment->reference_number)
+            <div class="border-t pt-3">
+              <p class="text-sm text-gray-600 mb-1">Reference Number:</p>
+              <p class="font-medium text-blue-600">{{ $order->payment->reference_number }}</p>
+            </div>
+            @endif
+
+            @if($order->payment && $order->payment->screenshot_path)
+            <div class="border-t pt-3">
+              <p class="text-sm text-gray-600 mb-2">Payment Screenshot:</p>
+              <div class="bg-gray-50 p-3 rounded-lg inline-block">
+                <img src="{{ asset('storage/' . $order->payment->screenshot_path) }}" 
+                     alt="Payment Screenshot"
+                     class="max-w-xs max-h-64 object-contain rounded shadow-md cursor-pointer hover:scale-105 transition"
+                     onclick="window.open(this.src, '_blank')">
+              </div>
+              <p class="text-xs text-gray-500 mt-2">Click image to view full size</p>
+            </div>
+            @endif
+          </div>
+        </div>
       </div>
 
       <!-- Summary Sidebar -->
