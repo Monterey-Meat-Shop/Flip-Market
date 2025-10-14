@@ -13,6 +13,9 @@ use Filament\Models\Contracts\FilamentUser;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
 
+use App\Models\Customer;
+use App\Models\Order;
+
 class User extends Authenticatable implements FilamentUser
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
@@ -58,5 +61,17 @@ class User extends Authenticatable implements FilamentUser
     public function isCustomer()
     {
         return $this->role === 'customer';
+    }
+
+    public function orders()
+    {
+        return $this->hasManyThrough(
+            Order::class,     
+            Customer::class,  
+            'user_id',     
+            'customerID',  
+            'id',          
+            'customerID'
+        );
     }
 }

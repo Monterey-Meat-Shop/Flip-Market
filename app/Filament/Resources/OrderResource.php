@@ -738,7 +738,9 @@ class OrderResource extends Resource
 
     public static function getRelations(): array
     {
-        return [];
+        return [
+            //OrdersRelationManager::class,
+        ];
     }
 
     public static function getNavigationBadge(): ?string

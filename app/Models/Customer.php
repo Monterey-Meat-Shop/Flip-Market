@@ -33,7 +33,7 @@ class Customer extends Model
         return $this->belongsTo(User::class, 'user_id', 'id');
     }
 
-    public function addresses()
+    public function address()
     {
         return $this->hasMany(Address::class, 'customerID', 'customerID');
     }

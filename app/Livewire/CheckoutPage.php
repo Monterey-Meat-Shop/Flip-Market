@@ -109,7 +109,7 @@ class CheckoutPage extends Component
     $this->lastName = $this->customer->last_name;
     $this->phone = $this->customer->phone;
 
-    $this->availableAddresses = $this->customer->addresses()->get();
+    $this->availableAddresses = $this->customer->address()->get();
 
     if ($this->availableAddresses->isNotEmpty()) {
         $latestAddress = $this->availableAddresses->first();
