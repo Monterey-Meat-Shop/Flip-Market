@@ -1,4 +1,4 @@
-<section class="bg-white py-8 md:py-16">
+<section class="bg-white py-8 md:py-16 h-screen">
   <div class="mx-auto max-w-screen-xl px-4 2xl:px-0">
     <h2 class="text-xl font-semibold text-gray-900 sm:text-2xl">Shopping Cart</h2>
 
