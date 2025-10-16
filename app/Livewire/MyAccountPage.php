@@ -76,7 +76,7 @@ class MyAccountPage extends Component
 
     public function loadAddresses()
     {
-        $this->addresses = $this->customer->addresses()->get();
+        $this->addresses = $this->customer->address()->get();
     }
 
     public function saveProfile()
@@ -149,7 +149,7 @@ class MyAccountPage extends Component
                     session()->flash('success', 'Address updated successfully!');
                 }
             } else {
-                $this->customer->addresses()->create($addressData);
+                $this->customer->address()->create($addressData);
                 session()->flash('success', 'Address added successfully!');
             }
 

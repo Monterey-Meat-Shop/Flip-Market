@@ -13,6 +13,9 @@ use Filament\Models\Contracts\FilamentUser;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
 
+use App\Models\Customer;
+use App\Models\Order;
+
 class User extends Authenticatable implements FilamentUser
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
@@ -63,13 +66,12 @@ class User extends Authenticatable implements FilamentUser
     public function orders()
     {
         return $this->hasManyThrough(
-            \App\Models\Order::class,     // Final model
-            \App\Models\Customer::class,  // Intermediate model
-            'user_id',     // Foreign key on customers table
-            'customerID',  // Foreign key on orders table
-            'id',          // Local key on users table
-            'customerID'   // Local key on customers table
+            Order::class,     
+            Customer::class,  
+            'user_id',     
+            'customerID',  
+            'id',          
+            'customerID'
         );
     }
-
 }
