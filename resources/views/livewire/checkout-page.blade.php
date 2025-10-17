@@ -281,8 +281,23 @@
           </h3>
           <p class="mt-1 text-xs text-gray-600 leading-snug">
             @if($item->size) Size: {{ $item->size }} @endif
-            @if($item->colorway) | Color: {{ $item->colorway }} @endif
+            @if($item->colorway) {{ $item->size ? '|' : '' }} Color: {{ $item->colorway }} @endif
           </p>
+          
+          {{-- Show discount badge if applicable --}}
+          @if(isset($item->active_discount))
+            <span class="inline-block mt-1 text-xs px-2 py-0.5 bg-red-100 text-red-600 rounded">
+              {{ $item->active_discount->discount_value }}{{ $item->active_discount->discount_type === 'Percentage' ? '%' : '₱' }} OFF
+            </span>
+          @endif
+          
+          {{-- Show price with discount --}}
+          @if(isset($item->active_discount) && isset($item->original_price))
+            <div class="mt-1">
+              <span class="text-xs text-gray-400 line-through">₱{{ number_format($item->original_price, 2) }}</span>
+              <span class="text-xs font-semibold text-blue-600 ml-1">₱{{ number_format($item->unit_price, 2) }}</span>
+            </div>
+          @endif
         </div>
 
         <div class="flex flex-col items-center justify-center w-16">
@@ -299,36 +314,61 @@
       <div class="bg-white p-6 rounded-2xl shadow">
         <h2 class="text-lg font-semibold mb-4">Order summary</h2>
         
-        <div class="flex justify-between mb-2">
-          <span>Subtotal ({{ $cartCount }} items)</span>
-          <span>₱{{ number_format($subtotal, 2) }}</span>
-        </div>
+        <div class="space-y-2">
+          <div class="flex justify-between">
+            <span class="text-sm text-gray-600">Subtotal ({{ $cartCount }} items)</span>
+            <span class="text-sm font-medium">₱{{ number_format($subtotal, 2) }}</span>
+          </div>
 
-        @if($discountAmount > 0)
-        <div class="flex justify-between mb-2 text-green-600">
-          <span>Discount</span>
-          <span>-₱{{ number_format($discountAmount, 2) }}</span>
-        </div>
-        @endif
-        
-        <div class="flex justify-between mb-2">
-          <span>Delivery Fee 
-            @if($selectedShippingMethod)
-              <small class="text-gray-500">({{ $availableShippingMethods[$selectedShippingMethod]['name'] }})</small>
-            @endif
-          </span>
-          <span>₱{{ number_format($deliveryFee, 2) }}</span>
+          {{-- Show product-level discount savings --}}
+          @if($productDiscountSavings > 0)
+          <div class="flex justify-between text-green-600">
+            <span class="text-sm">Product Discounts</span>
+            <span class="text-sm font-semibold">-₱{{ number_format($productDiscountSavings, 2) }}</span>
+          </div>
+          @endif
+
+          {{-- Show checkout-level coupon discount --}}
+          @if($discountAmount > 0)
+          <div class="flex justify-between text-green-600">
+            <span class="text-sm">Coupon Discount</span>
+            <span class="text-sm font-semibold">-₱{{ number_format($discountAmount, 2) }}</span>
+          </div>
+          @endif
+          
+          <div class="flex justify-between">
+            <span class="text-sm text-gray-600">
+              Delivery Fee 
+              @if($selectedShippingMethod)
+                <span class="text-xs text-gray-500">({{ $availableShippingMethods[$selectedShippingMethod]['name'] }})</span>
+              @endif
+            </span>
+            <span class="text-sm font-medium">₱{{ number_format($deliveryFee, 2) }}</span>
+          </div>
+
+          {{-- Show total savings --}}
+          @php
+            $totalSavings = $productDiscountSavings + $discountAmount;
+          @endphp
+          @if($totalSavings > 0)
+          <div class="border-t pt-2">
+            <div class="flex justify-between text-green-700 bg-green-50 p-2 rounded">
+              <span class="text-sm font-medium">Total Savings</span>
+              <span class="text-sm font-bold">₱{{ number_format($totalSavings, 2) }}</span>
+            </div>
+          </div>
+          @endif
         </div>
    
-        <div class="flex justify-between font-bold text-lg border-t pt-4">
+        <div class="flex justify-between font-bold text-lg border-t pt-4 mt-4">
           <span>Total</span>
-          <span>₱{{ number_format($totalAmount, 2) }}</span>
+          <span class="text-blue-700">₱{{ number_format($totalAmount, 2) }}</span>
         </div>
         
         <button wire:click="placeOrder" 
                 wire:loading.attr="disabled"
                 wire:loading.class="opacity-50 cursor-not-allowed"
-                class="w-full mt-4 bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-800 cursor-pointer disabled:opacity-50">
+                class="w-full mt-4 bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-800 cursor-pointer disabled:opacity-50 transition">
           <span wire:loading.remove>Place Order</span>
           <span wire:loading>Processing...</span>
         </button>

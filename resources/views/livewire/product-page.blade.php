@@ -8,7 +8,6 @@
             <aside class="bg-white rounded-xl p-4 shadow-md lg:col-span-1 h-fit top-4">
                 <h2 class="text-lg font-bold text-gray-700 mb-4">Filters</h2>
 
-
             <!-- Category Filter -->
             <div class="mb-6">
                 <h3 class="text-sm font-semibold text-gray-600 mb-2">Category</h3>
@@ -84,6 +83,12 @@
                                             {{ $product->brand->name }}
                                         </span>
                                     @endif
+
+                                    @if($product->discounted_price < $product->price)
+                                        <span class="absolute top-2 right-2 bg-red-600 text-white text-xs font-bold px-2 py-1 rounded shadow-md">
+                                            SALE
+                                        </span>
+                                    @endif
                                     
                                     <!-- Stock Status Badge -->
                                     @if($product->total_stock_quantity <= 0)
@@ -97,57 +102,69 @@
                                     @endif
                                 </div>
 
-                                <div class="p-4">
-                                    <h2 class="text-slate-700 font-semibold text-lg mb-1">{{ $product->name }}</h2>
-                                    <p class="text-sm text-slate-400 mb-2">
-                                        {{ $product->category->name ?? 'No Category' }}
-                                    </p>
-                                    <p class="text-lg font-bold text-blue-500">₱{{ number_format($product->price, 2) }}</p>
+                                <div class="p-4 flex flex-col justify-between h-32">
+                                    <div>
+                                        <h2 class="text-slate-700 font-semibold text-lg mb-1">{{ $product->name }}</h2>
+                                            <p class="text-sm text-slate-400 mb-2">
+                                                {{ $product->category->name ?? 'No Category' }}
+                                            </p>
+
+                                            @if($product->discounted_price < $product->price)
+                                                <div>
+                                                    <p class="text-sm text-gray-500 line-through leading-tight">₱{{ number_format($product->price, 2) }}</p>
+                                                    <p class="text-lg font-bold text-red-500 leading-tight">
+                                                        ₱{{ number_format($product->discounted_price, 2) }}
+                                                    </p>
+                                                </div>
+                                            @else
+                                                <p class="text-lg font-bold text-blue-500 leading-tight">
+                                                    ₱{{ number_format($product->price, 2) }}
+                                                </p>
+                                            @endif
+                                    </div>
                                 </div>
                             </a>
                             
-                           <div class="p-4 pt-0">
-    <button 
-        onclick="checkLoginAndAddToCart({{ $product->productID }})"
-        @if($product->total_stock_quantity <= 0) disabled @endif
-        class="w-full flex items-center justify-center space-x-2 rounded-lg bg-blue-500 px-4 py-2 text-white hover:bg-blue-600 transition-all duration-300 transform hover:scale-105 disabled:bg-gray-400 disabled:cursor-not-allowed"
-    >
-        <svg class="w-4 h-4 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5m4.5-5a2 2 0 11-4 0 2 2 0 014 0zm6 0a2 2 0 11-4 0 2 2 0 014 0z"></path>
-        </svg>
-        <span>
-            @if($product->total_stock_quantity <= 0)
-                Out of Stock
-            @else
-                Add to Cart
-            @endif
-        </span>
-    </button>
-</div>
+                            <div class="p-4 pt-0">
+                                <button onclick="checkLoginAndAddToCart({{ $product->productID }})"
+                                        @if($product->total_stock_quantity <= 0) disabled @endif
+                                        class="w-full flex items-center justify-center space-x-2 rounded-lg bg-blue-500 px-4 py-2 text-white hover:bg-blue-600 transition-all duration-300 transform hover:scale-105 disabled:bg-gray-400 disabled:cursor-not-allowed">
+                                    <svg class="w-4 h-4 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5m4.5-5a2 2 0 11-4 0 2 2 0 014 0zm6 0a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                                    </svg>
+                                    <span>
+                                        @if($product->total_stock_quantity <= 0)
+                                            Out of Stock
+                                        @else
+                                            Add to Cart
+                                        @endif
+                                    </span>
+                               </button>
+                            </div>
 
-<script>
-    function checkLoginAndAddToCart(productID) {
-        @auth
-            // Apply animation when adding to cart (optional)
-            const button = event.target;
-            button.classList.add("animate-ping");  // Animation effect
+                            <script>
+                                function checkLoginAndAddToCart(productID) {
+                                @auth
+                                    // Apply animation when adding to cart (optional)
+                                    const button = event.target;
+                                    button.classList.add("animate-ping");  // Animation effect
 
-            // Delay to ensure animation finishes before adding to cart
-            setTimeout(function() {
-                addToCart(productID);
-            }, 500);  // Adjust this value based on animation duration
-        @else
-            // Add a subtle animation before redirecting
-            const button = event.target;
-            button.classList.add("animate-bounce");  // Animation effect
+                                    // Delay to ensure animation finishes before adding to cart
+                                    setTimeout(function() {
+                                        addToCart(productID);
+                                    }, 500);  // Adjust this value based on animation duration
+                                @else
+                                    // Add a subtle animation before redirecting
+                                    const button = event.target;
+                                    button.classList.add("animate-bounce");  // Animation effect
 
-            // Redirect after the animation finishes
-            setTimeout(function() {
-                window.location.href = "/login";
-            }, 500);  // Adjust this value based on animation duration
-        @endauth
-    }
-</script>
+                                    // Redirect after the animation finishes
+                                    setTimeout(function() {
+                                        window.location.href = "/login";
+                                    }, 500);  // Adjust this value based on animation duration
+                                @endauth
+                                }
+                            </script>
 
                         </article>
                     @empty

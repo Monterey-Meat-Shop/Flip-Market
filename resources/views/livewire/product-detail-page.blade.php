@@ -141,7 +141,36 @@
                 </div>
 
                 <!-- Price -->
-                <p class="mt-4 text-3xl font-bold text-gray-900">₱{{ number_format($this->getCurrentPrice(), 2) }}</p>
+                @php
+                    $activeDiscount = $product->discounts
+                        ->where('is_active', true)
+                        ->filter(function($discount) {
+                            return (is_null($discount->start_date) || $discount->start_date <= now())
+                                && (is_null($discount->end_date) || $discount->end_date >= now());
+                        })
+                        ->first();
+
+                    $originalPrice = $this->getCurrentPrice();
+                    $finalPrice = $activeDiscount ? $activeDiscount->getFinalPrice($originalPrice) : $originalPrice;
+                @endphp
+
+                <div class="mt-4 flex items-baseline gap-3">
+                    @if($activeDiscount)
+                        <span class="text-3xl font-bold text-black-700">
+                            ₱{{ number_format($finalPrice, 2) }}
+                        </span>
+                        <span class="text-lg text-gray-400 line-through">
+                            ₱{{ number_format($originalPrice, 2) }}
+                        </span>
+                        <span class="text-sm text-red-600 font-semibold">
+                            ({{ $activeDiscount->discount_value }}{{ $activeDiscount->discount_type === 'Percentage' ? '%' : '₱' }} OFF)
+                        </span>
+                    @else
+                        <span class="text-3xl font-bold text-gray-900">
+                            ₱{{ number_format($originalPrice, 2) }}
+                        </span>
+                    @endif
+                </div>
 
                 <!-- Variants: Sizes -->
                 @if($this->getAvailableSizes()->isNotEmpty())

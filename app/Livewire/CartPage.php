@@ -14,11 +14,47 @@ class CartPage extends Component
     public $total = 0;
     public $cartCount = 0;
 
-    protected $listeners = array('cartUpdated' => 'loadCart');
+    protected $listeners = ['cartUpdated' => 'loadCart'];
 
     public function mount()
     {
         $this->loadCart();
+    }
+
+    /**
+     * Helper method to get active discount for a product
+     */
+    private function getActiveDiscount($product)
+    {
+        if (!$product || !$product->relationLoaded('discounts')) {
+            $product->load('discounts');
+        }
+
+        return $product->discounts
+            ->where('is_active', true)
+            ->filter(function($discount) {
+                return (is_null($discount->start_date) || $discount->start_date <= now())
+                    && (is_null($discount->end_date) || $discount->end_date >= now());
+            })
+            ->first();
+    }
+
+    /**
+     * Calculate discounted price
+     */
+    private function calculateDiscountedPrice($basePrice, $discount)
+    {
+        if (!$discount) {
+            return $basePrice;
+        }
+
+        if ($discount->discount_type === 'Percentage') {
+            $discountedPrice = $basePrice - ($basePrice * ($discount->discount_value / 100));
+        } else {
+            $discountedPrice = $basePrice - $discount->discount_value;
+        }
+
+        return max($discountedPrice, 0); // prevent negative price
     }
 
     public function loadCart()
@@ -33,23 +69,40 @@ class CartPage extends Component
         $customer = Customer::where('user_id', Auth::id())->first();
 
         if ($customer) {
+            // Eager load relationships including discounts
             $this->cartItems = CartItem::where('customerID', $customer->customerID)
-                ->with(array('product', 'variant'))
+                ->with(['product.discounts', 'variant'])
                 ->get();
         } else {
             $this->cartItems = collect();
         }
 
+        // Calculate discounted prices for each item
+        foreach ($this->cartItems as $item) {
+            $basePrice = $item->variant->price ?? $item->product->price;
+            $activeDiscount = $this->getActiveDiscount($item->product);
+            
+            $discountedPrice = $this->calculateDiscountedPrice($basePrice, $activeDiscount);
+
+            // Update the item with discounted price
+            $item->unit_price = $discountedPrice;
+            $item->sub_total = $discountedPrice * $item->quantity;
+            
+            // Store discount info for display (optional)
+            $item->active_discount = $activeDiscount;
+            $item->original_price = $basePrice;
+        }
+
         $this->total = $this->cartItems->sum('sub_total');
         $this->cartCount = $this->cartItems->sum('quantity');
-        
-        // Dispatch event to update cart count in navbar
+
+        // Update cart count in navbar
         $this->dispatch('cartUpdated', $this->cartCount);
     }
 
     public function updateQuantity($cartItemId, $newQuantity)
     {
-        $cartItem = CartItem::with(array('product', 'variant'))->find($cartItemId);
+        $cartItem = CartItem::with(['product.discounts', 'variant'])->find($cartItemId);
         
         if (!$cartItem) {
             session()->flash('error', 'Cart item not found.');
@@ -61,69 +114,63 @@ class CartPage extends Component
             return;
         }
 
-        // Since all products have variants (based on your model), we only work with variants
-        if (!$cartItem->variant) {
-            session()->flash('error', 'Product variant not found. Please refresh the page.');
-            return;
-        }
+        try {
+            DB::transaction(function () use ($cartItem, $newQuantity) {
+                $variant = $cartItem->variant->fresh();
+                $currentStock = $variant->stock_quantity;
+                $totalAvailable = $currentStock + $cartItem->quantity;
 
-        DB::transaction(function () use ($cartItem, $newQuantity) {
-            // Get fresh variant stock data
-            $variant = $cartItem->variant->fresh();
-            $currentStock = $variant->stock_quantity;
-
-            // Calculate total available (current stock + what's currently in cart)
-            $totalAvailable = $currentStock + $cartItem->quantity;
-
-            if ($newQuantity > $totalAvailable) {
-                throw new \Exception('Not enough stock available. Maximum: ' . $totalAvailable);
-            }
-
-            // Calculate stock difference
-            $stockDifference = $newQuantity - $cartItem->quantity;
-
-            // Update variant stock safely
-            if ($stockDifference > 0) {
-                // Taking more stock - use atomic update
-                $affectedRows = DB::table('product_variants')
-                    ->where('id', $cartItem->product_variant_id)
-                    ->where('stock_quantity', '>=', $stockDifference)
-                    ->update(array(
-                        'stock_quantity' => DB::raw("stock_quantity - {$stockDifference}"),
-                        'updated_at' => now()
-                    ));
-                    
-                if ($affectedRows === 0) {
-                    throw new \Exception('Insufficient stock for this update.');
+                if ($newQuantity > $totalAvailable) {
+                    throw new \Exception('Not enough stock available. Maximum: ' . $totalAvailable);
                 }
-            } else {
-                // Returning stock (stockDifference is negative)
-                $returnAmount = abs($stockDifference);
-                DB::table('product_variants')
-                    ->where('id', $cartItem->product_variant_id)
-                    ->update(array(
-                        'stock_quantity' => DB::raw("stock_quantity + {$returnAmount}"),
-                        'updated_at' => now()
-                    ));
-            }
 
-            // Update cart item
-            $unitPrice = $cartItem->variant->price ?? $cartItem->product->price;
-            
-            $cartItem->update(array(
-                'quantity' => $newQuantity,
-                'unit_price' => $unitPrice,
-                'sub_total' => $unitPrice * $newQuantity,
-            ));
-        });
+                $stockDifference = $newQuantity - $cartItem->quantity;
 
-        $this->loadCart();
-        session()->flash('message', 'Cart updated successfully.');
+                if ($stockDifference > 0) {
+                    $affectedRows = DB::table('product_variants')
+                        ->where('id', $cartItem->product_variant_id)
+                        ->where('stock_quantity', '>=', $stockDifference)
+                        ->update([
+                            'stock_quantity' => DB::raw("stock_quantity - {$stockDifference}"),
+                            'updated_at' => now()
+                        ]);
+
+                    if ($affectedRows === 0) {
+                        throw new \Exception('Insufficient stock for this update.');
+                    }
+                } else {
+                    $returnAmount = abs($stockDifference);
+                    DB::table('product_variants')
+                        ->where('id', $cartItem->product_variant_id)
+                        ->update([
+                            'stock_quantity' => DB::raw("stock_quantity + {$returnAmount}"),
+                            'updated_at' => now()
+                        ]);
+                }
+
+                // Recalculate unit price with discount
+                $unitPrice = $cartItem->variant->price ?? $cartItem->product->price;
+                $activeDiscount = $this->getActiveDiscount($cartItem->product);
+                
+                $discountedPrice = $this->calculateDiscountedPrice($unitPrice, $activeDiscount);
+
+                $cartItem->update([
+                    'quantity' => $newQuantity,
+                    'unit_price' => $discountedPrice,
+                    'sub_total' => $discountedPrice * $newQuantity,
+                ]);
+            });
+
+            $this->loadCart();
+            session()->flash('message', 'Cart updated successfully.');
+        } catch (\Exception $e) {
+            session()->flash('error', $e->getMessage());
+        }
     }
 
     public function removeItem($cartItemId)
     {
-        $cartItem = CartItem::with(array('product', 'variant'))->find($cartItemId);
+        $cartItem = CartItem::with(['product', 'variant'])->find($cartItemId);
         
         if (!$cartItem) {
             session()->flash('error', 'Cart item not found.');
@@ -159,7 +206,7 @@ class CartPage extends Component
         DB::transaction(function () use ($customer) {
             // Return stock for all items
             $cartItems = CartItem::where('customerID', $customer->customerID)
-                ->with(array('product', 'variant'))
+                ->with(['product', 'variant'])
                 ->get();
 
             foreach ($cartItems as $item) {
@@ -180,10 +227,10 @@ class CartPage extends Component
 
     public function render()
     {
-        return view('livewire.cart-page', array(
+        return view('livewire.cart-page', [
             'cartItems' => $this->cartItems,
             'total' => $this->total,
             'cartCount' => $this->cartCount,
-        ));
+        ]);
     }
 }

@@ -22,16 +22,13 @@ class ProductPage extends Component
 
     public function render()
     {
-        $products = Product::query()
-            ->when(count($this->selectedCategories) > 0, function ($query) {
-                $query->whereIn('CategoryID', $this->selectedCategories);
-            })
-            ->when(count($this->selectedBrands) > 0, function ($query) {
-                $query->whereIn('BrandID', $this->selectedBrands);
-            })
-            ->when($this->maxPrice > 0, function ($query) {
-                $query->where('price', '<=', $this->maxPrice);
-            })
+        $products = Product::with(['brand', 'category', 'discounts'])
+            ->when(count($this->selectedCategories) > 0, fn($query) =>
+        $query->whereIn('CategoryID', $this->selectedCategories))
+            ->when(count($this->selectedBrands) > 0, fn($query) =>
+        $query->whereIn('BrandID', $this->selectedBrands))
+            ->when($this->maxPrice > 0, fn($query) =>
+        $query->where('price', '<=', $this->maxPrice))
             ->get();
 
         return view('livewire.product-page', [
