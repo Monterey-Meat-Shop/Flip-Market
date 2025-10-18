@@ -531,18 +531,22 @@ class OrderResource extends Resource
                             ->inline()
                             ->default('processing')
                             ->options([
+                                // 'pending' => 'Pending',
                                 'processing' => 'Processing',
-                                'in-transit' => 'In Transit',
+                                'in_transit' => 'In Transit',
                                 'delivered' => 'Delivered',
+
                             ])
                             ->colors([
+                                'pending' => 'warning',
                                 'processing' => 'warning',
-                                'in-transit' => 'info',
+                                'in_transit' => 'info',
                                 'delivered' => 'success',
                             ])
                             ->icons([
+                                'pending' => 'heroicon-m-sparkles',
                                 'processing' => 'heroicon-m-arrow-path',
-                                'in-transit' => 'heroicon-m-truck',
+                                'in_transit' => 'heroicon-m-truck',
                                 'delivered' => 'heroicon-m-check-badge',
                             ])
                             ->afterStateHydrated(function (Set $set, $state, $record) {
@@ -711,7 +715,7 @@ class OrderResource extends Resource
                     ->color(fn (string $state): string => match ($state) {
                         'pending' => 'warning',
                         'processing' => 'warning',
-                        'in-transit' => 'info',
+                        'in_transit' => 'info',
                         'delivered' => 'success',
                     })
                     ->formatStateUsing(fn ($state) => $state ?? 'N/A'),

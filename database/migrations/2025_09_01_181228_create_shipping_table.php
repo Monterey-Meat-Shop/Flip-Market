@@ -23,7 +23,7 @@ return new class extends Migration
             $table->decimal('shipping_fee', 8, 2)->default(70.00);
             
             // Corrected enum and default value
-            $table->enum('shipping_status', ['pending', 'processing', 'shipped', 'delivered'])->default('pending');
+            $table->enum('shipping_status', ['pending', 'processing', 'in_transit', 'delivered'])->default('pending');
             
             $table->timestamps();
         });

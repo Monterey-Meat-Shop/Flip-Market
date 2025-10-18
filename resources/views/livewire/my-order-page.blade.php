@@ -25,9 +25,13 @@
             class="pb-2 border-b-2 {{ $activeTab === 'to_pay' ? 'border-blue-500 text-blue-600' : 'border-transparent hover:text-blue-600' }}">
       To pay
     </button>
-    <button wire:click="setActiveTab('to_ship')" 
-            class="pb-2 border-b-2 {{ $activeTab === 'to_ship' ? 'border-blue-500 text-blue-600' : 'border-transparent hover:text-blue-600' }}">
-      To ship
+    <button wire:click="setActiveTab('processing')" 
+            class="pb-2 border-b-2 {{ $activeTab === 'processing' ? 'border-blue-500 text-blue-600' : 'border-transparent hover:text-blue-600' }}">
+      Processing
+    </button>
+    <button wire:click="setActiveTab('in_transit')" 
+            class="pb-2 border-b-2 {{ $activeTab === 'in_transit' ? 'border-blue-500 text-blue-600' : 'border-transparent hover:text-blue-600' }}">
+      In transit
     </button>
     <button wire:click="setActiveTab('to_receive')" 
             class="pb-2 border-b-2 {{ $activeTab === 'to_receive' ? 'border-blue-500 text-blue-600' : 'border-transparent hover:text-blue-600' }}">
@@ -36,6 +40,14 @@
     <button wire:click="setActiveTab('completed')" 
             class="pb-2 border-b-2 {{ $activeTab === 'completed' ? 'border-blue-500 text-blue-600' : 'border-transparent hover:text-blue-600' }}">
       Completed
+    </button>
+    <button wire:click="setActiveTab('cancelled')" 
+            class="pb-2 border-b-2 {{ $activeTab === 'cancelled' ? 'border-blue-500 text-blue-600' : 'border-transparent hover:text-blue-600' }}">
+      Cancelled
+    </button>
+    <button wire:click="setActiveTab('returned')" 
+            class="pb-2 border-b-2 {{ $activeTab === 'returned' ? 'border-blue-500 text-blue-600' : 'border-transparent hover:text-blue-600' }}">
+      Returned
     </button>
   </div>
 

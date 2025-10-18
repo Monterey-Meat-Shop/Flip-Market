@@ -74,12 +74,19 @@ class MyOrderPage extends Component
                           $paymentQuery->where('status', '!=', 'Cash on Delivery');
                       });
                 break;
-            case 'to_ship':
-                $query->whereIn('order_status', array('Processing', 'Confirmed'));
+            case 'processing':
+               $query->whereHas('shipping', function($shippingQuery) {
+                    $shippingQuery->where('shipping_status', 'processing');
+                });
+                break;
+            case 'in_transit':
+               $query->whereHas('shipping', function($shippingQuery) {
+                    $shippingQuery->where('shipping_status', 'in_transit');
+                });
                 break;
             case 'to_receive':
                 $query->whereHas('shipping', function($shippingQuery) {
-                    $shippingQuery->where('shipping_status', 'shipped');
+                    $shippingQuery->where('shipping_status', 'in_transit');
                 });
                 break;
             case 'completed':
@@ -106,6 +113,8 @@ class MyOrderPage extends Component
                     return array('bg-orange-100', 'text-orange-600', 'To Pay');
                 }
             case 'processing':
+                return array('bg-blue-100', 'text-blue-600', 'Processing');
+                
             case 'confirmed':
                 return array('bg-yellow-100', 'text-yellow-600', 'To Ship');
             case 'shipped':
