@@ -1,4 +1,4 @@
-<main x-data="{ tab: 'profile' }" class="w-full max-w-6xl mx-auto p-6 min-h-screen">
+<main x-data="{ tab: 'profile' }" class="w-full max-w-7xl mx-auto p-6 min-h-screen">
   
   <!-- Success/Error Messages -->
   @if (session()->has('success'))
