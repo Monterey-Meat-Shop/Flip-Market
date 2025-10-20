@@ -135,19 +135,18 @@
                 View Order Details
               </button>
               
-              @if($order->order_status === 'Pending')
+              @if($order->order_status === 'pending')
                 <button wire:click="cancelOrder({{ $order->orderID }})"
                         wire:confirm="Are you sure you want to cancel this order?"
-                        class="border border-red-600 text-red-600 hover:bg-red-600 hover:text-white rounded-lg px-3 py-1 text-sm">
+                        class="border border-red-600 text-red-600 hover:bg-red-600 hover:text-white rounded-lg px-3 py-2 text-sm">
                   Cancel Order
                 </button>
-              @elseif($order->order_status === 'Completed' || $order->order_status === 'Delivered')
-                <button wire:click="requestReturn({{ $order->orderID }})"
-                        wire:confirm="Are you sure you want to request a return for this order?"
-                        class="border border-red-600 text-red-600 hover:bg-red-600 hover:text-white rounded-lg px-3 py-1 text-sm">
-                  Return Order
-                </button>
+              @elseif($order->order_status === 'Completed' || $order->order_status === 'completed')
+                <a href="/return" 
+                        class=" bg-red-500 text-white  hover:bg-red-600 hover:text-white rounded-lg px-3 py-2 text-sm">
+                  Return Order </a>
               @endif
+
             </div>
             @endif
           </div>
