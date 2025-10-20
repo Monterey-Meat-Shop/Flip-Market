@@ -41,6 +41,10 @@
             class="cursor-pointer pb-2 border-b-2 {{ $activeTab === 'completed' ? 'border-blue-500 text-blue-600' : 'border-transparent hover:text-blue-600' }}">
       Completed
     </button>
+    <button wire:click="setActiveTab('returned')" 
+            class="cursor-pointer pb-2 border-b-2 {{ $activeTab === 'returned' ? 'border-blue-500 text-blue-600' : 'border-transparent hover:text-blue-600' }}">
+      Returned
+    </button>
   </div>
 
   <!-- Search Bar -->
@@ -70,6 +74,8 @@
         $statusBg = $statusInfo[0];
         $statusText = $statusInfo[1];
         $statusLabel = $statusInfo[2];
+        $hasReturnRequest = $order->returnRequest !== null;
+        $canReturn = in_array(strtolower($order->order_status), ['completed', 'delivered']) && !$hasReturnRequest;
       @endphp
       
       <!-- Order Item -->
@@ -137,12 +143,20 @@
                         class="bg-red-600 hover:bg-red-800 text-white rounded-lg px-3 py-2 text-md">
                   Cancel Order
                 </button>
-              @elseif($order->order_status === 'completed' || $order->order_status === 'Delivered')
+              @elseif($canReturn)
                 <button wire:click="requestReturn({{ $order->orderID }})"
                         wire:confirm="Are you sure you want to request a return for this order?"
-                        class="bg-red-600 hover:bg-red-800 text-white rounded-lg px-3 py-2 text-md">
+                        class="bg-orange-600 hover:bg-orange-800 text-white rounded-lg px-3 py-2 text-md">
                   Return Order
                 </button>
+              @elseif($hasReturnRequest)
+                <div class="flex flex-col gap-1">
+                  {{-- <span class="text-xs text-yellow-600 font-medium">Return Status: {{ ucfirst($order->returnRequest->return_status) }}</span> --}}
+                  <a href="{{ route('returns.show', $order->returnRequest->returnID) }}" 
+                     class="bg-gray-600 hover:bg-gray-800 text-white rounded-lg px-3 py-2 text-md text-center">
+                    View Return
+                  </a>
+                </div>
               @endif
 
             </div>

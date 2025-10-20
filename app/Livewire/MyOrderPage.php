@@ -53,7 +53,7 @@ class MyOrderPage extends Component
         }
 
         $query = Order::where('customerID', $this->customer->customerID)
-            ->with(array('orderItems.product', 'orderItems.productVariant', 'payment', 'shipping'))
+            ->with(array('orderItems.product', 'orderItems.productVariant', 'payment', 'shipping', 'returnRequest'))
             ->orderBy('order_date', 'desc');
 
         // Apply search filter
@@ -95,6 +95,9 @@ class MyOrderPage extends Component
             case 'cancelled':
                 $query->where('order_status', 'Cancelled');
                 break;
+            case 'returned':
+                $query->whereIn('order_status', array('return_requested', 'returned'));
+                break;
             default: // 'all'
                 break;
         }
@@ -124,6 +127,10 @@ class MyOrderPage extends Component
                 return array('bg-green-100', 'text-green-600', 'Completed');
             case 'cancelled':
                 return array('bg-red-100', 'text-red-600', 'Cancelled');
+            case 'return_requested':
+                return array('bg-yellow-100', 'text-yellow-600', 'Return Requested');
+            case 'returned':
+                return array('bg-gray-100', 'text-gray-600', 'Returned');
             default:
                 return array('bg-gray-100', 'text-gray-600', 'Unknown');
         }
@@ -174,10 +181,9 @@ class MyOrderPage extends Component
 
     public function requestReturn($orderId)
     {
-
-        
         $order = Order::where('orderID', $orderId)
             ->where('customerID', $this->customer->customerID)
+            ->with('returnRequest')
             ->first();
 
         if (!$order) {
@@ -185,15 +191,32 @@ class MyOrderPage extends Component
             return;
         }
 
+        // Check if return already exists
+        if ($order->returnRequest) {
+            session()->flash('error', 'A return request already exists for this order.');
+            return;
+        }
+
         // Only allow returns for completed orders
-        if ($order->order_status !== 'Completed' && $order->order_status !== 'Delivered') {
+        if (!in_array(strtolower($order->order_status), ['completed', 'delivered'])) {
             session()->flash('error', 'Only completed orders can be returned.');
             return;
         }
 
-        // Here you would typically create a return request record
-        // For now, we'll just show a success message
-        session()->flash('success', 'Return request submitted. We will contact you soon.');
+        // Check if order is eligible for return
+        if (isset($order->is_returnable) && !$order->is_returnable) {
+            session()->flash('error', 'This order is not eligible for return.');
+            return;
+        }
+
+        // Check return deadline if it exists
+        if (isset($order->return_deadline) && $order->return_deadline && now()->isAfter($order->return_deadline)) {
+            session()->flash('error', 'The return deadline for this order has passed.');
+            return;
+        }
+
+        // Redirect to return page with order details
+        return redirect()->route('return.page', ['orderId' => $orderId]);
     }
 
     public function render()
