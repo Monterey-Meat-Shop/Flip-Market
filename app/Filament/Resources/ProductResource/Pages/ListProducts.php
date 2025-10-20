@@ -1,0 +1,83 @@
+<?php
+
+namespace App\Filament\Resources\ProductResource\Pages;
+
+use App\Filament\Resources\ProductResource;
+use App\Models\Product;
+use Filament\Actions;
+use Filament\Resources\Pages\ListRecords;
+use Filament\Resources\Pages\ListRecords\Tab;
+use Illuminate\Database\Eloquent\Builder;
+
+class ListProducts extends ListRecords
+{
+    protected static string $resource = ProductResource::class;
+
+    protected function getHeaderActions(): array
+    {
+        return [
+            Actions\CreateAction::make(),
+        ];
+    }
+
+    public function getTabs(): array
+    {
+        return [
+            // query for total available
+            'all' => Tab::make('All Product')
+                ->modifyQueryUsing(fn (Builder $query) => $query->withoutTrashed())
+                ->badge(Product::withoutTrashed()->count()),
+
+            // query for total on sale
+            'on_sale' => Tab::make('On Sale')
+                ->modifyQueryUsing(function (Builder $query) {
+                    $query->whereHas('discounts', function (Builder $discountQuery) {
+                        $discountQuery->where('is_active', true);
+                    });
+                })
+                ->badge(Product::whereHas('discounts', function (Builder $discountQuery) {
+                    $discountQuery->where('is_active', true);
+                })->count())
+                ->badgeColor('success'),
+
+            // query for total pre-order
+            'pre_order' => Tab::make('Pre-order')
+                ->modifyQueryUsing(fn (Builder $query) => $query->withoutTrashed()->where('status', 'pre_order'))
+                ->badge(Product::withoutTrashed()->where('status', 'pre_order')->count())
+                ->badgeColor('info'),
+
+            // query for total low stock
+            'low_stock' => Tab::make('Low Stock')
+                ->modifyQueryUsing(function (Builder $query) {
+                    // Use withSum and having to get the total stock and filter
+                    $query->withSum('variants', 'stock_quantity')
+                        ->having('variants_sum_stock_quantity', '<=', 4);
+                })
+                ->badge(Product::withSum('variants', 'stock_quantity')
+                    ->having('variants_sum_stock_quantity', '<=', 4)
+                    ->count())
+                ->badgeColor('warning'),
+
+            // query for total out of stock
+            'out_of_stock' => Tab::make('Out of Stock')
+                ->modifyQueryUsing(function (Builder $query) {
+                    // Use withSum and having to get the total stock and filter
+                    $query->withSum('variants', 'stock_quantity')
+                        ->having('variants_sum_stock_quantity', '=', 0);
+                })
+                ->badge(Product::withSum('variants', 'stock_quantity')
+                    ->having('variants_sum_stock_quantity', '=', 0)
+                    ->count())
+                ->badgeColor('danger'),
+
+            'returned' => Tab::make('Returned')
+                ->badgeColor('danger'),
+
+            // query for total archived
+            'archived' => Tab::make('Archived')
+                ->modifyQueryUsing(fn (Builder $query) => $query->onlyTrashed())
+                ->badge(Product::onlyTrashed()->count())
+                ->badgeColor('gray'),
+        ];
+    }
+}

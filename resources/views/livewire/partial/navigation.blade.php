@@ -1,81 +1,124 @@
-<div>
-    <flux:header container class="bg-zinc-50 dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-700">
-        <flux:sidebar.toggle class="lg:hidden" icon="bars-2" inset="left" />
-        <flux:brand href="#" name="FlipMarket">
-            <x-slot name="logo" class="size-18">
-                <img src="{{ asset('images/flipmarket_icon.jpg') }}" class="rounded-xl" alt="FlipMarket">
-            </x-slot>
-        </flux:brand>
-        <flux:navbar class="-mb-px max-lg:hidden">
-            <flux:navbar.item icon="home" href="#" current>Home</flux:navbar.item>
-            <flux:navbar.item icon="fire" href="#">Trending</flux:navbar.item>
-            <flux:navbar.item icon="tag" href="#">Deals</flux:navbar.item>
-        </flux:navbar>
-        <flux:spacer />
+<header 
+  class="flex z-40 sticky top-0 flex-wrap md:justify-start md:flex-nowrap w-full bg-[#f2f3f4] text-[13px] py-2 md:py-0 shadow-md transition-all duration-300" 
+  id="pageContent" 
+  style="font-family: 'Inter', sans-serif;" 
+  x-data="{ open: false }"
+>
+  <nav class="max-w-[85rem] w-full mx-auto px-4 md:px-6 lg:px-8" aria-label="Global">
+    <div class="relative md:flex md:items-center md:justify-between">
+      <div class="flex items-center justify-between">
+        <!-- LOGO -->
+        <a href="/" aria-label="Brand">
+          <img src="{{ asset('images/logopng.png') }}" alt="Brand Logo" width="110" height="auto" class="object-contain" />
+        </a>
 
-        @if($isAuthenticated)
-            <flux:navbar class="me-4">
-                <flux:navbar.item icon="shopping-cart" badge="3" href="#" label="Cart" />
-                <flux:navbar.item class="max-lg:hidden" icon="heart" href="#" label="Wishlist" />
-            </flux:navbar>
+        <!-- MOBILE TOGGLE -->
+        <div class="md:hidden">
+          <button 
+            @click="open = !open" 
+            class="flex justify-center items-center w-9 h-9 rounded-lg border border-gray-200 text-gray-800 hover:bg-gray-100 focus:outline-none"
+          >
+            <svg x-show="!open" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <line x1="3" x2="21" y1="6" y2="6"/>
+              <line x1="3" x2="21" y1="12" y2="12"/>
+              <line x1="3" x2="21" y1="18" y2="18"/>
+            </svg>
+            <svg x-show="open" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+      </div>
 
-            <flux:dropdown position="top" align="start">
-                <flux:profile avatar="https://fluxui.dev/img/demo/user.png" />
-                <flux:menu>
-                    <flux:menu.radio.group>
-                        <flux:menu.radio checked>Olivia Martin</flux:menu.radio>
-                        <flux:menu.radio>Truly Delta</flux:menu.radio>
-                    </flux:menu.radio.group>
-                    <flux:menu.separator />
-                    <flux:menu.item icon="user">My Account</flux:menu.item>
-                    <flux:menu.item icon="shopping-bag">My Orders</flux:menu.item>
-                    <flux:menu.item icon="heart">Wishlist</flux:menu.item>
-                    <flux:menu.separator />
-                    <flux:menu.item icon="arrow-right-start-on-rectangle">Logout</flux:menu.item>
-                </flux:menu>
-            </flux:dropdown>
-        @else
-            <flux:navbar.item icon="shopping-cart" badge="3" href="#" label="Cart" />
+      <!-- NAV LINKS -->
+      <div 
+        :class="{'block': open, 'hidden': !open}" 
+        class="w-full md:block md:w-auto mt-3 md:mt-0 transition-all duration-300"
+      >
+        <div class="flex flex-col gap-1 md:flex-row md:items-center md:justify-end md:gap-x-3 md:ps-6">
 
-            <div class="gap-2">
-                <flux:button variant="ghost">Login</flux:button>
-                <flux:button variant="primary">Signup</flux:button>
-            </div>
-        @endif
+          <!-- HOME -->
+          <a wire:navigate 
+             href="/" 
+             class="group inline-flex items-center gap-1.5 px-3 py-2 rounded-lg font-medium text-[13px] {{ request()->is('/') ? 'text-blue-500' : 'text-gray-700' }} hover:bg-blue-50 transition-all duration-200">
+            <span>HOME</span>
+          </a>
 
-    </flux:header>
-    
-    <flux:sidebar stashable sticky class="lg:hidden bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rtl:border-r-0 rtl:border-l">
-        <flux:sidebar.toggle icon="x-mark" class="lg:hidden" />
+          <!-- PRODUCTS -->
+          <a wire:navigate 
+             href="/products" 
+             class="group inline-flex items-center gap-1.5 px-3 py-2 rounded-lg font-medium text-[13px] {{ request()->is('products') ? 'text-blue-500' : 'text-gray-700' }} hover:bg-blue-50 transition-all duration-200">
+            <span>PRODUCTS</span>
+          </a>
 
-         <flux:brand href="#" name="FlipMarket">
-            <x-slot name="logo" class="size-18">
-                <img src="{{ asset('images/flipmarket_icon.jpg') }}" class="rounded-xl" alt="FlipMarket">
-            </x-slot>
-        </flux:brand>
+          <!-- CART -->
+          <a wire:navigate 
+             href="/cart" 
+             class="group inline-flex items-center gap-1.5 px-3 py-2 rounded-lg font-medium text-[13px] {{ request()->is('cart') ? 'text-blue-500' : 'text-gray-700' }} hover:bg-blue-50 transition-all duration-200">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" 
+                 class="w-[17px] h-[17px] mt-[1px] group-hover:text-blue-500 transition-colors">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5V6a3.75 3.75 0 1 0-7.5 0v4.5m11.356-1.993 1.263 12H4.25l1.264-12h12.974z" />
+            </svg>
+            <livewire:cart-counter />
+          </a>
 
-        <flux:navlist variant="outline" class="mt-4">
-            <flux:navlist.item icon="home" href="#" current>Home</flux:navlist.item>
-            <flux:navlist.item icon="fire" href="#">Trending</flux:navlist.item>
-            <flux:navlist.item icon="tag" href="#">Deals</flux:navlist.item>
-        </flux:navlist>
+          <!-- ACCOUNT (GUEST) -->
+          @guest
+           <a wire:navigate 
+   href="/login"
+   class="group inline-flex items-center gap-1.5 px-3 py-2 rounded-lg font-medium text-[13px] text-gray-700 hover:bg-blue-50 transition-all duration-200">
+  <svg xmlns="http://www.w3.org/2000/svg" 
+       fill="none" 
+       viewBox="0 0 24 24" 
+       stroke-width="1.8" 
+       stroke="currentColor" 
+       class="w-[18px] h-[18px] text-gray-700 group-hover:text-blue-500 transition-colors duration-200">
+    <path stroke-linecap="round" stroke-linejoin="round" 
+          d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4zM4 20a8 8 0 0 1 16 0z" />
+  </svg>
+  <span>ACCOUNT</span>
+</a>
 
-        <flux:spacer />
+          @endguest
 
-        @if($isAuthenticated)
-            <flux:navlist variant="outline">
-                <flux:navlist.item icon="user" href="#">My Account</flux:navlist.item>
-                <flux:navlist.item icon="shopping-bag" href="#">My Orders</flux:navlist.item>
-                <flux:navlist.item icon="heart" href="#">Wishlist</flux:navlist.item>
-                <flux:navlist.item icon="question-mark-circle" href="#">Help</flux:navlist.item>
-            </flux:navlist>
-        @else
-            <div class="flex flex-col gap-2 px-4 py-4">
-                <flux:button variant="ghost" class="w-full">Login</flux:button>
-                <flux:button variant="primary" class="w-full">Signup</flux:button>
-            </div>
-        @endif
-</flux:sidebar>
+          <!-- ACCOUNT (AUTH) -->
+          @auth
+            <div class="relative" x-data="{ dropdown: false }">
+  <button 
+    @click="dropdown = !dropdown" 
+    class="group inline-flex items-center gap-1.5 px-3 py-2 rounded-lg font-medium text-[13px] text-gray-700 hover:bg-blue-50 transition-all duration-200"
+  >
+    <svg xmlns="http://www.w3.org/2000/svg" 
+         viewBox="0 0 24 24" 
+         fill="currentColor" 
+         class="w-[18px] h-[18px] text-gray-700 group-hover:text-blue-500 transition-colors duration-200">
+      <path fill-rule="evenodd" 
+            d="M12 2.25a4.5 4.5 0 0 0-4.5 4.5 4.5 4.5 0 0 0 9 0 4.5 4.5 0 0 0-4.5-4.5Zm-7.5 18a7.5 7.5 0 0 1 15 0 .75.75 0 0 1-.75.75H5.25a.75.75 0 0 1-.75-.75Z" 
+            clip-rule="evenodd" />
+    </svg>
+    <span>{{ auth()->user()->name }}</span>
+    <svg class="w-3.5 h-3.5 group-hover:text-blue-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path d="M6 9l6 6 6-6"/>
+    </svg>
+  </button>
 
-
+  <div 
+    x-show="dropdown"
+    @click.away="dropdown = false"
+    x-transition
+    class="absolute right-0 mt-2 w-44 bg-white shadow-md rounded-lg p-2 border border-gray-200 z-50"
+  >
+    <a href="{{ route('my.orders') }}" class="block px-3 py-1.5 text-[13px] hover:bg-gray-100">My Orders</a>
+    <a href="#" class="block px-3 py-1.5 text-[13px] hover:bg-gray-100">My Favorites</a>
+    <a href="{{ route('my.account') }}" class="block px-3 py-1.5 text-[13px] hover:bg-gray-100">My Account</a>
+    <a href="/logout" class="block px-3 py-1.5 text-[13px] hover:bg-gray-100 text-red-600">Logout</a>
+  </div>
 </div>
+
+          @endauth
+
+        </div>
+      </div>
+    </div>
+  </nav>
+</header>

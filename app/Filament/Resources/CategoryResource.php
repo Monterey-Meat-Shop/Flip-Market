@@ -15,6 +15,12 @@ use Filament\Forms\Components\Toggle;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Filament\Tables\Actions\ActionGroup;
+use Filament\Tables\Actions\ViewAction;
+use Filament\Tables\Actions\EditAction;
+use Filament\Tables\Actions\DeleteAction;
+use Filament\Tables\Actions\RestoreAction;
+use Filament\Tables\Actions\ForceDeleteAction;
 use Filament\Tables\Columns\TextColumn;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
@@ -24,22 +30,27 @@ class CategoryResource extends Resource
     protected static ?string $model = Category::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-tag';
+    protected static ?string $navigationGroup = 'Products';
+
+    public static function canAccess(): bool
+    {
+        return auth()->user()->hasRole(['admin']);
+    }
 
     public static function form(Form $form): Form
     {
         return $form
         ->schema([
-            Section::make('Category Info')
+            Section::make('Category Information')
             ->schema([
                 Grid::make()
                 ->schema([
                     TextInput::make('name')
                     ->required()
                     ->maxLength(225)
-                    ->live(),
-
+                    ->live()
+                    ->unique(ignoreRecord: true),
                 ]),
-
                 Toggle::make('is_active')
                      ->required()
                      ->default(true),
@@ -47,25 +58,45 @@ class CategoryResource extends Resource
         ]);
 
     }
-
     public static function table(Table $table): Table
     {
         return $table
             ->columns([
-                TextColumn::make('name')->searchable()->sortable(),
+                TextColumn::make('name')
+                    ->searchable()
+                    ->sortable(),
                 TextColumn::make('is_active')
                     ->label('Status')
                     ->formatStateUsing(fn (bool $state) : string => $state ? 'Active' : 'Inactive')
                     ->badge()
                     ->color(fn (bool $state): string => $state ? 'success' : 'danger'),
+                TextColumn::make('name')
+                    ->searchable()
+                    ->sortable(),
+                TextColumn::make('created_at')
+                    ->dateTime()
+                    ->label('Created At')
+                    ->sortable(),
+                TextColumn::make('updated_at')
+                    ->dateTime()
+                    ->label('Updated At')
+                    ->sortable(),
 
-                TextColumn::make('name')->searchable()->sortable(),
-                TextColumn::make('created_at')->dateTime()->label('Created At')->sortable(),
-                TextColumn::make('updated_at')->dateTime()->label('Updated At')->sortable(),
+                TextColumn::make('deleted_at')
+                    ->dateTime()
+                    ->label('Archived At')
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([])
             ->actions([
-                Tables\Actions\EditAction::make(),
+                ActionGroup::make([
+                    ViewAction::make(),
+                    EditAction::make(),
+                    DeleteAction::make(),
+                    RestoreAction::make(),
+                    ForceDeleteAction::make(),
+                ])
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
@@ -88,5 +119,12 @@ class CategoryResource extends Resource
             'create' => Pages\CreateCategory::route('/create'),
             'edit' => Pages\EditCategory::route('/{record}/edit'),
         ];
+    }
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()
+            ->withoutGlobalScopes([
+                SoftDeletingScope::class,
+            ]);
     }
 }
