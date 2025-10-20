@@ -1,4 +1,4 @@
-<div class="max-w-5xl mx-auto p-4 sm:p-6 bg-gray-50 min-h-screen">
+<div class="max-w-7xl mx-auto p-4 sm:p-6 bg-gray-50 min-h-screen">
   <!-- Success/Error Messages -->
   @if (session()->has('error'))
       <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
@@ -13,16 +13,16 @@
   @endif
 
   <!-- Header -->
-  <h2 class="text-xl font-semibold mb-4">My Orders</h2>
+  <h2 class="text-xl font-semibold text-gray-900 sm:text-2xl mb-4">My Orders</h2>
 
   <!-- Tabs -->
-  <div class="flex flex-wrap gap-4 text-sm font-medium text-gray-600 mb-4">
+  <div class="flex flex-wrap gap-6 text-md font-medium text-gray-600 mb-4 ">
     <button wire:click="setActiveTab('all')" 
-            class="pb-2 border-b-2 {{ $activeTab === 'all' ? 'border-blue-500 text-blue-600' : 'border-transparent hover:text-blue-600' }}">
+            class="cursor-pointer pb-2 border-b-2 {{ $activeTab === 'all' ? 'border-blue-500 text-blue-600' : 'border-transparent hover:text-blue-600' }}">
       All
     </button>
     <button wire:click="setActiveTab('to_pay')" 
-            class="pb-2 border-b-2 {{ $activeTab === 'to_pay' ? 'border-blue-500 text-blue-600' : 'border-transparent hover:text-blue-600' }}">
+            class="cursor-pointer pb-2 border-b-2 {{ $activeTab === 'to_pay' ? 'border-blue-500 text-blue-600' : 'border-transparent hover:text-blue-600' }}">
       To pay
     </button>
     <button wire:click="setActiveTab('processing')" 
@@ -34,20 +34,12 @@
       In transit
     </button>
     <button wire:click="setActiveTab('to_receive')" 
-            class="pb-2 border-b-2 {{ $activeTab === 'to_receive' ? 'border-blue-500 text-blue-600' : 'border-transparent hover:text-blue-600' }}">
+            class="cursor-pointer pb-2 border-b-2 {{ $activeTab === 'to_receive' ? 'border-blue-500 text-blue-600' : 'border-transparent hover:text-blue-600' }}">
       To receive
     </button>
     <button wire:click="setActiveTab('completed')" 
-            class="pb-2 border-b-2 {{ $activeTab === 'completed' ? 'border-blue-500 text-blue-600' : 'border-transparent hover:text-blue-600' }}">
+            class="cursor-pointer pb-2 border-b-2 {{ $activeTab === 'completed' ? 'border-blue-500 text-blue-600' : 'border-transparent hover:text-blue-600' }}">
       Completed
-    </button>
-    <button wire:click="setActiveTab('cancelled')" 
-            class="pb-2 border-b-2 {{ $activeTab === 'cancelled' ? 'border-blue-500 text-blue-600' : 'border-transparent hover:text-blue-600' }}">
-      Cancelled
-    </button>
-    <button wire:click="setActiveTab('returned')" 
-            class="pb-2 border-b-2 {{ $activeTab === 'returned' ? 'border-blue-500 text-blue-600' : 'border-transparent hover:text-blue-600' }}">
-      Returned
     </button>
   </div>
 
@@ -65,7 +57,7 @@
         type="text" 
         placeholder="Search your Order"
         wire:model.live="searchQuery"
-        class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md bg-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        class="w-full pl-10 pr-4 py-4 border border-gray-300 rounded-md bg-gray-100 text-md focus:outline-none focus:ring-2 focus:ring-blue-500"
       />
     </div>
   </div>
@@ -81,12 +73,12 @@
       @endphp
       
       <!-- Order Item -->
-      <div class="bg-white border border-gray-300 rounded-lg mb-4">
+      <div class="bg-white border border-gray-300 rounded-lg mb-4 h-50">
         <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center px-4 py-2 border-b border-gray-300">
-          <span class="font-medium text-gray-700">Order Id: #{{ $order->orderID }}</span>
+          <span class="font-medium text-lg text-gray-700">Order Id: #{{ $order->orderID }}</span>
           <div class="flex items-center gap-2 mt-2 sm:mt-0">
-            <span class="text-xs text-gray-500">{{ $order->order_date->format('M d, Y') }}</span>
-            <span class="px-3 py-1 {{ $statusBg }} {{ $statusText }} text-xs font-medium rounded-full">
+            <span class="text-sm font-medium text-gray-500">{{ $order->order_date->format('M d, Y') }}</span>
+            <span class="px-3 py-2 {{ $statusBg }} {{ $statusText }} text-md font-medium rounded-full">
               {{ $statusLabel }}
             </span>
           </div>
@@ -99,7 +91,7 @@
             @if($item->product && $item->product->image_path)
               <img src="{{ asset('storage/' . $item->product->image_path) }}" 
                    alt="{{ $item->product->name }}"
-                   class="w-24 h-24 object-cover rounded-md">
+                   class="w-28 h-28 object-cover rounded-md mx-2">
             @else
               <div class="w-24 h-24 bg-gray-200 rounded-md flex items-center justify-center">
                 <span class="text-gray-500 text-xs font-semibold">
@@ -111,35 +103,35 @@
           
           <!-- Product Details -->
           <div class="flex-1 mt-3 sm:mt-0">
-            <h3 class="text-sm font-medium text-gray-800 mb-2">{{ $item->product->name ?? 'Product Name' }}</h3>
+            <h3 class="text-lg font-medium text-gray-800 mb-2">{{ $item->product->name ?? 'Product Name' }}</h3>
             @if($item->colorway || $item->size)
-            <p class="text-sm text-gray-500 mb-3">
+            <p class="text-md text-gray-500 mb-3">
               @if($item->colorway){{ $item->colorway }}@endif@if($item->colorway && $item->size) | @endif@if($item->size)Size: {{ $item->size }}@endif
             </p>
             @endif
             <div class="flex flex-wrap gap-2">
               @if($item->product->brand)
-                <span class="text-xs text-blue-600 border border-blue-400 rounded px-2 py-0.5">{{ $item->product->brand->name }}</span>
+                <span class="text-md text-blue-600 border border-blue-400 rounded px-2 py-0.5">{{ $item->product->brand->name }}</span>
               @endif
               @if($item->product->category)
-                <span class="text-xs text-blue-600 border border-blue-400 rounded px-2 py-0.5">{{ $item->product->category->name }}</span>
+                <span class="text-md text-blue-600 border border-blue-400 rounded px-2 py-0.5">{{ $item->product->category->name }}</span>
               @endif
             </div>
           </div>
 
           <!-- Price and Actions -->
-          <div class="text-right text-sm text-gray-700 mt-4 sm:mt-0">
+          <div class="text-right text-md text-gray-700 mt-4 sm:mt-0">
             <p class="font-medium">₱{{ number_format($item->sub_total, 2) }}</p>
             <p>Qty: {{ $item->quantity }}</p>
             
             @if($loop->last) <!-- Only show buttons on last item -->
             <div class="flex flex-col sm:flex-row sm:justify-end gap-2 mt-4">
               <button wire:click="viewOrderDetails({{ $order->orderID }})"
-                      class="bg-blue-600 hover:bg-blue-800 text-white rounded-lg px-3 py-1 text-sm">
+                      class="bg-blue-600 hover:bg-blue-800 text-white rounded-lg px-3 py-2 text-md">
                 View Order Details
               </button>
               
-              @if($order->order_status === 'Pending')
+              @if($order->order_status === 'pending')
                 <button wire:click="cancelOrder({{ $order->orderID }})"
                         wire:confirm="Are you sure you want to cancel this order?"
                         class="border border-red-600 text-red-600 hover:bg-red-600 hover:text-white rounded-lg px-3 py-1 text-sm">
@@ -152,6 +144,7 @@
                   Return Order
                 </button>
               @endif
+
             </div>
             @endif
           </div>

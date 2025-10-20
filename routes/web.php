@@ -13,7 +13,7 @@ use App\Http\Controllers\CartController;
 
 use App\Livewire\ProductDetailPage;
 use App\Livewire\ProductPage;
-
+use App\Livewire\ReturnPage;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 use Livewire\Volt\Volt;
@@ -56,6 +56,9 @@ Route::middleware('auth')->group(function () {
     Route::post('/cart/remove/{itemId}', [CartController::class, 'removeFromCart'])->name('cart.remove');
     Route::post('/cart/update/{itemId}', [CartController::class, 'updateQuantity'])->name('cart.update');
     
+    Route::get('/return', ReturnPage::class)->name('return');
+
+
     Route::get('/logout', function () {
         Auth::logout(); 
         return redirect('/');

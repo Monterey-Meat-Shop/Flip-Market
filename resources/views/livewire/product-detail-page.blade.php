@@ -195,11 +195,14 @@
                 <!-- Quantity + Add to Favorites -->
                 <div class="mt-6 flex items-center gap-3">
                     <label for="quantity" class="text-sm font-medium text-gray-900">Quantity:</label>
-                    <select wire:model="quantity" id="quantity" class="border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500">
-                        @for($i = 1; $i <= min(10, $this->getCurrentStock()); $i++)
-                            <option value="{{ $i }}">{{ $i }}</option>
-                        @endfor
-                    </select>
+
+               
+                    
+                    <!-- ETO APPROACH KO YA -->
+                      <input wire:model="quantity"id="quantity" type="number" min="1" max="{{  $this->getCurrentStock() }}" 
+                      class="w-20 border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    <!-- END APPROACH -->
+
                     <button 
                         wire:click="addToFavorites"
                         class="px-4 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50 flex items-center gap-2"

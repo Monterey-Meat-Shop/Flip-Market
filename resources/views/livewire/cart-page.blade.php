@@ -1,4 +1,4 @@
-<section class="bg-white py-8 md:py-16">
+<section class="bg-white py-8 md:py-7 h-screen">
   <div class="mx-auto max-w-screen-xl px-4 2xl:px-0">
     <h2 class="text-xl font-semibold text-gray-900 sm:text-2xl">Shopping Cart</h2>
 
@@ -21,6 +21,9 @@
                     src="{{ $item->product && $item->product->image_path 
                         ? asset('storage/' . $item->product->image_path) 
                         : 'https://via.placeholder.com/150' }}"
+
+
+
                     alt="{{ $item->product->name ?? 'Unknown Product' }}" 
                   />
                 </a>
