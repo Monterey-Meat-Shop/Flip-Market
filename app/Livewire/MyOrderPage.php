@@ -130,7 +130,7 @@ class MyOrderPage extends Component
             case 'return_requested':
                 return array('bg-yellow-100', 'text-yellow-600', 'Return Requested');
             case 'returned':
-                return array('bg-gray-100', 'text-gray-600', 'Returned');
+                return array('bg-gray-100', 'text-red-600', 'Returned');
             default:
                 return array('bg-gray-100', 'text-gray-600', 'Unknown');
         }

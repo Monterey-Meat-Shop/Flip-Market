@@ -3,11 +3,11 @@
 namespace App\Filament\Resources\BrandResource\Pages;
 
 use App\Filament\Resources\BrandResource;
+use App\Models\Brand;
 use Filament\Actions;
 use Filament\Resources\Pages\ListRecords;
-use App\Models\Brand;
-use Illuminate\Database\Eloquent\Builder;
 use Filament\Resources\Pages\ListRecords\Tab;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 
 class ListBrands extends ListRecords

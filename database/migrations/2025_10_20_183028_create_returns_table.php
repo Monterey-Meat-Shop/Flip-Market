@@ -21,25 +21,24 @@ return new class extends Migration
             $table->unsignedBigInteger('customerID');
             $table->foreign('customerID')->references('customerID')->on('customers')->onDelete('cascade');
             
-            // Return details
             $table->enum('return_reason', [
                 'not_delivered',
                 'defective',
-                //'changed_mind',
                 'incorrect',
                 'other'
             ]);
             $table->text('other_reason')->nullable();
             $table->string('product_image');
             
-            // Return status and processing
             $table->enum('return_status', [
                 'pending',
                 'approved',
                 'rejected',
-                'completed',
-                'refunded'
+                'completed'
             ])->default('pending');
+
+            // $table->json('returned_items')->nullable(); //added
+            $table->text('returned_items')->nullable();
             
             $table->text('admin_notes')->nullable();
             $table->datetime('approved_at')->nullable();

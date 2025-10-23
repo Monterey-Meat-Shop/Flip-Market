@@ -568,6 +568,7 @@ class OrderResource extends Resource
                                 'completed' => 'Completed',
                                 'cancelled' => 'Cancelled',
                                 'returned' => 'Returned',
+                                'return_requested' => 'Return Requested',
                             ])
                             ->colors([
                                 'pending' => 'warning',
@@ -576,6 +577,7 @@ class OrderResource extends Resource
                                 'completed' => 'success',
                                 'cancelled' => 'danger',
                                 'returned' => 'danger',
+                                'return_requested' => 'warning',
                             ])
                             ->icons([
                                 'pending' => 'heroicon-m-sparkles',
@@ -584,6 +586,7 @@ class OrderResource extends Resource
                                 'completed' => 'heroicon-m-check-badge',
                                 'cancelled' => 'heroicon-m-x-mark',
                                 'returned' => 'heroicon-m-x-circle',
+                                'return_requested' => 'heroicon-m-arrow-path',
                             ])->columnSpanFull(),
                     ])->columns(2),
 
@@ -706,6 +709,9 @@ class OrderResource extends Resource
                         'completed' => 'success',
                         'cancelled' => 'danger',
                         'pre-order' => 'info',
+                        'returned' => 'danger',
+                        'return_requested' => 'danger',
+                        default => 'gray',
                     }),
 
                 TextColumn::make('shipping.shipping_status')

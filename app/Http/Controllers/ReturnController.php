@@ -62,6 +62,37 @@ class ReturnController extends Controller
             $imagePath = $request->file('product_image')->store('returns', 'public');
         }
 
+        // Get selected items from session
+        $selectedItems = session('return_selected_items', []);
+        $itemQuantities = session('return_item_quantities', []);
+        $itemNotes = session('return_item_notes', []);
+        
+        if (empty($selectedItems)) {
+            return back()->with('error', 'No items selected for return.');
+        }
+        
+        // Build returned items data
+        $returnedItemsData = [];
+        foreach ($selectedItems as $order_itemID) {
+            // ensure integer
+            $order_itemID = (int) $order_itemID;
+
+            // ensure the order item exists and belongs to this order
+            $orderItem = \App\Models\OrderItem::where('order_itemID', $order_itemID)
+                ->where('orderID', $order->orderID)
+                ->first();
+
+            if (! $orderItem) {
+                return back()->with('error', 'Invalid item selected for return.');
+            }
+
+            $returnedItemsData[] = [
+                'order_itemID' => $order_itemID,
+                'quantity' => (int) ($itemQuantities[$order_itemID] ?? 1),
+                'notes' => $itemNotes[$order_itemID] ?? null,
+            ];
+        }
+        
         // Create return request
         $return = ReturnRequest::create([
             'orderID' => $order->orderID,
@@ -70,7 +101,11 @@ class ReturnController extends Controller
             'other_reason' => $validated['other_reason'] ?? null,
             'product_image' => $imagePath,
             'return_status' => 'pending',
+            'returned_items' => $returnedItemsData,
         ]);
+        
+        // Clear session data
+        session()->forget(['return_selected_items', 'return_item_quantities', 'return_item_notes', 'return_order_id']);
 
         // Update order status
         $order->update([
@@ -89,17 +124,22 @@ class ReturnController extends Controller
         // Get authenticated user's customer
         $user = Auth::user();
         $customer = $user->customer;
-        
+    
         if (!$customer) {
             return redirect()->route('my.orders')->with('error', 'Customer profile not found.');
         }
-        
-        $return = ReturnRequest::with(['order', 'customer'])
-            ->where('returnID', $returnId)
-            ->where('customerID', $customer->customerID)
-            ->firstOrFail();
+    
+        // Get the return request for this customer
+        $return = \App\Models\ReturnRequest::with([
+            'order.orderItems.product',
+            'order.orderItems.productVariant',
+            'customer'
+        ])
+        ->where('returnID', $returnId)
+        ->where('customerID', $customer->customerID)
+        ->firstOrFail();
 
-        return view('returns.show', compact('return'));
+        return view('livewire.return-view-page', compact('return'));
     }
 
     /**

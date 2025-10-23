@@ -10,8 +10,9 @@ class OrderItem extends Model
     use HasFactory;
     
     protected $table = 'order_items';
-
     protected $primaryKey = 'order_itemID';
+    public $incrementing = true;
+    protected $keyType = 'int';
 
     protected $fillable = [
         'orderID',

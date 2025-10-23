@@ -151,7 +151,7 @@
                 </button>
               @elseif($hasReturnRequest)
                 <div class="flex flex-col gap-1">
-                  {{-- <span class="text-xs text-yellow-600 font-medium">Return Status: {{ ucfirst($order->returnRequest->return_status) }}</span> --}}
+                  <span class="text-xs text-yellow-600 font-medium">Return Status: {{ ucfirst($order->returnRequest->return_status) }}</span>
                   <a href="{{ route('returns.show', $order->returnRequest->returnID) }}" 
                      class="bg-gray-600 hover:bg-gray-800 text-white rounded-lg px-3 py-2 text-md text-center">
                     View Return
