@@ -109,6 +109,7 @@
     class="absolute right-0 mt-2 w-44 bg-white shadow-md rounded-lg p-2 border border-gray-200 z-50"
   >
     <a href="{{ route('my.orders') }}" class="block px-3 py-1.5 text-[13px] hover:bg-gray-100">My Orders</a>
+    <a href="#" class="block px-3 py-1.5 text-[13px] hover:bg-gray-100">My Favorites</a>
     <a href="{{ route('my.account') }}" class="block px-3 py-1.5 text-[13px] hover:bg-gray-100">My Account</a>
     <a href="/logout" class="block px-3 py-1.5 text-[13px] hover:bg-gray-100 text-red-600">Logout</a>
   </div>

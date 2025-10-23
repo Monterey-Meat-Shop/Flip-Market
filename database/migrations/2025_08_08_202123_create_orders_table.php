@@ -24,10 +24,21 @@ return new class extends Migration
             $table->datetime('order_date');
             $table->decimal('total_amount', 10, 2);
             $table->decimal('final_amount', 10, 2);
-            $table->enum('order_status', ['pending', 'processing', 'completed', 'cancelled', 'pre-order'])->default('pending');
+            $table->enum('order_status', [
+                'pending', 
+                'processing', 
+                'completed', 
+                'cancelled', 
+                'pre-order',
+                'return_requested',
+                'returned'
+            ])->default('pending');
             $table->enum('payment_status', ['unpaid', 'paid', 'verified'])->default('unpaid');
 
             $table->boolean('stock_deducted')->default(false); //added
+
+            $table->boolean('is_returnable')->default(true);  // NEW: Can this order be returned?
+            $table->datetime('return_deadline')->nullable();  // NEW: Last date for returns (e.g., 7-30 days after delivery)
             
             $table->string('payment_method')->nullable();
 

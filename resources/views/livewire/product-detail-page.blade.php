@@ -141,7 +141,36 @@
                 </div>
 
                 <!-- Price -->
-                <p class="mt-4 text-3xl font-bold text-gray-900">₱{{ number_format($this->getCurrentPrice(), 2) }}</p>
+                @php
+                    $activeDiscount = $product->discounts
+                        ->where('is_active', true)
+                        ->filter(function($discount) {
+                            return (is_null($discount->start_date) || $discount->start_date <= now())
+                                && (is_null($discount->end_date) || $discount->end_date >= now());
+                        })
+                        ->first();
+
+                    $originalPrice = $this->getCurrentPrice();
+                    $finalPrice = $activeDiscount ? $activeDiscount->getFinalPrice($originalPrice) : $originalPrice;
+                @endphp
+
+                <div class="mt-4 flex items-baseline gap-3">
+                    @if($activeDiscount)
+                        <span class="text-3xl font-bold text-black-700">
+                            ₱{{ number_format($finalPrice, 2) }}
+                        </span>
+                        <span class="text-lg text-gray-400 line-through">
+                            ₱{{ number_format($originalPrice, 2) }}
+                        </span>
+                        <span class="text-sm text-red-600 font-semibold">
+                            ({{ $activeDiscount->discount_value }}{{ $activeDiscount->discount_type === 'Percentage' ? '%' : '₱' }} OFF)
+                        </span>
+                    @else
+                        <span class="text-3xl font-bold text-gray-900">
+                            ₱{{ number_format($originalPrice, 2) }}
+                        </span>
+                    @endif
+                </div>
 
                 <!-- Variants: Sizes -->
                 @if($this->getAvailableSizes()->isNotEmpty())
@@ -166,11 +195,14 @@
                 <!-- Quantity + Add to Favorites -->
                 <div class="mt-6 flex items-center gap-3">
                     <label for="quantity" class="text-sm font-medium text-gray-900">Quantity:</label>
-                    <select wire:model="quantity" id="quantity" class="border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500">
-                        @for($i = 1; $i <= min(10, $this->getCurrentStock()); $i++)
-                            <option value="{{ $i }}">{{ $i }}</option>
-                        @endfor
-                    </select>
+
+               
+                    
+                    <!-- ETO APPROACH KO YA -->
+                      <input wire:model="quantity"id="quantity" type="number" min="1" max="{{  $this->getCurrentStock() }}" 
+                      class="w-20 border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    <!-- END APPROACH -->
+
                     <button 
                         wire:click="addToFavorites"
                         class="px-4 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50 flex items-center gap-2"

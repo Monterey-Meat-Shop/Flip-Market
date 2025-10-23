@@ -57,11 +57,20 @@ class Product extends Model
         return $this->hasMany(OrderItem::class, 'productID', 'productID');
     }
 
-    public function discounts(): BelongsToMany
+    // public function discounts(): BelongsToMany
+    // {
+    //     return $this->belongsToMany(Discount::class, 'discount_product', 'product_id', 'discount_id');
+    // }
+
+    public function discounts()
     {
-        return $this->belongsToMany(Discount::class, 'discount_product', 'product_id', 'discount_id');
+    return $this->belongsToMany(Discount::class, 'discount_product', 'product_id', 'discount_id');
     }
 
+    public function discount(): BelongsTo
+    {
+        return $this->belongsTo(Discount::class, 'discountID');
+    }
     // --- Attributes / Helpers ---
     public function getTotalStockQuantityAttribute(): int
     {
@@ -134,7 +143,7 @@ class Product extends Model
     }
 
     /**
-     * 🔥 Scope: Get top performing products by sales & revenue
+     * Scope: Get top performing products by sales & revenue
      */
     public function scopeTopPerforming($query, int $limit = 6)
     {
@@ -198,25 +207,51 @@ class Product extends Model
     }
 
     public function getImagePathAttribute()
-{
-    // Check if image_url exists and is not null
-    if (!$this->image_url) {
-        return null;
+    {
+        // Check if image_url exists and is not null
+        if (!$this->image_url) {
+            return null;
+        }
+
+        // If image_url is stored as JSON array
+        if (is_string($this->image_url)) {
+            $decoded = json_decode($this->image_url, true);
+            return is_array($decoded) && isset($decoded[0]) ? $decoded[0] : $this->image_url;
+        }
+
+        // If image_url is already an array (due to casting)
+        if (is_array($this->image_url) && isset($this->image_url[0])) {
+            return $this->image_url[0];
+        }
+
+        // If it's a simple string
+        return $this->image_url;
     }
 
-    // If image_url is stored as JSON array
-    if (is_string($this->image_url)) {
-        $decoded = json_decode($this->image_url, true);
-        return is_array($decoded) && isset($decoded[0]) ? $decoded[0] : $this->image_url;
-    }
+    public function getDiscountedPriceAttribute(): float
+    {
+        // Find the first active discount linked to this product
+        $activeDiscount = $this->discounts()
+            ->where('is_active', true)
+            ->where(function ($q) {
+                $q->whereNull('start_date')->orWhere('start_date', '<=', now());
+            })
+            ->where(function ($q) {
+                $q->whereNull('end_date')->orWhere('end_date', '>=', now());
+            })
+            ->first();
 
-    // If image_url is already an array (due to casting)
-    if (is_array($this->image_url) && isset($this->image_url[0])) {
-        return $this->image_url[0];
-    }
+        if (! $activeDiscount) {
+            return (float) $this->price;
+        }
 
-    // If it's a simple string
-    return $this->image_url;
-}
-    
+        // Compute discounted price based on type
+        if ($activeDiscount->discount_type === 'Percentage') {
+            $discounted = $this->price - ($this->price * ($activeDiscount->discount_value / 100));
+        } else {
+            $discounted = $this->price - $activeDiscount->discount_value;
+        }
+
+        return max($discounted, 0); // prevent negative price
+    }
 }

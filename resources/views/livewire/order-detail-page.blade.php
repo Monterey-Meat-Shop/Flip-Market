@@ -127,18 +127,19 @@
       <div class="md:w-3/4">
         <!-- Products Table -->
         <div class="bg-white overflow-x-auto rounded-lg shadow-md p-6 mb-4 border border-gray-200">
+          <h2 class="text-lg font-semibold mb-4">Order Items</h2>
           <table class="w-full">
             <thead>
-              <tr>
-                <th class="text-left font-semibold">Product</th>
-                <th class="text-left font-semibold">Price</th>
-                <th class="text-left font-semibold">Quantity</th>
-                <th class="text-left font-semibold">Total</th>
+              <tr class="border-b">
+                <th class="text-left font-semibold py-3">Product</th>
+                <th class="text-left font-semibold py-3">Price</th>
+                <th class="text-left font-semibold py-3">Quantity</th>
+                <th class="text-left font-semibold py-3">Total</th>
               </tr>
             </thead>
             <tbody>
               @foreach($order->orderItems as $item)
-              <tr wire:key="{{ $item->order_itemID }}">
+              <tr wire:key="{{ $item->order_itemID }}" class="border-b">
                 <td class="py-4">
                   <div class="flex items-center">
                     @if($item->product && $item->product->image_path)
@@ -160,14 +161,33 @@
                           @if($item->size) | Size: {{ $item->size }} @endif
                         </p>
                       @endif
+
+                      {{-- Show discount badge if item has discount --}}
+                      @if(isset($item->has_discount) && $item->has_discount)
+                        <span class="inline-block mt-1 text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded">
+                          Discounted
+                        </span>
+                      @endif
                     </div>
                   </div>
                 </td>
-                <td class="py-4">₱{{ number_format($item->unit_price, 2) }}</td>
+                <td class="py-4">
+                  <div>
+                    {{-- Show original price if discounted --}}
+                    @if(isset($item->has_discount) && $item->has_discount && isset($item->original_unit_price))
+                      <span class="text-xs text-gray-400 line-through block">₱{{ number_format($item->original_unit_price, 2) }}</span>
+                      <span class="font-semibold text-green-600">₱{{ number_format($item->unit_price, 2) }}</span>
+                    @else
+                      <span class="font-semibold">₱{{ number_format($item->unit_price, 2) }}</span>
+                    @endif
+                  </div>
+                </td>
                 <td class="py-4">
                   <span class="text-center w-8">{{ $item->quantity }}</span>
                 </td>
-                <td class="py-4">₱{{ number_format($item->sub_total, 2) }}</td>
+                <td class="py-4">
+                  <span class="font-semibold">₱{{ number_format($item->sub_total, 2) }}</span>
+                </td>
               </tr>
               @endforeach
             </tbody>
@@ -231,30 +251,70 @@
       <!-- Summary Sidebar -->
       <div class="md:w-1/4">
         <div class="bg-white rounded-lg shadow-md p-6 border border-gray-200">
-          <h2 class="text-lg font-semibold mb-4">Summary</h2>
-          <div class="flex justify-between mb-2">
-            <span>Subtotal</span>
-            <span>₱{{ number_format($order->total_amount, 2) }}</span>
-          </div>
-          @if($order->discount)
-          <div class="flex justify-between mb-2 text-green-600">
-            <span>Discount</span>
-            <span>-₱{{ number_format($order->total_amount - ($order->final_amount - ($order->shipping->shipping_fee ?? 0)), 2) }}</span>
-          </div>
-          @endif
-          <div class="flex justify-between mb-2">
-            <span>Shipping</span>
-            <span>₱{{ number_format($order->shipping->shipping_fee ?? 0, 2) }}</span>
-          </div>
-          <hr class="my-2">
-          <div class="flex justify-between mb-2">
-            <span class="font-semibold">Grand Total</span>
-            <span class="font-semibold">₱{{ number_format($order->final_amount, 2) }}</span>
+          <h2 class="text-lg font-semibold mb-4">Order Summary</h2>
+          
+          <div class="space-y-2">
+            {{-- Original Subtotal (if there are discounts) --}}
+            @if($productDiscountSavings > 0)
+            <div class="flex justify-between text-sm text-gray-500">
+              <span>Original Subtotal</span>
+              <span class="line-through">₱{{ number_format($originalSubtotal, 2) }}</span>
+            </div>
+            @endif
+
+            {{-- Current Subtotal --}}
+            <div class="flex justify-between">
+              <span>Subtotal</span>
+              <span class="font-medium">₱{{ number_format($order->total_amount, 2) }}</span>
+            </div>
+
+            {{-- Product Discounts --}}
+            @if($productDiscountSavings > 0)
+            <div class="flex justify-between text-green-600">
+              <span class="text-sm">Product Discounts</span>
+              <span class="text-sm font-semibold">-₱{{ number_format($productDiscountSavings, 2) }}</span>
+            </div>
+            @endif
+
+            {{-- Coupon Discount --}}
+            @if($order->discount && $couponDiscountAmount > 0)
+            <div class="flex justify-between text-green-600">
+              <span class="text-sm">Coupon Discount</span>
+              <span class="text-sm font-semibold">-₱{{ number_format($couponDiscountAmount, 2) }}</span>
+            </div>
+            @endif
+
+            {{-- Shipping --}}
+            <div class="flex justify-between">
+              <span>Shipping</span>
+              <span>₱{{ number_format($order->shipping->shipping_fee ?? 0, 2) }}</span>
+            </div>
+
+            {{-- Total Savings --}}
+            @php
+              $totalSavings = $productDiscountSavings + $couponDiscountAmount;
+            @endphp
+            @if($totalSavings > 0)
+            <div class="border-t pt-2 mt-2">
+              <div class="flex justify-between bg-green-50 p-2 rounded text-green-700">
+                <span class="text-sm font-medium">Total Savings</span>
+                <span class="text-sm font-bold">₱{{ number_format($totalSavings, 2) }}</span>
+              </div>
+            </div>
+            @endif
+
+            {{-- Grand Total --}}
+            <div class="border-t pt-3 mt-3">
+              <div class="flex justify-between">
+                <span class="font-bold text-lg">Grand Total</span>
+                <span class="font-bold text-lg text-blue-700">₱{{ number_format($order->final_amount, 2) }}</span>
+              </div>
+            </div>
           </div>
         </div>
 
         <!-- Back Button -->
-        <a href="{{ route('my.orders') }}" class="mt-4 block w-full bg-blue-600 hover:bg-blue-700 text-white text-center py-2 px-4 rounded-lg">
+        <a href="{{ route('my.orders') }}" class="mt-4 block w-full bg-blue-600 hover:bg-blue-700 text-white text-center py-2 px-4 rounded-lg transition">
           Back to Orders
         </a>
       </div>

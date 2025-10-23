@@ -10,9 +10,12 @@ use App\Livewire\MyAccountPage;
 use App\Livewire\OrderDetailPage;
 
 use App\Http\Controllers\CartController;
+use App\Http\Controllers\ReturnController;
 
 use App\Livewire\ProductDetailPage;
 use App\Livewire\ProductPage;
+use App\Livewire\ReturnPage;
+use App\Livewire\ReturnConfirmationPage;
 
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
@@ -47,6 +50,12 @@ Route::middleware('auth')->group(function () {
     Route::get('/checkout', CheckoutPage::class)->name('checkout');
     Route::get('/my-orders', MyOrderPage::class)->name('my.orders');
     Route::get('/my-account', MyAccountPage::class)->name('my.account');
+
+    // Return routes - NEW/UPDATED
+    Route::get('/return/{orderId}', ReturnPage::class)->name('return.page');
+    Route::post('/returns/{order}/submit', [ReturnController::class, 'submit'])->name('returns.submit');
+    Route::get('/returns/confirmation', [ReturnController::class, 'confirmation'])->name('returns.confirmation');
+    Route::get('/returns/{returnId}', [ReturnController::class, 'show'])->name('returns.show');
     
     // Order details - pass orderId as parameter
     Route::get('/orders/{orderId}', OrderDetailPage::class)->name('orders.show');

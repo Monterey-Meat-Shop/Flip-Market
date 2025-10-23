@@ -531,18 +531,22 @@ class OrderResource extends Resource
                             ->inline()
                             ->default('processing')
                             ->options([
+                                // 'pending' => 'Pending',
                                 'processing' => 'Processing',
-                                'in-transit' => 'In Transit',
+                                'in_transit' => 'In Transit',
                                 'delivered' => 'Delivered',
+
                             ])
                             ->colors([
+                                'pending' => 'warning',
                                 'processing' => 'warning',
-                                'in-transit' => 'info',
+                                'in_transit' => 'info',
                                 'delivered' => 'success',
                             ])
                             ->icons([
+                                'pending' => 'heroicon-m-sparkles',
                                 'processing' => 'heroicon-m-arrow-path',
-                                'in-transit' => 'heroicon-m-truck',
+                                'in_transit' => 'heroicon-m-truck',
                                 'delivered' => 'heroicon-m-check-badge',
                             ])
                             ->afterStateHydrated(function (Set $set, $state, $record) {
@@ -564,6 +568,7 @@ class OrderResource extends Resource
                                 'completed' => 'Completed',
                                 'cancelled' => 'Cancelled',
                                 'returned' => 'Returned',
+                                'return_requested' => 'Return Requested',
                             ])
                             ->colors([
                                 'pending' => 'warning',
@@ -572,6 +577,7 @@ class OrderResource extends Resource
                                 'completed' => 'success',
                                 'cancelled' => 'danger',
                                 'returned' => 'danger',
+                                'return_requested' => 'warning',
                             ])
                             ->icons([
                                 'pending' => 'heroicon-m-sparkles',
@@ -580,6 +586,7 @@ class OrderResource extends Resource
                                 'completed' => 'heroicon-m-check-badge',
                                 'cancelled' => 'heroicon-m-x-mark',
                                 'returned' => 'heroicon-m-x-circle',
+                                'return_requested' => 'heroicon-m-arrow-path',
                             ])->columnSpanFull(),
                     ])->columns(2),
 
@@ -702,6 +709,9 @@ class OrderResource extends Resource
                         'completed' => 'success',
                         'cancelled' => 'danger',
                         'pre-order' => 'info',
+                        'returned' => 'danger',
+                        'return_requested' => 'danger',
+                        default => 'gray',
                     }),
 
                 TextColumn::make('shipping.shipping_status')
@@ -711,7 +721,7 @@ class OrderResource extends Resource
                     ->color(fn (string $state): string => match ($state) {
                         'pending' => 'warning',
                         'processing' => 'warning',
-                        'in-transit' => 'info',
+                        'in_transit' => 'info',
                         'delivered' => 'success',
                     })
                     ->formatStateUsing(fn ($state) => $state ?? 'N/A'),

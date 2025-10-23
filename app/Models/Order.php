@@ -63,6 +63,11 @@ class Order extends Model
         return $this->hasOne(Shipping::class, 'orderID', 'orderID');
     }
 
+    public function returnRequest()
+    {
+        return $this->hasOne(ReturnRequest::class, 'orderID', 'orderID');
+    }
+
     public function deductStockForTransaction(): void
     {
         if ($this->stock_deducted) {

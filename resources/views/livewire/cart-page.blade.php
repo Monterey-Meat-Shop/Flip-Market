@@ -1,4 +1,4 @@
-<section class="bg-white py-8 md:py-16">
+<section class="bg-white py-8 md:py-7 h-screen">
   <div class="mx-auto max-w-screen-xl px-4 2xl:px-0">
     <h2 class="text-xl font-semibold text-gray-900 sm:text-2xl">Shopping Cart</h2>
 
@@ -35,144 +35,105 @@
         @if($cartItems->isEmpty())
           <div class="p-6 bg-white rounded-lg border border-gray-200">
             <p class="text-gray-600">Your cart is empty.</p>
-            <a href="{{ route('products') }}" class="text-blue-600 hover:underline">Browse Products</a>
+            <a href="{{ route('products') }}" class="text-blue-600 hover:underline mt-2 inline-block">Browse Products</a>
           </div>
         @else
           <div class="space-y-6">
             @foreach($cartItems as $item)
-              @php
-                // Get current warehouse stock (items already in cart have been deducted)
-                $warehouseStock = $item->variant 
-                    ? $item->variant->stock_quantity 
-                    : $item->product->total_stock_quantity;
+              <div class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm md:p-6 flex items-center gap-4">
                 
-                // ACCURATE CALCULATION:
-                // Real total stock = warehouse + what user has in cart
-                // This is the MAXIMUM the user can have
-                $realTotalStock = $warehouseStock + $item->quantity;
-                
-                // Check if at limit (can't add more)
-                $isAtLimit = $item->quantity >= $realTotalStock;
-                
-                // Check if over limit (validation error)
-                $hasStockIssue = $item->quantity > $realTotalStock;
-              @endphp
+                {{-- Product Image --}}
+                <a href="{{ route('product.detail', $item->product->productID ?? 0) }}" class="shrink-0">
+                  <img 
+                    class="h-20 w-20 object-cover rounded"
+                    src="{{ $item->product && $item->product->image_path 
+                        ? asset('storage/' . $item->product->image_path) 
+                        : 'https://via.placeholder.com/150' }}"
 
-              <div class="rounded-lg border {{ $hasStockIssue ? 'border-red-300 bg-red-50' : 'border-gray-200 bg-white' }} p-4 shadow-sm md:p-6">
-                <div class="flex items-center gap-4">
-                  
-                  {{-- Product Image --}}
-                  <a href="{{ route('product.detail', $item->product->productID ?? 0) }}" class="shrink-0">
-                    <img 
-                      class="h-20 w-20 object-cover rounded"
-                      src="{{ $item->product && $item->product->image_path 
-                          ? asset('storage/' . $item->product->image_path) 
-                          : 'https://via.placeholder.com/150' }}"
-                      alt="{{ $item->product->name ?? 'Unknown Product' }}" 
-                    />
+
+
+                    alt="{{ $item->product->name ?? 'Unknown Product' }}" 
+                  />
+                </a>
+
+                {{-- Product Info --}}
+                <div class="flex-1 min-w-0">
+                  <a href="{{ route('product.detail', $item->product->productID ?? 0) }}" class="text-base font-medium text-gray-900 hover:underline">
+                    {{ $item->product->name ?? 'Unknown Product' }}
                   </a>
-
-                  {{-- Product Info --}}
-                  <div class="flex-1 min-w-0">
-                    <a href="{{ route('product.detail', $item->product->productID ?? 0) }}" class="text-base font-medium text-gray-900 hover:underline">
-                      {{ $item->product->name ?? 'Unknown Product' }}
-                    </a>
-                    <p class="text-sm text-gray-500 mt-1">
-                      @if($item->size) Size: {{ $item->size }} @endif
-                      @if($item->colorway) • Color: {{ $item->colorway }} @endif
-                    </p>
-                    
-                    {{-- Real-time Stock Info --}}
-                    <div class="mt-2 text-xs">
-                      <span class="inline-flex items-center px-2 py-0.5 rounded {{ $warehouseStock > 0 ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800' }}">
-                        Warehouse: {{ $warehouseStock }} left
-                      </span>
-                      <span class="ml-2 text-gray-600">
-                        • Total available: {{ $realTotalStock }}
-                      </span>
+                  <p class="text-sm text-gray-500 mt-1">
+                    @if($item->size) Size: {{ $item->size }} @endif
+                    @if($item->colorway) {{ $item->size ? '•' : '' }} Color: {{ $item->colorway }} @endif
+                  </p>
+                  
+                  {{-- Show discount badge if applicable --}}
+                  @if(isset($item->active_discount))
+                    <span class="inline-block mt-1 text-xs px-2 py-0.5 bg-red-100 text-red-600 rounded">
+                      {{ $item->active_discount->discount_value }}{{ $item->active_discount->discount_type === 'Percentage' ? '%' : '₱' }} OFF
+                    </span>
+                  @endif
+                  
+                  {{-- Show original price if discounted --}}
+                  @if(isset($item->active_discount) && isset($item->original_price))
+                    <div class="mt-1">
+                      <span class="text-sm text-gray-400 line-through">₱{{ number_format($item->original_price, 2) }}</span>
+                      <span class="text-sm font-semibold text-blue-600 ml-2">₱{{ number_format($item->unit_price, 2) }}</span>
                     </div>
-                    
-                    {{-- Stock Issue Warning for this item --}}
-                    @if($hasStockIssue)
-                      <p class="text-xs text-red-600 font-medium mt-2 flex items-center gap-1">
-                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                          <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
-                        </svg>
-                        Only {{ $realTotalStock }} available - please reduce quantity to {{ $realTotalStock }} or less
-                      </p>
-                    @endif
+                  @else
+                    <div class="mt-1">
+                      <span class="text-sm text-gray-600">₱{{ number_format($item->unit_price, 2) }}</span>
+                    </div>
+                  @endif
+                </div>
+
+                {{-- Quantity + Subtotal --}}
+                <div class="flex items-center gap-4">
+                  <div class="flex items-center border rounded-lg">
+                    <button 
+                      wire:click="updateQuantity({{ $item->cart_itemID }}, {{ max(1, $item->quantity - 1) }})" 
+                      class="px-3 py-2 hover:bg-gray-100 transition"
+                    >
+                      -
+                    </button>
+                    <input 
+                      type="text" 
+                      readonly 
+                      value="{{ $item->quantity }}" 
+                      class="w-12 text-center border-0 bg-transparent font-medium" 
+                    />
+                    <button 
+                      wire:click="updateQuantity({{ $item->cart_itemID }}, {{ $item->quantity + 1 }})" 
+                      class="px-3 py-2 hover:bg-gray-100 transition"
+                    >
+                      +
+                    </button>
                   </div>
 
-                  {{-- Quantity Controls + Subtotal --}}
-                  <div class="flex items-center gap-4">
-                    <div class="flex flex-col items-center gap-2">
-                      <div class="flex items-center border border-gray-300 rounded">
-                        {{-- Decrease Button --}}
-                        <button 
-                          wire:click="updateQuantity({{ $item->cart_itemID }}, {{ max(1, $item->quantity - 1) }})" 
-                          class="px-3 py-2 hover:bg-gray-100 transition"
-                          type="button"
-                          title="Decrease quantity"
-                        >
-                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/>
-                          </svg>
-                        </button>
-
-                        {{-- Quantity Display --}}
-                        <input 
-                          type="text" 
-                          readonly 
-                          value="{{ $item->quantity }}" 
-                          class="w-16 text-center border-0 bg-white font-semibold {{ $hasStockIssue ? 'text-red-600' : 'text-gray-900' }}" 
-                        />
-
-                        {{-- Increase Button --}}
-                        <button 
-                          wire:click="updateQuantity({{ $item->cart_itemID }}, {{ $item->quantity + 1 }})"
-                          class="px-3 py-2 transition {{ $isAtLimit ? 'opacity-40 cursor-not-allowed' : 'hover:bg-gray-100' }}"
-                          type="button"
-                          @if($isAtLimit) 
-                            disabled 
-                            title="Maximum stock ({{ $realTotalStock }}) reached"
-                          @endif
-                        >
-                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-                          </svg>
-                        </button>
-                      </div>
-
-                      {{-- Stock Status Badge --}}
-                      @if($isAtLimit)
-                        <span class="text-xs font-medium text-orange-600 bg-orange-50 px-2 py-0.5 rounded">
-                          Max Reached
-                        </span>
-                      @elseif($warehouseStock <= 3 && $warehouseStock > 0)
-                        <span class="text-xs font-medium text-amber-600 bg-amber-50 px-2 py-0.5 rounded">
-                          Low Stock
-                        </span>
-                      @endif
-                    </div>
-
-                    <div class="text-end min-w-[100px]">
-                      <p class="text-base font-bold text-gray-900">₱{{ number_format($item->sub_total, 2) }}</p>
-                      <p class="text-xs text-gray-500 mt-0.5">₱{{ number_format($item->unit_price, 2) }} each</p>
-                      <button 
-                        wire:click="removeItem({{ $item->cart_itemID }})" 
-                        class="text-sm text-red-600 hover:underline mt-2 inline-flex items-center gap-1"
-                        type="button"
-                      >
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                        </svg>
-                        Remove
-                      </button>
-                    </div>
+                  <div class="text-end min-w-[100px]">
+                    <p class="text-base font-bold text-gray-900">₱{{ number_format($item->sub_total, 2) }}</p>
+                    <button 
+                      wire:click="removeItem({{ $item->cart_itemID }})" 
+                      class="text-sm text-red-600 hover:underline mt-1"
+                    >
+                      Remove
+                    </button>
                   </div>
                 </div>
               </div>
             @endforeach
+          </div>
+        @endif
+
+        {{-- Flash Messages --}}
+        @if (session()->has('message'))
+          <div class="mt-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded-lg">
+            {{ session('message') }}
+          </div>
+        @endif
+
+        @if (session()->has('error'))
+          <div class="mt-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg">
+            {{ session('error') }}
           </div>
         @endif
       </div>
@@ -180,49 +141,51 @@
       {{-- Sidebar Order Summary --}}
       <aside class="w-full lg:w-80">
         <div class="space-y-4 rounded-lg border border-gray-200 bg-white p-4 shadow-sm sticky top-4">
-          <p class="text-xl font-semibold text-gray-900">Order Summary</p>
+          <p class="text-xl font-semibold text-gray-900">Order summary</p>
 
           <div class="space-y-4">
-            <dl class="flex items-center justify-between text-sm">
-              <dt class="text-gray-600">Total Items</dt>
-              <dd class="font-medium text-gray-900">{{ $cartCount }}</dd>
+            <div class="space-y-2">
+              <dl class="flex items-center justify-between">
+                <dt class="text-base font-normal text-gray-500">Subtotal</dt>
+                <dd class="text-base font-medium text-gray-900">₱{{ number_format($total ?? 0, 2) }}</dd>
+              </dl>
+
+              {{-- Show total savings if any discounts applied --}}
+              @php
+                $totalSavings = 0;
+                foreach($cartItems as $item) {
+                  if(isset($item->active_discount) && isset($item->original_price)) {
+                    $totalSavings += ($item->original_price - $item->unit_price) * $item->quantity;
+                  }
+                }
+              @endphp
+
+              @if($totalSavings > 0)
+                <dl class="flex items-center justify-between text-green-600">
+                  <dt class="text-base font-normal">Total Savings</dt>
+                  <dd class="text-base font-semibold">-₱{{ number_format($totalSavings, 2) }}</dd>
+                </dl>
+              @endif
+            </div>
+
+            <dl class="flex items-center justify-between border-t pt-4">
+              <dt class="text-lg font-bold text-gray-900">Total</dt>
+              <dd class="text-lg font-bold text-blue-700">₱{{ number_format($total ?? 0, 2) }}</dd>
             </dl>
 
-            <dl class="flex items-center justify-between pt-4 border-t border-gray-200">
-              <dt class="text-lg font-semibold text-gray-900">Subtotal</dt>
-              <dd class="text-lg font-bold text-gray-900">₱{{ number_format($total ?? 0, 2) }}</dd>
-            </dl>
-
-            {{-- Checkout Button with Validation --}}
-            @if($canCheckout && !$cartItems->isEmpty())
-              <button 
-                wire:click="proceedToCheckout"
-                class="flex w-full items-center justify-center rounded-lg bg-blue-600 px-5 py-3 text-sm font-medium text-white hover:bg-blue-700 transition shadow-sm">
-                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-                </svg>
+            @if(!$cartItems->isEmpty())
+              <a 
+                href="{{ route('checkout') }}" 
+                class="flex w-full items-center justify-center rounded-lg bg-blue-700 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-800 transition"
+              >
                 Proceed to Checkout
-              </button>
-            @else
-              <div>
-                <button 
-                  disabled
-                  class="flex w-full items-center justify-center rounded-lg bg-gray-300 px-5 py-3 text-sm font-medium text-gray-500 cursor-not-allowed"
-                  title="{{ $cartItems->isEmpty() ? 'Cart is empty' : 'Please fix stock issues first' }}">
-                  <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
-                  </svg>
-                  Checkout Unavailable
-                </button>
-                @if(!$canCheckout && !$cartItems->isEmpty())
-                  <p class="text-xs text-red-600 text-center mt-2 font-medium">
-                    ⚠️ Fix stock issues above to continue
-                  </p>
-                @endif
-              </div>
+              </a>
             @endif
-
-            <a href="{{ route('products') }}" class="flex items-center justify-center gap-2 text-sm text-blue-600 hover:text-blue-700 mt-4 hover:underline">
+            
+            <a 
+              href="{{ route('products') }}" 
+              class="inline-flex items-center gap-2 text-sm text-blue-700 hover:underline"
+            >
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
               </svg>
