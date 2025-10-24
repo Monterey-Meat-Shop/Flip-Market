@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Order;
+use App\Models\OrderItem;
 use App\Models\ReturnRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -10,9 +11,7 @@ use Illuminate\Support\Facades\Storage;
 
 class ReturnController extends Controller
 {
-    /**
-     * Submit a return request
-     */
+    // Submit a return request
     public function submit(Request $request, Order $order)
     {
         // Get authenticated user's customer
@@ -78,7 +77,7 @@ class ReturnController extends Controller
             $order_itemID = (int) $order_itemID;
 
             // ensure the order item exists and belongs to this order
-            $orderItem = \App\Models\OrderItem::where('order_itemID', $order_itemID)
+            $orderItem = OrderItem::where('order_itemID', $order_itemID)
                 ->where('orderID', $order->orderID)
                 ->first();
 
@@ -116,9 +115,7 @@ class ReturnController extends Controller
             ->with('success', 'Your return request has been submitted successfully!');
     }
 
-    /**
-     * Show a specific return request
-     */
+    //Show a specific return request
     public function show($returnId)
     {
         // Get authenticated user's customer
@@ -142,11 +139,8 @@ class ReturnController extends Controller
         return view('livewire.return-view-page', compact('return'));
     }
 
-    /**
-     * Show return confirmation page
-     */
     public function confirmation()
     {
-        return view('returns.confirmation');
+        return view('livewire.return-confirmation-page');
     }
 }
