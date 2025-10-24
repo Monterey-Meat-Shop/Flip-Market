@@ -17,6 +17,10 @@ use App\Livewire\ProductPage;
 use App\Livewire\ReturnPage;
 use App\Livewire\ReturnConfirmationPage;
 
+use App\Livewire\Auth\ResetPassword; // ✅ make sure this import line exists
+use Illuminate\Support\Facades\Mail; // test email route
+
+
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 use Livewire\Volt\Volt;
@@ -44,6 +48,26 @@ Route::get('/product/{productId}', ProductDetailPage::class)->name('product.deta
 // Login/Register
 Route::get('/login', LoginPage::class)->name('login');
 Route::get('/register', RegisterPage::class)->name('register');
+
+// Forgot Password (🔹 add this line)
+use App\Livewire\Auth\ForgotPassword; // make sure this import exists at the top
+Route::get('/forgot-password', ForgotPassword::class)->name('forgot-password');
+
+// Reset Password (🔹 add this line)
+Route::get('/reset-password/{token}', ResetPassword::class)->name('password.reset');
+
+// //test email route
+// Route::get('/test-email', function () {
+//     try {
+//         Mail::raw('This is a test email from Flip Market (local setup working fine).', function ($message) {
+//             $message->to('your_email@gmail.com') // ← put your real Gmail address here
+//                     ->subject('Flip Market Test Email');
+//         });
+//         return '✅ Test email sent successfully! Check your inbox.';
+//     } catch (\Exception $e) {
+//         return '❌ Failed: ' . $e->getMessage();
+//     }
+// });
 
 // Authenticated routes
 Route::middleware('auth')->group(function () {

@@ -30,7 +30,12 @@ class RegisterPage extends Component
        $this->validate([
     'firstname' => ['required', 'max:255', 'regex:/^[A-Za-z\s\-]+$/'],
     'lastname'  => ['required', 'max:255', 'regex:/^[A-Za-z\s\-]+$/'],
-    'email'     => 'required|email|unique:users,email|max:255',
+    'email' => [
+        'required',
+        'email:rfc,dns', // checks format AND domain existence
+        'unique:users,email',
+        'max:255'
+    ],
     'password'  => 'required|min:8|max:255|confirmed',
     'password_confirmation' => 'required',
     'postal_code' => 'required|numeric|digits_between:4,10',
