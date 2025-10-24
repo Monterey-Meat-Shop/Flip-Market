@@ -26,4 +26,17 @@ class Address extends Model
     {
         return $this->belongsTo(Customer::class, 'customerID', 'customerID');
     }
+
+    public function getFullAddressAttribute(): string
+    {
+        $parts = [
+            $this->address_line_1,
+            $this->address_line_2, 
+            $this->city,
+            $this->province,
+            $this->postal_code,
+        ];
+
+        return implode(', ', array_filter($parts));
+    }
 }

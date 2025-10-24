@@ -18,6 +18,11 @@ class Shipping extends Model
         'shipping_method',
         'shipping_status',
         'shipping_fee',
+        'delivered_at',
+    ];
+
+    protected $casts = [
+        'delivered_at' => 'datetime',
     ];
 
     protected $attributes = [

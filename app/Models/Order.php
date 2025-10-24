@@ -63,6 +63,31 @@ class Order extends Model
         return $this->hasOne(Shipping::class, 'orderID', 'orderID');
     }
 
+    public function shippingAddress(): BelongsTo
+    {
+        // Links 'address_choice' on the orders table to 'addressID' on the addresses table
+        return $this->belongsTo(Address::class, 'address_choice', 'addressID');
+    }
+
+    public function getFormattedShippingAddressAttribute(): string
+{
+    // 1. Try to get the specific address linked by address_choice
+    $address = $this->shippingAddress;
+
+    // 2. If no specific address is linked (address_choice is null), try to use the customer's first address.
+    if (!$address && $this->customer) {
+        $address = $this->customer->address->first();
+    }
+    
+    // 3. Return the formatted address or the fallback text
+    if ($address) {
+        // We know Address::getFullAddressAttribute() exists, so we call it.
+        return $address->full_address;
+    }
+
+    return '— Address Not Found or Selected —';
+}
+
     public function returnRequest()
     {
         return $this->hasOne(ReturnRequest::class, 'orderID', 'orderID');
