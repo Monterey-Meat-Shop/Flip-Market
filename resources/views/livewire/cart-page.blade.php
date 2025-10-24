@@ -90,11 +90,12 @@
                 <div class="flex items-center gap-4">
                   <div class="flex items-center border rounded-lg">
                     <button 
-                      wire:click="updateQuantity({{ $item->cart_itemID }}, {{ max(1, $item->quantity - 1) }})" 
-                      class="px-3 py-2 hover:bg-gray-100 transition"
-                    >
-                      -
-                    </button>
+  wire:click="updateQuantity({{ $item->cart_itemID }}, {{ $item->quantity - 1 }})" 
+  class="px-3 py-2 hover:bg-gray-100 transition disabled:opacity-50 disabled:cursor-not-allowed"
+  @disabled($item->quantity <= 1)
+>
+  -
+</button>
                     <input 
                       type="text" 
                       readonly 
