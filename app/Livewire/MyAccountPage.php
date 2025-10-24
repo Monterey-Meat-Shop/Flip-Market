@@ -80,27 +80,36 @@ class MyAccountPage extends Component
     }
 
     public function saveProfile()
-    {
-        $this->validate([
-            'firstname' => 'required|string|max:255',
-            'lastname' => 'required|string|max:255',
-            'email' => 'required|email|max:255',
-            'phone' => 'nullable|string|max:20',
-        ]);
+{
+    $this->validate([
+        'firstname' => 'required|string|max:255',
+        'lastname'  => 'required|string|max:255',
+        'email'     => 'required|email|max:255',
+        'phone'     => 'nullable|string|max:20',
+    ]);
 
-        try {
-            $this->customer->update([
-                'first_name' => $this->firstname,
-                'last_name' => $this->lastname,
-                'email' => $this->email,
-                'phone' => $this->phone,
-            ]);
+ try {
+    $this->customer->update([
+        'first_name' => $this->firstname,
+        'last_name'  => $this->lastname,
+        'email'      => $this->email,
+        'phone'      => $this->phone,
+    ]);
 
-            session()->flash('success', 'Profile updated successfully!');
-        } catch (\Exception $e) {
-            session()->flash('error', 'Failed to update profile: ' . $e->getMessage());
-        }
-    }
+    // Update Auth user’s name field (optional, keeps it consistent)
+    $fullName = $this->firstname . ' ' . $this->lastname;
+    Auth::user()->update(['name' => $fullName]);
+
+    // 🔥 Dispatch Livewire event (v3 syntax)
+    $this->dispatch('userNameUpdated', $fullName);
+
+    session()->flash('success', 'Profile updated successfully!');
+} catch (\Exception $e) {
+    session()->flash('error', 'Failed to update profile: ' . $e->getMessage());
+}
+
+}
+
 
     public function showNewAddressForm()
     {

@@ -14,6 +14,8 @@ class RegisterPage extends Component
      public $lastname;
     public $email;
     public $password;
+    public $password_confirmation;
+
 
 
     public $phone;
@@ -25,24 +27,24 @@ class RegisterPage extends Component
 
     // validation using livewire :<<
     public function register(){
-        $this->validate([
-            'firstname' => 'required|max:255',
-            'lastname' => 'required|max:255',
-            'email' => 'required|email|unique:users,email|max:255', //kupal kasi eh need pa tuloy check sa user table ung email kung unique
-            'password' => 'required|min:8|max:255',
-            
-            'postal_code' => 'required|max:255',
-            'address_line_1' => 'required|max:255',
-            'address_line_2' => 'max:255',
-            'city' => 'required|max:255',
-            'province' => 'required|max:255',
-            'phone'     => [
-            'required',
-            'regex:/^[0-9]{10,11}$/',
-            // 'unique:customers,phone',
-        ],
+       $this->validate([
+    'firstname' => ['required', 'max:255', 'regex:/^[A-Za-z\s\-]+$/'],
+    'lastname'  => ['required', 'max:255', 'regex:/^[A-Za-z\s\-]+$/'],
+    'email'     => 'required|email|unique:users,email|max:255',
+    'password'  => 'required|min:8|max:255|confirmed',
+    'password_confirmation' => 'required',
+    'postal_code' => 'required|numeric|digits_between:4,10',
+    'address_line_1' => 'required|max:255',
+    'address_line_2' => 'max:255',
+    'city' => ['required', 'max:255', 'regex:/^[A-Za-z\s\-]+$/'],
+    'province' => ['required', 'max:255', 'regex:/^[A-Za-z\s\-]+$/'],
+    'phone' => [
+        'required',
+        'regex:/^[0-9]{10,11}$/',
+    ],
+]);
 
-        ]);
+
 
             $user = User::create([
                 'name' => $this->firstname,

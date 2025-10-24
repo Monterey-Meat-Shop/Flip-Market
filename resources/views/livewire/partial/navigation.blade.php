@@ -96,7 +96,16 @@
             d="M12 2.25a4.5 4.5 0 0 0-4.5 4.5 4.5 4.5 0 0 0 9 0 4.5 4.5 0 0 0-4.5-4.5Zm-7.5 18a7.5 7.5 0 0 1 15 0 .75.75 0 0 1-.75.75H5.25a.75.75 0 0 1-.75-.75Z" 
             clip-rule="evenodd" />
     </svg>
-    <span>{{ auth()->user()->name }}</span>
+    <span 
+    x-data="{ name: '{{ auth()->user()->name }}' }"
+    x-init="
+        window.addEventListener('userNameUpdated', e => {
+            name = e.detail; // Update Alpine state when Livewire fires event
+        });
+    "
+    x-text="name"
+></span>
+
     <svg class="w-3.5 h-3.5 group-hover:text-blue-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
       <path d="M6 9l6 6 6-6"/>
     </svg>
