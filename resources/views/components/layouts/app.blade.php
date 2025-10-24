@@ -4,31 +4,26 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-        <title>{{ $title ?? 'FLIP MARKET' }}</title>
+        <title>{{ $title ?? 'Flip Market' }}</title>
+
+        <!-- ✅ Favicon -->
+        <link rel="icon" type="image/png" href="{{ asset('images/try.png') }}">
+        <link rel="apple-touch-icon" href="{{ asset('images/try.png') }}">
+
         @vite(['resources/css/app.css', 'resources/js/app.js']) 
         @livewireStyles
     </head>
     
-    <body class=" dark:bg-slate-600">
+    <body class="dark:bg-slate-600">
         @livewire('partial.navigation')
-        <main >
-            
-        {{ $slot }}
-    </main>
+        <main>
+            {{ $slot }}
+        </main>
         @livewire('partial.footer')
         @livewireScripts
         <script src="https://unpkg.com/preline/dist/preline.js"></script>
-        
 
-        <head>
-    <!-- Add Montserrat font from Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600&display=swap" rel="stylesheet">
-</head>
-
-
-
-
+        <!-- Fonts -->
+        <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600&display=swap" rel="stylesheet">
     </body> 
 </html>
-
-
