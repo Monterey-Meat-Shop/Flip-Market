@@ -5,6 +5,7 @@ namespace App\Livewire;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 use App\Models\Order;
+use App\Models\OrderItem;
 use App\Models\ReturnRequest;
 use Illuminate\Support\Facades\Auth;
 
@@ -131,7 +132,7 @@ class ReturnPage extends Component
         $returnedItemsData = [];
         foreach ($this->selectedItems as $order_itemID) {   // note variable name
             // extra guard: ensure it exists and belongs to this order
-            $orderItem = \App\Models\OrderItem::where('order_itemID', $order_itemID)
+            $orderItem = OrderItem::where('order_itemID', $order_itemID)
                         ->where('orderID', $this->order->orderID)
                         ->first();
 

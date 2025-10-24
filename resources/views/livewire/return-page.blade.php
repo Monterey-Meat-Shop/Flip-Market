@@ -118,14 +118,14 @@
               return $itemQuantities[$itemId] ?? 0;
             }) }}
           </span>
-          <span class="text-lg font-bold text-blue-600">
+          {{-- <span class="text-lg font-bold text-blue-600">
             Est. Refund: ₱{{ number_format(
               $order->orderItems->whereIn('orderItemID', $selectedItems)->sum(function($item) use ($itemQuantities) {
                 $qty = $itemQuantities[$item->orderItemID] ?? $item->quantity;
                 return ($item->sub_total / $item->quantity) * $qty;
               }), 2
             ) }}
-          </span>
+          </span> --}}
         </div>
       </div>
     @endif
@@ -224,7 +224,7 @@
 
     <!-- Buttons -->
     <div class="flex justify-between mt-5">
-      <a href="{{ route('my.orders') }}" class="px-4 py-2 border border-red-700 rounded-lg text-red-600 hover:bg-red-500 hover:text-white cursor-pointer transition-colors inline-block text-center">Cancel Return</a>
+      <a href="{{ route('my.orders') }}" class="bg-red-600 hover:bg-red-800 text-white rounded-lg px-3 py-2 text-md">Cancel Return</a>
       <button type="submit" class="px-6 py-2 bg-blue-700 text-white rounded-lg hover:bg-blue-800 cursor-pointer transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed" wire:loading.attr="disabled">
         <span wire:loading.remove>Return the Product</span>
         <span wire:loading>

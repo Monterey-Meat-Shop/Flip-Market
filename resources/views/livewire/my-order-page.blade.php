@@ -16,7 +16,7 @@
   <h2 class="text-xl font-semibold text-gray-900 sm:text-2xl mb-4">My Orders</h2>
 
   <!-- Tabs -->
-  <div class="flex flex-wrap gap-6 text-md font-medium text-gray-600 mb-4 ">
+  <div class="flex flex-wrap gap-6 text-md font-medium text-gray-600 mb-4">
     <button wire:click="setActiveTab('all')" 
             class="cursor-pointer pb-2 border-b-2 {{ $activeTab === 'all' ? 'border-blue-500 text-blue-600' : 'border-transparent hover:text-blue-600' }}">
       All
@@ -79,100 +79,122 @@
       @endphp
       
       <!-- Order Item -->
-      <div class="bg-white border border-gray-300 rounded-lg mb-4 h-50">
+      <div class="bg-white border border-gray-300 rounded-lg mb-6 shadow-sm hover:shadow-md transition-shadow duration-200">
         <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center px-4 py-2 border-b border-gray-300">
           <span class="font-medium text-lg text-gray-700">Order Id: #{{ $order->orderID }}</span>
           <div class="flex items-center gap-2 mt-2 sm:mt-0">
             <span class="text-sm font-medium text-gray-500">{{ $order->order_date->format('M d, Y') }}</span>
-            <span class="px-3 py-2 {{ $statusBg }} {{ $statusText }} text-md font-medium rounded-full">
+            <span class="px-3 py-1 {{ $statusBg }} {{ $statusText }} text-md font-medium rounded-full">
               {{ $statusLabel }}
             </span>
           </div>
         </div>
 
+        <!-- Each Item -->
         @foreach($order->orderItems as $item)
-        <div class="flex flex-col sm:flex-row sm:items-start sm:space-x-4 p-4 {{ !$loop->last ? 'border-b border-gray-100' : '' }}">
-          <!-- Product Image -->
-          <div class="shrink-0 mx-auto sm:mx-0">
-            @if($item->product && $item->product->image_path)
-              <img src="{{ asset('storage/' . $item->product->image_path) }}" 
-                   alt="{{ $item->product->name }}"
-                   class="w-28 h-28 object-cover rounded-md mx-2">
-            @else
-              <div class="w-24 h-24 bg-gray-200 rounded-md flex items-center justify-center">
-                <span class="text-gray-500 text-xs font-semibold">
-                  {{ strtoupper(substr($item->product->name ?? 'Product', 0, 2)) }}
-                </span>
-              </div>
-            @endif
-          </div>
-          
-          <!-- Product Details -->
-          <div class="flex-1 mt-3 sm:mt-0">
-            <h3 class="text-lg font-medium text-gray-800 mb-2">{{ $item->product->name ?? 'Product Name' }}</h3>
-            @if($item->colorway || $item->size)
-            <p class="text-md text-gray-500 mb-3">
-              @if($item->colorway){{ $item->colorway }}@endif@if($item->colorway && $item->size) | @endif@if($item->size)Size: {{ $item->size }}@endif
-            </p>
-            @endif
-            <div class="flex flex-wrap gap-2">
-              @if($item->product->brand)
-                <span class="text-md text-blue-600 border border-blue-400 rounded px-2 py-0.5">{{ $item->product->brand->name }}</span>
-              @endif
-              @if($item->product->category)
-                <span class="text-md text-blue-600 border border-blue-400 rounded px-2 py-0.5">{{ $item->product->category->name }}</span>
-              @endif
-            </div>
-          </div>
-
-          <!-- Price and Actions -->
-          <div class="text-right text-md text-gray-700 mt-4 sm:mt-0">
-            <p class="font-medium">₱{{ number_format($item->sub_total, 2) }}</p>
-            <p>Qty: {{ $item->quantity }}</p>
-            
-            @if($loop->last) <!-- Only show buttons on last item -->
-            <div class="flex flex-col sm:flex-row sm:justify-end gap-2 mt-4">
-              <button wire:click="viewOrderDetails({{ $order->orderID }})"
-                      class="bg-blue-600 hover:bg-blue-800 text-white rounded-lg px-3 py-2 text-md">
-                View Order Details
-              </button>
-              
-              @if($order->order_status === 'pending')
-                <button wire:click="cancelOrder({{ $order->orderID }})"
-                        wire:confirm="Are you sure you want to cancel this order?"
-                        class="bg-red-600 hover:bg-red-800 text-white rounded-lg px-3 py-2 text-md">
-                  Cancel Order
-                </button>
-              @elseif($canReturn)
-                <button wire:click="requestReturn({{ $order->orderID }})"
-                        wire:confirm="Are you sure you want to request a return for this order?"
-                        class="bg-orange-600 hover:bg-orange-800 text-white rounded-lg px-3 py-2 text-md">
-                  Return Order
-                </button>
-              @elseif($hasReturnRequest)
-                <div class="flex flex-col gap-1">
-                  <span class="text-xs text-yellow-600 font-medium">Return Status: {{ ucfirst($order->returnRequest->return_status) }}</span>
-                  <a href="{{ route('returns.show', $order->returnRequest->returnID) }}" 
-                     class="bg-gray-600 hover:bg-gray-800 text-white rounded-lg px-3 py-2 text-md text-center">
-                    View Return
-                  </a>
+          <div class="flex flex-col sm:flex-row sm:items-start sm:space-x-4 p-4 border-b border-gray-100 last:border-b-0">
+            <!-- Product Image -->
+            <div class="w-28 h-28 flex-shrink-0 mx-auto sm:mx-0">
+              @if($item->product && $item->product->image_path)
+                <img src="{{ asset('storage/' . $item->product->image_path) }}" 
+                     alt="{{ $item->product->name }}"
+                     class="w-full h-full object-cover rounded-md">
+              @else
+                <div class="w-full h-full bg-gray-200 rounded-md flex items-center justify-center">
+                  <span class="text-gray-500 text-xs font-semibold">
+                    {{ strtoupper(substr($item->product->name ?? 'Product', 0, 2)) }}
+                  </span>
                 </div>
               @endif
-
             </div>
+
+            <!-- Product Details -->
+            <div class="flex flex-col justify-between flex-1 mt-3 sm:mt-0">
+              <div>
+                <h3 class="text-lg font-medium text-gray-800">{{ $item->product->name ?? 'Product Name' }}</h3>
+                @if($item->colorway || $item->size)
+                  <p class="text-md text-gray-500 mt-1">
+                    @if($item->colorway){{ $item->colorway }}@endif
+                    @if($item->colorway && $item->size) | @endif
+                    @if($item->size)Size: {{ $item->size }}@endif
+                  </p>
+                @endif
+                <div class="flex flex-wrap gap-2 mt-2">
+                  @if($item->product->brand)
+                    <span class="text-sm text-blue-600 border border-blue-400 rounded px-2 py-0.5">{{ $item->product->brand->name }}</span>
+                  @endif
+                  @if($item->product->category)
+                    <span class="text-sm text-blue-600 border border-blue-400 rounded px-2 py-0.5">{{ $item->product->category->name }}</span>
+                  @endif
+                </div>
+              </div>
+
+              <!-- Price -->
+              <div class="text-right mt-3 sm:mt-0">
+                <p class="font-medium text-gray-700">₱{{ number_format($item->sub_total, 2) }}</p>
+                <p class="text-sm text-gray-500">Qty: {{ $item->quantity }}</p>
+              </div>
+            </div>
+          </div>
+        @endforeach
+
+        <!-- Order Actions -->
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between px-4 py-3 bg-gray-50 border-t border-gray-200">
+          <!-- Left side: Return Status -->
+          @if($hasReturnRequest)
+            @php
+                $status = strtolower($order->returnRequest->return_status);
+                $statusColor = match($status) {
+                    'completed' => 'text-green-600',   
+                    'approved' => 'text-blue-600',     
+                    'rejected' => 'text-red-600',      
+                    default => 'text-yellow-600',
+                };
+            @endphp
+
+            <span class="text-sm font-medium {{ $statusColor }} mb-2 sm:mb-0">
+              Return Status: {{ ucfirst($order->returnRequest->return_status) }}
+            </span>
+          @else
+            <span></span> <!-- Empty placeholder for alignment -->
+          @endif
+
+          <!-- Right side: Buttons -->
+          <div class="flex flex-col sm:flex-row sm:items-center gap-2">
+            <button wire:click="viewOrderDetails({{ $order->orderID }})"
+                    class="bg-blue-600 hover:bg-blue-800 text-white rounded-lg px-3 py-2 text-md">
+              View Order Details
+            </button>
+
+            @if($order->order_status === 'pending')
+              <button wire:click="cancelOrder({{ $order->orderID }})"
+                      wire:confirm="Are you sure you want to cancel this order?"
+                      class="bg-red-600 hover:bg-red-800 text-white rounded-lg px-3 py-2 text-md">
+                Cancel Order
+              </button>
+            @elseif($canReturn)
+              <button wire:click="requestReturn({{ $order->orderID }})"
+                      wire:confirm="Are you sure you want to request a return for this order?"
+                      class="bg-red-600 hover:bg-red-800 text-white rounded-lg px-3 py-2 text-md">
+                Return Order
+              </button>
+            @elseif($hasReturnRequest)
+              <a href="{{ route('returns.show', $order->returnRequest->returnID) }}" 
+                 class="bg-gray-600 hover:bg-gray-800 text-white rounded-lg px-3 py-2 text-md text-center">
+                View Return
+              </a>
             @endif
           </div>
         </div>
-        @endforeach
 
         <!-- Order Summary -->
         @if($order->orderItems->count() > 1)
-        <div class="px-4 py-2 bg-gray-50 border-t border-gray-200 text-sm text-gray-600">
-          <div class="flex justify-between">
-            <span>{{ $order->orderItems->count() }} items</span>
-            <span class="font-medium">Total: ₱{{ number_format($order->final_amount, 2) }}</span>
+          <div class="px-4 py-2 bg-gray-100 border-t border-gray-200 text-sm text-gray-600">
+            <div class="flex justify-between">
+              <span>{{ $order->orderItems->count() }} items</span>
+              <span class="font-medium">Total: ₱{{ number_format($order->final_amount, 2) }}</span>
+            </div>
           </div>
-        </div>
         @endif
       </div>
     @endforeach

@@ -55,6 +55,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/return/{orderId}', ReturnPage::class)->name('return.page');
     Route::post('/returns/{order}/submit', [ReturnController::class, 'submit'])->name('returns.submit');
     Route::get('/returns/confirmation', [ReturnController::class, 'confirmation'])->name('returns.confirmation');
+    // Route::get('/returns/confirmation', [ReturnController::class, 'confirmation'])->name('returns.confirmation');
     Route::get('/returns/{returnId}', [ReturnController::class, 'show'])->name('returns.show');
     
     // Order details - pass orderId as parameter
