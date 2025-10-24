@@ -523,17 +523,15 @@ class TransactionResource extends Resource
                                 ),
 
                             Select::make('status')
-    ->label('Payment Status')
-    ->options([
-        'unpaid'    => 'Unpaid',
-        'verified'  => 'Verified',
-        'completed' => 'Completed',
-        'failed'    => 'Failed',
-    ])
-    ->default('verified')
-    ->required()
-    ->dehydrated(true),
-
+                                ->label('Payment Status')
+                                ->options([
+                                    'unpaid' => 'Unpaid',
+                                    'paid' => 'Paid',
+                                    'verified' => 'Verified',
+                                ])
+                                ->default('paid')
+                                ->required()
+                                ->dehydrated(true),
                         ])->columns(2),
                 ])->columnSpan(2),
 
