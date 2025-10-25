@@ -85,31 +85,36 @@
           @auth
             <div class="relative" x-data="{ dropdown: false }">
   <button 
-    @click="dropdown = !dropdown" 
-    class="group inline-flex items-center gap-1.5 px-3 py-2 rounded-lg font-medium text-[13px] text-gray-700 hover:bg-blue-50 transition-all duration-200"
-  >
-    <svg xmlns="http://www.w3.org/2000/svg" 
-         viewBox="0 0 24 24" 
-         fill="currentColor" 
-         class="w-[18px] h-[18px] text-gray-700 group-hover:text-blue-500 transition-colors duration-200">
-      <path fill-rule="evenodd" 
-            d="M12 2.25a4.5 4.5 0 0 0-4.5 4.5 4.5 4.5 0 0 0 9 0 4.5 4.5 0 0 0-4.5-4.5Zm-7.5 18a7.5 7.5 0 0 1 15 0 .75.75 0 0 1-.75.75H5.25a.75.75 0 0 1-.75-.75Z" 
-            clip-rule="evenodd" />
-    </svg>
-    <span 
+  @click="dropdown = !dropdown" 
+  class="group inline-flex items-center gap-1.5 px-3 py-2 rounded-lg font-medium text-[13px] text-gray-700 hover:bg-blue-50 transition-all duration-200"
+>
+  <!-- User Icon -->
+  <svg xmlns="http://www.w3.org/2000/svg" 
+       viewBox="0 0 24 24" 
+       fill="currentColor" 
+       class="w-[18px] h-[18px] text-gray-700 group-hover:text-blue-500 transition-colors duration-200">
+    <path fill-rule="evenodd" 
+          d="M12 2.25a4.5 4.5 0 0 0-4.5 4.5 4.5 4.5 0 0 0 9 0 4.5 4.5 0 0 0-4.5-4.5Zm-7.5 18a7.5 7.5 0 0 1 15 0 .75.75 0 0 1-.75.75H5.25a.75.75 0 0 1-.75-.75Z" 
+          clip-rule="evenodd" />
+  </svg>
+
+  <!-- ✅ Dynamic User Name -->
+  <span 
     x-data="{ name: '{{ auth()->user()->name }}' }"
     x-init="
         window.addEventListener('userNameUpdated', e => {
-            name = e.detail; // Update Alpine state when Livewire fires event
+            name = e.detail; // updates instantly after profile save
         });
     "
     x-text="name"
-></span>
+  ></span>
 
-    <svg class="w-3.5 h-3.5 group-hover:text-blue-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path d="M6 9l6 6 6-6"/>
-    </svg>
-  </button>
+  <!-- Dropdown Arrow -->
+  <svg class="w-3.5 h-3.5 group-hover:text-blue-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path d="M6 9l6 6 6-6"/>
+  </svg>
+</button>
+
 
   <div 
     x-show="dropdown"

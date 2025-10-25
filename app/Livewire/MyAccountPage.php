@@ -79,36 +79,73 @@ class MyAccountPage extends Component
         $this->addresses = $this->customer->address()->get();
     }
 
-    public function saveProfile()
+  public function saveProfile()
 {
     $this->validate([
-        'firstname' => 'required|string|max:255',
-        'lastname'  => 'required|string|max:255',
-        'email'     => 'required|email|max:255',
-        'phone'     => 'nullable|string|max:20',
+        'firstname' => [
+            'required',
+            'string',
+            'max:255',
+            'regex:/^[A-Za-z\s\-]+$/',
+            'not_regex:/[0-9!@#$%^&*(),.?":{}|<>]/'
+        ],
+        'lastname' => [
+            'required',
+            'string',
+            'max:255',
+            'regex:/^[A-Za-z\s\-]+$/',
+            'not_regex:/[0-9!@#$%^&*(),.?":{}|<>]/'
+        ],
+        'email' => [
+            'required',
+            'email:rfc,dns',
+            'max:255'
+        ],
+        'phone' => [
+            'nullable',
+            'regex:/^[0-9]{11}$/'
+        ],
+    ], [
+        'firstname.regex' => 'The first name may only contain letters, spaces, or hyphens.',
+        'lastname.regex' => 'The last name may only contain letters, spaces, or hyphens.',
+        'firstname.not_regex' => 'The first name cannot contain symbols or numbers.',
+        'lastname.not_regex' => 'The last name cannot contain symbols or numbers.',
+        'phone.regex' => 'The phone number must be exactly 11 digits and contain numbers only.',
+        'email.email' => 'Please enter a valid and active email address.',
     ]);
 
- try {
-    $this->customer->update([
-        'first_name' => $this->firstname,
-        'last_name'  => $this->lastname,
-        'email'      => $this->email,
-        'phone'      => $this->phone,
-    ]);
+    try {
+        // ✅ Update customer table
+        $this->customer->update([
+            'first_name' => $this->firstname,
+            'last_name'  => $this->lastname,
+            'email'      => $this->email,
+            'phone'      => $this->phone,
+        ]);
 
-    // Update Auth user’s name field (optional, keeps it consistent)
-    $fullName = $this->firstname . ' ' . $this->lastname;
-    Auth::user()->update(['name' => $fullName]);
+        // ✅ Update Auth user and refresh the session
+        Auth::user()->update(['name' => "{$this->firstname} {$this->lastname}"]);
+        Auth::setUser(Auth::user()->fresh()); // 💡 Forces session refresh
 
-    // 🔥 Dispatch Livewire event (v3 syntax)
-    $this->dispatch('userNameUpdated', $fullName);
+        // ✅ Notify navigation bar & frontend
+        $updatedName = "{$this->firstname} {$this->lastname}";
+        $this->dispatch('userNameUpdated', $updatedName);
 
-    session()->flash('success', 'Profile updated successfully!');
-} catch (\Exception $e) {
-    session()->flash('error', 'Failed to update profile: ' . $e->getMessage());
+        // ✅ Toast success message
+        $this->dispatch('notify', [
+            'message' => 'Profile updated successfully!',
+            'type' => 'success',
+        ]);
+    } catch (\Exception $e) {
+        $this->dispatch('notify', [
+            'message' => 'Failed to update profile: ' . $e->getMessage(),
+            'type' => 'error',
+        ]);
+    }
 }
 
-}
+
+
 
 
     public function showNewAddressForm()
