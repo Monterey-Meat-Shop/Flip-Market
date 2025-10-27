@@ -234,9 +234,12 @@ class ViewOrder extends ViewRecord
                                 ->schema([
                                     RepeatableEntry::make('orderItems')
                                         ->label('Items')
+                                        ->contained(false)
                                         ->schema([
-                                            TextEntry::make('product_name') // Check your OrderItem model for this accessor/relationship
+                                            TextEntry::make('product.name')
                                                 ->label('Product'),
+                                            TextEntry::make('productvariant.colorway')
+                                                ->label('Colorway'),
 
                                             TextEntry::make('unit_price')
                                                 ->label('Unit Price')
@@ -245,14 +248,14 @@ class ViewOrder extends ViewRecord
                                             TextEntry::make('quantity')
                                                 ->label('Qty'),
 
-                                            TextEntry::make('line_total') // Calculate total for this item
+                                            TextEntry::make('line_total')
                                                 ->label('Subtotal')
                                                 ->getStateUsing(fn ($record) => $record->quantity * $record->unit_price)
                                                 ->money('PHP'),
                                         ])
-                                        ->columns(4)
+                                        ->columns(5)
                                         ->contained(false),
-                            ]),
+                                ]),
                             
                     ])->columns(2),
 
@@ -265,7 +268,6 @@ class ViewOrder extends ViewRecord
                                     ->height(500) 
                                     ->width(450)
                                     ->defaultImageUrl(fn () => null)
-                                    // Only show the image section if a screenshot path is present
                                     ->visible(fn ($record) => filled($record->payment?->screenshot_path)),
                             ])
                             ->columnSpan(2),
@@ -285,6 +287,33 @@ class ViewOrder extends ViewRecord
                                         'failed', 'cancelled', 'refunded' => 'danger',
                                         default => 'gray',
                                     }),
+
+                                TextEntry::make('discount_name')
+                                    ->label('Discount Applied')
+                                    ->default('None'),
+
+                // 2. Shipping Fee
+                TextEntry::make('shipping_fee')
+                    ->label('Shipping Fee')
+                    ->money('PHP'),
+                
+                // 3. Subtotal (Before Discount)
+                TextEntry::make('subtotal')
+                    ->label('Subtotal')
+                    // Calculate the sum of all line items
+                    ->getStateUsing(function ($record) {
+                        return $record->orderItems->sum(function ($item) {
+                            return $item->quantity * $item->unit_price;
+                        });
+                    })
+                    ->money('PHP'),
+
+                // 4. Final Total (After Discount + Shipping)
+                TextEntry::make('total_price')
+                    ->label('Final Total')
+                    ->size(TextEntrySize::Large) // Make the total stand out
+                    ->weight(FontWeight::Bold)
+                    ->money('PHP')
                             ])->columns(2),
                     ])
                     ->columns(2),
