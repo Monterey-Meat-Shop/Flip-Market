@@ -1,15 +1,4 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Order Details - #{{ $order->orderID }}</title>
-  @vite(['resources/css/app.css', 'resources/js/app.js'])
-  @livewireStyles
-</head>
-<body class="bg-gray-50">
-  
-  <div class="w-full max-w-[85rem] py-10 px-4 sm:px-6 lg:px-8 mx-auto min-h-screen">
+<div class="w-full max-w-[85rem] py-10 px-4 sm:px-6 lg:px-8 mx-auto min-h-screen">
     <h2 class="text-xl font-semibold text-gray-900 sm:text-2xl">Order Details</h2>
 
     <!-- Grid -->
@@ -139,6 +128,18 @@
             </thead>
             <tbody>
               @foreach($order->orderItems as $item)
+              @php
+                // Check if item has discount based on stored data
+                $hasDiscount = (!empty($item->original_price) && $item->original_price > $item->unit_price) 
+                            || (!empty($item->discount_amount) && $item->discount_amount > 0);
+                
+                if ($hasDiscount) {
+                    $originalPrice = !empty($item->original_price) 
+                        ? $item->original_price 
+                        : ($item->unit_price + $item->discount_amount);
+                    $savings = $originalPrice - $item->unit_price;
+                }
+              @endphp
               <tr wire:key="{{ $item->order_itemID }}" class="border-b">
                 <td class="py-4">
                   <div class="flex items-center">
@@ -163,10 +164,17 @@
                       @endif
 
                       {{-- Show discount badge if item has discount --}}
-                      @if(isset($item->has_discount) && $item->has_discount)
-                        <span class="inline-block mt-1 text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded">
-                          Discounted
-                        </span>
+                      @if($hasDiscount)
+                        <div class="flex items-center gap-2 mt-1">
+                          <span class="inline-block text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded">
+                            Discounted
+                          </span>
+                          @if(!empty($item->discount_name))
+                            <span class="text-xs text-gray-500">
+                              ({{ $item->discount_name }})
+                            </span>
+                          @endif
+                        </div>
                       @endif
                     </div>
                   </div>
@@ -174,9 +182,10 @@
                 <td class="py-4">
                   <div>
                     {{-- Show original price if discounted --}}
-                    @if(isset($item->has_discount) && $item->has_discount && isset($item->original_unit_price))
-                      <span class="text-xs text-gray-400 line-through block">₱{{ number_format($item->original_unit_price, 2) }}</span>
+                    @if($hasDiscount)
+                      <span class="text-xs text-gray-400 line-through block">₱{{ number_format($originalPrice, 2) }}</span>
                       <span class="font-semibold text-green-600">₱{{ number_format($item->unit_price, 2) }}</span>
+                      <span class="text-xs text-green-600 block">Save ₱{{ number_format($savings, 2) }}</span>
                     @else
                       <span class="font-semibold">₱{{ number_format($item->unit_price, 2) }}</span>
                     @endif
@@ -279,7 +288,12 @@
             {{-- Coupon Discount --}}
             @if($order->discount && $couponDiscountAmount > 0)
             <div class="flex justify-between text-green-600">
-              <span class="text-sm">Coupon Discount</span>
+              <span class="text-sm">
+                Coupon Discount
+                @if($order->discount->name)
+                  <span class="block text-xs text-gray-500">({{ $order->discount->name }})</span>
+                @endif
+              </span>
               <span class="text-sm font-semibold">-₱{{ number_format($couponDiscountAmount, 2) }}</span>
             </div>
             @endif
@@ -319,8 +333,4 @@
         </a>
       </div>
     </div>
-  </div>
-
-  @livewireScripts
-</body>
-</html>
+</div>

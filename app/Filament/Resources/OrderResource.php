@@ -66,14 +66,19 @@ class OrderResource extends Resource
         return auth()->user()->hasRole(['admin', 'manager']);
     }
 
+    public static function canViewAny(): bool
+    {
+        return Auth::user()->hasAnyRole(['admin', 'manager', 'cashier']);
+    }
+
     public static function canCreate(): bool
     {
-        return auth()->user()->hasRole('admin');
+        return auth()->user()->hasRole('');
     }
 
     public static function canEdit(Model $record): bool
     {
-        return auth()->user()->hasRole('manager');
+        return auth()->user()->hasRole(['admin', 'manager']);// need to change
     }
 
     public static function canDelete(Model $record): bool
@@ -658,46 +663,39 @@ class OrderResource extends Resource
         return $table
             ->defaultSort('orderID', 'desc')
             ->columns([
-                TextColumn::make('orderID')
-                    ->label('Order ID')
-                    ->searchable()
-                    ->sortable(),
+                // TextColumn::make('orderID')
+                //     ->label('Order ID')
+                //     ->searchable()
+                //     ->sortable(),
 
-                TextColumn::make('customer.first_name')
-                    ->label('Customer')
+                 TextColumn::make('payment.reference_number')
+                    ->label('Reference No.')
+                    ->sortable()
+                    ->formatStateUsing(fn ($state) => $state ?? 'N/A'),
+
+                TextColumn::make('payment.paymentMethod.method_name')
+                    ->label('Payment')
                     ->searchable()
                     ->sortable()
-                    ->formatStateUsing(fn ($state, $record) => $record->customer?->first_name),
+                    ->formatStateUsing(fn ($state) => $state ?? 'N/A'),
 
-                TextColumn::make('total_amount')
+                TextColumn::make('payment.amount')
                     ->numeric()
                     ->sortable()
                     ->money('PHP'),
 
-                TextColumn::make('payment.paymentMethod.method_name')
-                    ->label('Payment Method')
-                    ->searchable()
-                    ->sortable()
-                    ->formatStateUsing(fn ($state) => $state ?? 'N/A'),
-
-                TextColumn::make('payment.status')
-                    ->label('Payment Status')
-                    ->badge()
-                    ->color(fn (string $state): string => match ($state) {
-                        'pending' => 'warning',
-                        'paid', 'verified' => 'success',
-                        'failed' => 'danger',
-                        'unpaid' => 'warning',
-                        'completed' => 'success',
-                    })
-                    ->sortable()
-                    ->formatStateUsing(fn ($state) => $state ?? 'N/A'),
-
-                TextColumn::make('payment.reference_number')
-                    ->label('Reference No.')
-                    ->sortable()
-                    ->formatStateUsing(fn ($state) => $state ?? 'N/A')
-                    ->toggleable(isToggledHiddenByDefault: true),
+                // TextColumn::make('payment.status')
+                //     ->label('Payment Status')
+                //     ->badge()
+                //     ->color(fn (string $state): string => match ($state) {
+                //         'pending' => 'warning',
+                //         'paid', 'verified' => 'success',
+                //         'failed' => 'danger',
+                //         'unpaid' => 'warning',
+                //         'completed' => 'success',
+                //     })
+                //     ->sortable()
+                //     ->formatStateUsing(fn ($state) => $state ?? 'N/A'),
 
                 TextColumn::make('order_status')
                     ->label('Order Status')
@@ -715,7 +713,7 @@ class OrderResource extends Resource
                     }),
 
                 TextColumn::make('shipping.shipping_status')
-                    ->label('Shipping Status')
+                    ->label('Shipping')
                     ->sortable()
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {
@@ -726,19 +724,140 @@ class OrderResource extends Resource
                     })
                     ->formatStateUsing(fn ($state) => $state ?? 'N/A'),
 
+                TextColumn::make('customer.first_name')//make customer full name
+                    ->label('Customer')
+                    ->searchable()
+                    ->sortable()
+                    ->formatStateUsing(fn ($state, $record) => $record->customer?->first_name)
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('order_date')->dateTime()->sortable()->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('updated_at')->dateTime()->sortable()->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('deleted_at')->label('Archived Date')->dateTime()->sortable()->toggleable(isToggledHiddenByDefault: true),
             ])
             ->actions([
-                Tables\Actions\ActionGroup::make([
                     Tables\Actions\ViewAction::make(),
-                    Tables\Actions\EditAction::make(),
-                    Tables\Actions\DeleteAction::make(),
+                    // Tables\Actions\EditAction::make(),
+                    Tables\Actions\DeleteAction::make()
+                        ->label('Archive')
+                        ->modalHeading('Archive Order')
+                        ->modalDescription('Are you sure you want to archive this order? You can restore it later if needed.')
+                        ->modalSubmitActionLabel('Archive') 
+                        ->modalCancelActionLabel('Cancel') 
+                        ->color('danger')
+                        ->icon('heroicon-o-archive-box')
+                        ->visible(fn ($record) => in_array($record->order_status, ['completed', 'cancelled', 'returned'])),
                     Tables\Actions\RestoreAction::make(),
                     Tables\Actions\ForceDeleteAction::make(),
+
+                    Tables\Actions\Action::make('accept')
+                        ->label('Accept Order')
+                        ->icon('heroicon-o-check-circle')
+                        ->color('success')
+                        ->requiresConfirmation()
+                        ->visible(fn (Order $record) => $record->order_status === 'pending')
+                        ->action(function (Order $record) {
+                    
+                            $shipping = $record->shipping;
+                            $shippingStatus = 'processing'; 
+
+                            if (strtoupper($shipping?->shipping_method) === 'LALAMOVE') {
+                                $shippingStatus = 'in_transit';
+                            }
+
+                            $record->update([
+                                'order_status' => 'processing',
+                            ]);
+
+                            $record->payment()->update([
+                                //'status' => 'paid',
+                                'status' => 'completed',
+                            ]);
+
+                            if ($shipping) {
+                                $shipping->update([
+                                    'shipping_status' => $shippingStatus,
+                                ]);
+                            } else {
+                                \Filament\Notifications\Notification::make()
+                                    ->title('Warning: Shipping record missing for this order.')
+                                    ->warning()
+                                    ->send();
+                            }
+
+                            \Filament\Notifications\Notification::make()
+                                ->title('Order Accepted')
+                                ->success()
+                                ->send();
+                    }),
+
+                    // Tables\Actions\Action::make('reject')
+                    //     ->label('Reject Order')
+                    //     ->icon('heroicon-o-x-circle')
+                    //     ->color('danger')
+                    //     ->requiresConfirmation()
+                    //     ->visible(fn ($record) => $record->order_status === 'pending')
+                    //     ->action(function ($record) {
+                    //         $record->update([
+                    //             'order_status' => 'failed',
+                    //             // 'rejected_at' => now(),
+                    //         ]);
+
+                    //         \Filament\Notifications\Notification::make()
+                    //             ->title('Order Rejected')
+                    //             ->danger()
+                    //             ->send();
+                    //     }),
+
+                    Tables\Actions\Action::make('in_transit')
+                        ->label('In Transit')
+                        ->icon('heroicon-o-truck')
+                        ->color('warning')
+                        ->requiresConfirmation()
+                        ->visible(fn (Order $record) => $record->shipping?->shipping_status === 'processing')
+                        ->action(function (Order $record) {
+                            $record->shipping->update([
+                                'shipping_status' => 'in_transit',
+                                // 'in_transit_at' => now(),
+                            ]);
+
+                            \Filament\Notifications\Notification::make()
+                                ->title('Order In Transit')
+                                ->warning()
+                                ->send();
+                        }),
+
+                    Tables\Actions\Action::make('deliver')
+                        ->label('Delivered')
+                        ->icon('heroicon-o-truck')
+                        ->color('success')
+                        ->requiresConfirmation()
+                        ->visible(fn (Order $record) => $record->shipping?->shipping_status === 'in_transit')
+                        ->action(function (Order $record) {
+                            $shipping = $record->shipping;
+
+                            if ($shipping) {
+                                $shipping->update([
+                                    'shipping_status' => 'delivered',
+                                    // 'delivered_at' => now(),
+                                ]);
+                            } else {
+                                 \Filament\Notifications\Notification::make()
+                                    ->title('Error: Cannot deliver, shipping record missing.')
+                                    ->danger()
+                                    ->send();
+                                return;
+                            }
+
+                            $record->update([
+                                'order_status' => 'completed',
+                            ]);
+
+                            \Filament\Notifications\Notification::make()
+                                ->title('Order Delivered')
+                                ->success()
+                                ->send();
+                        }),
                 ])
-            ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make(),
@@ -767,10 +886,4 @@ class OrderResource extends Resource
             'edit' => Pages\EditOrder::route('/{record}/edit'),
         ];
     }
-
-    public static function canViewAny(): bool
-    {
-        return Auth::user()->hasAnyRole(['admin', 'manager', 'cashier']);
-    }
-
 }

@@ -31,7 +31,8 @@ return new class extends Migration
                 'cancelled', 
                 'pre-order',
                 'return_requested',
-                'returned'
+                'returned',
+                'failed'
             ])->default('pending');
             $table->enum('payment_status', ['unpaid', 'paid', 'verified'])->default('unpaid');
 

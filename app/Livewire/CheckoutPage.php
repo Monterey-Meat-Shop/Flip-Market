@@ -25,7 +25,7 @@ class CheckoutPage extends Component
     public $subtotal = 0;
     public $deliveryFee = 70;
     public $discountAmount = 0;
-    public $productDiscountSavings = 0; // New: Track product-level discount savings
+    public $productDiscountSavings = 0;
     public $totalAmount = 0;
     public $cartCount = 0;
 
@@ -193,11 +193,13 @@ class CheckoutPage extends Component
                 // Store discount info for display
                 $item->active_discount = $activeDiscount;
                 $item->original_price = $basePrice;
+                $item->discount_amount = $basePrice - $discountedPrice;
             } else {
                 // No discount, use original price
                 $item->unit_price = $basePrice;
                 $item->sub_total = $basePrice * $item->quantity;
                 $item->original_price = $basePrice;
+                $item->discount_amount = 0;
             }
         }
 
@@ -422,9 +424,14 @@ class CheckoutPage extends Component
                     'province' => $selectedAddress->province,
                 ]);
 
-                // Create order items with discounted prices
+                // Create order items with discount information
                 foreach ($this->cartItems as $cartItem) {
-                    // Use the already calculated discounted prices from cart
+                    // Get the active discount info
+                    $activeDiscount = isset($cartItem->active_discount) ? $cartItem->active_discount : null;
+                    $discountName = $activeDiscount ? $activeDiscount->name : null;
+                    $originalPrice = $cartItem->original_price ?? $cartItem->unit_price;
+                    $discountAmount = $cartItem->discount_amount ?? 0;
+                    
                     OrderItem::create([
                         'orderID' => $order->orderID,
                         'productID' => $cartItem->productID,
@@ -432,8 +439,11 @@ class CheckoutPage extends Component
                         'size' => $cartItem->size,
                         'colorway' => $cartItem->colorway,
                         'quantity' => $cartItem->quantity,
-                        'unit_price' => $cartItem->unit_price, // This is already discounted
-                        'sub_total' => $cartItem->sub_total, // This is already discounted
+                        'unit_price' => $cartItem->unit_price, // Discounted price
+                        'original_price' => $originalPrice, // Original price before discount
+                        'discount_name' => $discountName, // Name of the discount
+                        'discount_amount' => $discountAmount, // Discount amount per unit
+                        'sub_total' => $cartItem->sub_total, // Total with discount applied
                     ]);
 
                     if (!$cartItem->variant) {

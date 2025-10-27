@@ -42,4 +42,10 @@ class Customer extends Model
     {
        return $this->hasMany(CartItem::class, 'customerID', 'customerID');
     }
+
+    public function getFullNameAttribute(): string
+    {
+        // Combines first_name and last_name with a space
+        return "{$this->first_name} {$this->last_name}";
+    }
 }

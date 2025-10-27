@@ -34,7 +34,7 @@ class OrderDetailPage extends Component
         $this->order = Order::where('orderID', $orderId)
             ->where('customerID', $customer->customerID)
             ->with([
-                'orderItems.product.discounts', 
+                'orderItems.product', 
                 'orderItems.productVariant', 
                 'payment.paymentMethod', 
                 'shipping', 
@@ -54,94 +54,70 @@ class OrderDetailPage extends Component
         $this->productDiscountSavings = 0;
         $this->originalSubtotal = 0;
 
-        // Calculate product-level discounts
+        // Calculate product-level discounts from OrderItem data
         foreach ($this->order->orderItems as $item) {
-            if ($item->product) {
-                // Get the current variant or product base price (without discount)
-                $currentBasePrice = $item->productVariant 
-                    ? ($item->productVariant->price ?? $item->product->price) 
-                    : $item->product->price;
-
-                // Check if there's an active discount on this product
-                $activeDiscount = $this->getItemDiscount($item);
+            // Check if the order item has discount information stored
+            if (!empty($item->original_price) && $item->original_price > $item->unit_price) {
+                // Discount was applied - use stored data
+                $item->has_discount = true;
+                $item->original_unit_price = $item->original_price;
+                $item->savings_per_unit = $item->original_price - $item->unit_price;
                 
-                if ($activeDiscount) {
-                    // Calculate what the original price would be (current base price)
-                    $originalPrice = $currentBasePrice;
-                    
-                    // Calculate expected discounted price
-                    if ($activeDiscount->discount_type === 'Percentage') {
-                        $expectedDiscountedPrice = $originalPrice - ($originalPrice * ($activeDiscount->discount_value / 100));
-                    } else {
-                        $expectedDiscountedPrice = $originalPrice - $activeDiscount->discount_value;
-                    }
-                    $expectedDiscountedPrice = max(0, $expectedDiscountedPrice);
-                    
-                    // If the item's unit_price is close to the expected discounted price, it was discounted
-                    if (abs($item->unit_price - $expectedDiscountedPrice) < 0.01) {
-                        $item->original_unit_price = $originalPrice;
-                        $item->has_discount = true;
-                        
-                        $itemSavings = ($originalPrice - $item->unit_price) * $item->quantity;
-                        $this->productDiscountSavings += $itemSavings;
-                        $this->originalSubtotal += $originalPrice * $item->quantity;
-                    } else {
-                        // No discount was applied to this item at purchase time
-                        $item->original_unit_price = $item->unit_price;
-                        $item->has_discount = false;
-                        $this->originalSubtotal += $item->unit_price * $item->quantity;
-                    }
-                } else {
-                    // No active discount, compare with current base price
-                    if ($item->unit_price < $currentBasePrice) {
-                        // Item was purchased at a discount (discount may have expired)
-                        $item->original_unit_price = $currentBasePrice;
-                        $item->has_discount = true;
-                        
-                        $itemSavings = ($currentBasePrice - $item->unit_price) * $item->quantity;
-                        $this->productDiscountSavings += $itemSavings;
-                        $this->originalSubtotal += $currentBasePrice * $item->quantity;
-                    } else {
-                        // No discount
-                        $item->original_unit_price = $item->unit_price;
-                        $item->has_discount = false;
-                        $this->originalSubtotal += $item->unit_price * $item->quantity;
-                    }
-                }
+                $itemSavings = ($item->original_price - $item->unit_price) * $item->quantity;
+                $this->productDiscountSavings += $itemSavings;
+                $this->originalSubtotal += $item->original_price * $item->quantity;
+            } 
+            // Fallback: Check if discount_amount is stored
+            elseif (!empty($item->discount_amount) && $item->discount_amount > 0) {
+                $item->has_discount = true;
+                $item->original_unit_price = $item->unit_price + $item->discount_amount;
+                $item->savings_per_unit = $item->discount_amount;
+                
+                $itemSavings = $item->discount_amount * $item->quantity;
+                $this->productDiscountSavings += $itemSavings;
+                $this->originalSubtotal += $item->original_unit_price * $item->quantity;
+            }
+            // No discount information stored in order item
+            else {
+                $item->has_discount = false;
+                $item->original_unit_price = $item->unit_price;
+                $item->savings_per_unit = 0;
+                $this->originalSubtotal += $item->unit_price * $item->quantity;
             }
         }
 
-        // Calculate coupon/checkout-level discount
+        // Calculate coupon/order-level discount
         if ($this->order->discount) {
-            // The difference between order total_amount and the sum of order items
+            // Method 1: Direct calculation from total_amount and final_amount
             $itemsTotal = $this->order->orderItems->sum('sub_total');
-            
-            // If there's a discount applied at checkout level
             $shippingFee = $this->order->shipping->shipping_fee ?? 0;
+            
+            // Expected total before order-level discount
             $expectedTotal = $itemsTotal + $shippingFee;
             
+            // The difference is the coupon discount
             if ($this->order->final_amount < $expectedTotal) {
                 $this->couponDiscountAmount = $expectedTotal - $this->order->final_amount;
             }
+            
+            // Alternative: Calculate based on discount rules (if available)
+            // This is useful if final_amount calculation is complex
+            if ($this->couponDiscountAmount == 0 && $this->order->total_amount > $this->order->final_amount) {
+                $totalBeforeShipping = $this->order->total_amount;
+                $totalWithShipping = $totalBeforeShipping + $shippingFee;
+                
+                if ($this->order->discount->discount_type === 'Percentage') {
+                    $potentialDiscount = $totalBeforeShipping * ($this->order->discount->discount_value / 100);
+                } else {
+                    $potentialDiscount = $this->order->discount->discount_value;
+                }
+                
+                // Check if this matches
+                if (abs(($totalWithShipping - $potentialDiscount) - $this->order->final_amount) < 0.01) {
+                    $this->couponDiscountAmount = $potentialDiscount;
+                }
+            }
         }
-    }
-
-    /**
-     * Get active discount info for an order item's product
-     */
-    private function getItemDiscount($item)
-    {
-        if (!$item->product || !$item->product->relationLoaded('discounts')) {
-            return null;
-        }
-
-        return $item->product->discounts
-            ->where('is_active', true)
-            ->filter(function($discount) {
-                return (is_null($discount->start_date) || $discount->start_date <= now())
-                    && (is_null($discount->end_date) || $discount->end_date >= now());
-            })
-            ->first();
     }
 
     public function render()

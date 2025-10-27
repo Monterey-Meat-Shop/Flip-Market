@@ -376,7 +376,7 @@ class ReturnRequestResource extends Resource
                     ->modalDescription('Are you sure you want to archive this return request? You can restore it later if needed.')
                     ->modalSubmitActionLabel('Archive') 
                     ->modalCancelActionLabel('Cancel') 
-                    ->color('warning')
+                    ->color('danger')
                     ->icon('heroicon-o-archive-box')
                     ->visible(fn ($record) => in_array($record->return_status, ['completed', 'rejected'])),
                 Tables\Actions\RestoreAction::make(),
