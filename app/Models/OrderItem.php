@@ -17,17 +17,23 @@ class OrderItem extends Model
     protected $fillable = [
         'orderID',
         'productID',
-        'product_variant_id', 
+        'product_variant_id',
+        'discountID', 
         'size', 
         'colorway',
         'quantity',
         'unit_price',
-
         'original_price',
         'discount_name',
         'discount_amount',
-        
         'sub_total',
+    ];
+
+    protected $casts = [
+        'unit_price' => 'decimal:2',
+        'original_price' => 'decimal:2',
+        'discount_amount' => 'decimal:2',
+        'sub_total' => 'decimal:2',
     ];
 
     public function order()
@@ -40,9 +46,13 @@ class OrderItem extends Model
         return $this->belongsTo(Product::class, 'productID', 'productID');
     }
 
-    // Add a relationship to the ProductVariant model for easier access
     public function productVariant()
     {
         return $this->belongsTo(ProductVariant::class, 'product_variant_id', 'id');
+    }
+
+    public function discount()
+    {
+        return $this->belongsTo(Discount::class, 'discountID', 'discountID');
     }
 }

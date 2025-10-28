@@ -91,9 +91,9 @@ class CheckoutPage extends Component
         }
 
         $this->loadCustomerData();
-        $this->loadCartData();
         $this->loadPaymentMethods();
         $this->loadShippingMethods();
+        $this->loadCartData();
         $this->calculateTotals();
     }
 
@@ -156,55 +156,94 @@ class CheckoutPage extends Component
     }
 
     public function loadCartData()
-    {
-        if (!$this->customer) {
-            $this->cartItems = collect();
-            return;
-        }
-
-        // Eager load product discounts
-        $this->cartItems = CartItem::where('customerID', $this->customer->customerID)
-            ->with(['product.discounts', 'variant'])
-            ->get();
-
-        if ($this->cartItems->isEmpty()) {
-            session()->flash('error', 'Your cart is empty.');
-            return redirect()->route('cart');
-        }
-
-        // Calculate product-level discounts and update prices
-        $this->productDiscountSavings = 0;
-        
-        foreach ($this->cartItems as $item) {
-            $basePrice = $item->variant->price ?? $item->product->price;
-            $activeDiscount = $this->getActiveDiscount($item->product);
-            
-            if ($activeDiscount) {
-                $discountedPrice = $this->calculateDiscountedPrice($basePrice, $activeDiscount);
-                
-                // Calculate savings for this item
-                $savings = ($basePrice - $discountedPrice) * $item->quantity;
-                $this->productDiscountSavings += $savings;
-                
-                // Update item with discounted price
-                $item->unit_price = $discountedPrice;
-                $item->sub_total = $discountedPrice * $item->quantity;
-                
-                // Store discount info for display
-                $item->active_discount = $activeDiscount;
-                $item->original_price = $basePrice;
-                $item->discount_amount = $basePrice - $discountedPrice;
-            } else {
-                // No discount, use original price
-                $item->unit_price = $basePrice;
-                $item->sub_total = $basePrice * $item->quantity;
-                $item->original_price = $basePrice;
-                $item->discount_amount = 0;
-            }
-        }
-
-        $this->cartCount = $this->cartItems->sum('quantity');
+{
+    if (!$this->customer) {
+        $this->cartItems = collect();
+        return;
     }
+
+    // Eager load product discounts
+    $this->cartItems = CartItem::where('customerID', $this->customer->customerID)
+        ->with(['product.discounts', 'variant'])
+        ->get();
+
+    if ($this->cartItems->isEmpty()) {
+        session()->flash('error', 'Your cart is empty.');
+        return redirect()->route('cart');
+    }
+
+    // Calculate product-level discounts and update prices
+    $this->productDiscountSavings = 0;
+    $this->originalSubtotal = 0;
+    $this->discountedSubtotal = 0;
+
+    foreach ($this->cartItems as $item) {
+        // Get base price from variant or product
+        $basePrice = (float) $item->product->price;
+        
+        // Get active discount for this product
+        $activeDiscount = $this->getActiveDiscount($item->product);
+        
+        \Log::info('Processing cart item', [
+            'product' => $item->product->name,
+            'base_price' => $basePrice,
+            'has_discount' => !is_null($activeDiscount),
+            'discount_name' => $activeDiscount?->name ?? 'none',
+        ]);
+        
+        // Store discount reference on the item
+        $item->active_discount = $activeDiscount;
+
+        if ($activeDiscount) {
+            // Calculate discounted price
+            $discountedPrice = $this->calculateDiscountedPrice($basePrice, $activeDiscount);
+            $discountDifference = $basePrice - $discountedPrice;
+            
+            \Log::info('Discount calculation', [
+                'base' => $basePrice,
+                'discounted' => $discountedPrice,
+                'difference' => $discountDifference,
+            ]);
+            
+            // Only apply if there's actual savings
+            if ($discountDifference > 0.01) {
+                $item->unit_price = round($discountedPrice, 2);
+                $item->sub_total = round($discountedPrice * $item->quantity, 2);
+                $item->original_price = round($basePrice, 2);
+                $item->discount_amount = round($discountDifference, 2);
+                
+                $this->productDiscountSavings += $discountDifference * $item->quantity;
+                $this->originalSubtotal += $basePrice * $item->quantity;
+            } else {
+                // No meaningful discount
+                $item->unit_price = round($basePrice, 2);
+                $item->sub_total = round($basePrice * $item->quantity, 2);
+                $item->original_price = null;
+                $item->discount_amount = 0;
+                $item->active_discount = null;
+                
+                $this->originalSubtotal += $basePrice * $item->quantity;
+            }
+        } else {
+            // No discount
+            $item->unit_price = round($basePrice, 2);
+            $item->sub_total = round($basePrice * $item->quantity, 2);
+            $item->original_price = null;
+            $item->discount_amount = 0;
+            
+            $this->originalSubtotal += $basePrice * $item->quantity;
+        }
+    }
+
+    $this->cartCount = $this->cartItems->sum('quantity');
+    
+    \Log::info('Cart loaded', [
+        'items_count' => $this->cartItems->count(),
+        'product_discount_savings' => $this->productDiscountSavings,
+        'original_subtotal' => $this->originalSubtotal,
+    ]);
+}
+
 
     public function loadPaymentMethods()
     {
@@ -426,42 +465,72 @@ class CheckoutPage extends Component
 
                 // Create order items with discount information
                 foreach ($this->cartItems as $cartItem) {
-                    // Get the active discount info
-                    $activeDiscount = isset($cartItem->active_discount) ? $cartItem->active_discount : null;
-                    $discountName = $activeDiscount ? $activeDiscount->name : null;
-                    $originalPrice = $cartItem->original_price ?? $cartItem->unit_price;
-                    $discountAmount = $cartItem->discount_amount ?? 0;
-                    
-                    OrderItem::create([
-                        'orderID' => $order->orderID,
-                        'productID' => $cartItem->productID,
-                        'product_variant_id' => $cartItem->product_variant_id,
-                        'size' => $cartItem->size,
-                        'colorway' => $cartItem->colorway,
-                        'quantity' => $cartItem->quantity,
-                        'unit_price' => $cartItem->unit_price, // Discounted price
-                        'original_price' => $originalPrice, // Original price before discount
-                        'discount_name' => $discountName, // Name of the discount
-                        'discount_amount' => $discountAmount, // Discount amount per unit
-                        'sub_total' => $cartItem->sub_total, // Total with discount applied
-                    ]);
+    // ✅ Get the active discount we stored during loadCartData
+    $activeDiscount = $cartItem->active_discount ?? null;
 
-                    if (!$cartItem->variant) {
-                        throw new \Exception("Product variant not found for {$cartItem->product->name}");
-                    }
-                    
-                    $affectedRows = DB::table('product_variants')
-                        ->where('id', $cartItem->product_variant_id)
-                        ->where('stock_quantity', '>=', $cartItem->quantity)
-                        ->update([
-                            'stock_quantity' => DB::raw("stock_quantity - {$cartItem->quantity}"),
-                            'updated_at' => now()
-                        ]);
-                        
-                    if ($affectedRows === 0) {
-                        throw new \Exception("Could not update stock for {$cartItem->product->name}. Stock may have been sold out.");
-                    }
-                }
+    // ✅ Use the calculated prices from loadCartData
+    $unitPrice = (float) $cartItem->unit_price;
+    $subTotal = (float) $cartItem->sub_total;
+    $originalPrice = $cartItem->original_price; // Will be null if no discount
+    $discountAmount = (float) ($cartItem->discount_amount ?? 0);
+
+    \Log::info('Creating OrderItem', [
+        'product' => $cartItem->product->name,
+        'unit_price' => $unitPrice,
+        'original_price' => $originalPrice,
+        'discountID' => $activeDiscount?->discountID ?? null,
+        'discount_name' => $activeDiscount?->name ?? null,
+        'discount_amount' => $discountAmount,
+        'has_discount' => !is_null($originalPrice) && $originalPrice > $unitPrice,
+    ]);
+
+    $createdItem = OrderItem::create([
+        'orderID' => $order->orderID,
+        'productID' => $cartItem->productID,
+        'product_variant_id' => $cartItem->product_variant_id,
+        'discountID' => $activeDiscount?->discountID ?? null,
+        'size' => $cartItem->size,
+        'colorway' => $cartItem->colorway,
+        'quantity' => $cartItem->quantity,
+        'unit_price' => $unitPrice,
+        'original_price' => $originalPrice,
+        'discount_name' => $activeDiscount?->name ?? null,
+        'discount_amount' => $discountAmount,
+        'sub_total' => $subTotal,
+    ]);
+
+    // ✅ Verify it was saved correctly
+    \Log::info('OrderItem created', [
+        'order_item_id' => $createdItem->order_itemID,
+        'saved_original_price' => $createdItem->original_price,
+        'saved_discount_amount' => $createdItem->discount_amount,
+        'saved_discountID' => $createdItem->discountID,
+    ]);
+
+    // Stock update...
+    if (!$cartItem->variant) {
+        throw new \Exception("Product variant not found for {$cartItem->product->name}");
+    }
+
+    $affectedRows = DB::table('product_variants')
+        ->where('id', $cartItem->product_variant_id)
+        ->where('stock_quantity', '>=', $cartItem->quantity)
+        ->update([
+            'stock_quantity' => DB::raw("stock_quantity - {$cartItem->quantity}"),
+            'updated_at' => now()
+        ]);
+
+    if ($affectedRows === 0) {
+        \Log::error('Stock update failed', [
+            'product' => $cartItem->product->name,
+            'variant_id' => $cartItem->product_variant_id,
+            'requested_quantity' => $cartItem->quantity,
+            'current_stock' => $cartItem->variant->stock_quantity ?? 'unknown'
+        ]);
+
+        throw new \Exception("Could not update stock for {$cartItem->product->name}. Stock may have been sold out.");
+    }
+}
 
                 $paymentMethod = PaymentMethod::find($this->selectedPaymentMethod);
                 $methodName = strtolower($paymentMethod->method_name);

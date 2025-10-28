@@ -258,57 +258,57 @@
       
       <!-- Cart Items -->
       @foreach($cartItems as $item)
-      <div class="bg-white rounded-lg border border-gray-200 p-4 flex items-center gap-4">
-        <!-- Image -->
-        <a href="#" class="shrink-0">
-          @if($item->product && $item->product->image_path)
-            <img src="{{ asset('storage/' . $item->product->image_path) }}" 
-                 alt="{{ $item->product->name }}"
-                 class="h-20 w-20 object-cover rounded">
-          @else
-            <div class="h-20 w-20 bg-gray-200 rounded flex items-center justify-center">
-              <span class="text-gray-500 text-xs font-semibold">
-                {{ strtoupper(substr($item->product->name, 0, 2)) }}
-              </span>
-            </div>
-          @endif
-        </a>
-
-        <!-- Product Info -->
-        <div class="flex-1 min-w-0">
-          <h3 class="text-sm font-semibold text-gray-800 leading-tight">
-            {{ $item->product->name }}
-          </h3>
-          <p class="mt-1 text-xs text-gray-600 leading-snug">
-            @if($item->size) Size: {{ $item->size }} @endif
-            @if($item->colorway) {{ $item->size ? '|' : '' }} Color: {{ $item->colorway }} @endif
-          </p>
-          
-          {{-- Show discount badge if applicable --}}
-          @if(isset($item->active_discount))
-            <span class="inline-block mt-1 text-xs px-2 py-0.5 bg-red-100 text-red-600 rounded">
-              {{ $item->active_discount->discount_value }}{{ $item->active_discount->discount_type === 'Percentage' ? '%' : '₱' }} OFF
-            </span>
-          @endif
-          
-          {{-- Show price with discount --}}
-          @if(isset($item->active_discount) && isset($item->original_price))
-            <div class="mt-1">
-              <span class="text-xs text-gray-400 line-through">₱{{ number_format($item->original_price, 2) }}</span>
-              <span class="text-xs font-semibold text-blue-600 ml-1">₱{{ number_format($item->unit_price, 2) }}</span>
-            </div>
-          @endif
-        </div>
-
-        <div class="flex flex-col items-center justify-center w-16">
-          <span class="text-sm text-gray-700">Qty: {{ $item->quantity }}</span>
-        </div>
-
-        <div class="flex flex-col items-end justify-between shrink-0">
-          <span class="text-sm font-semibold text-gray-900">₱{{ number_format($item->sub_total, 2) }}</span>
-        </div>
+<div class="bg-white rounded-lg border border-gray-200 p-4 flex items-center gap-4">
+  <!-- Image -->
+  <a href="#" class="shrink-0">
+    @if($item->product && $item->product->image_path)
+      <img src="{{ asset('storage/' . $item->product->image_path) }}" 
+           alt="{{ $item->product->name }}"
+           class="h-20 w-20 object-cover rounded">
+    @else
+      <div class="h-20 w-20 bg-gray-200 rounded flex items-center justify-center">
+        <span class="text-gray-500 text-xs font-semibold">
+          {{ strtoupper(substr($item->product->name, 0, 2)) }}
+        </span>
       </div>
-      @endforeach
+    @endif
+  </a>
+
+  <!-- Product Info -->
+  <div class="flex-1 min-w-0">
+    <h3 class="text-sm font-semibold text-gray-800 leading-tight">
+      {{ $item->product->name }}
+    </h3>
+    <p class="mt-1 text-xs text-gray-600 leading-snug">
+      @if($item->size) Size: {{ $item->size }} @endif
+      @if($item->colorway) {{ $item->size ? '|' : '' }} Color: {{ $item->colorway }} @endif
+    </p>
+    
+    {{-- Show discount badge if applicable --}}
+    @if(isset($item->active_discount) && $item->active_discount)
+      <span class="inline-block mt-1 text-xs px-2 py-0.5 bg-red-100 text-red-600 rounded">
+        {{ $item->active_discount->discount_value }}{{ $item->active_discount->discount_type === 'Percentage' ? '%' : '₱' }} OFF
+      </span>
+    @endif
+    
+    {{-- Show price with discount --}}
+    @if(isset($item->original_price) && $item->original_price)
+      <div class="mt-1">
+        <span class="text-xs text-gray-400 line-through">₱{{ number_format($item->original_price, 2) }}</span>
+        <span class="text-xs font-semibold text-blue-600 ml-1">₱{{ number_format($item->unit_price, 2) }}</span>
+      </div>
+    @endif
+  </div>
+
+  <div class="flex flex-col items-center justify-center w-16">
+    <span class="text-sm text-gray-700">Qty: {{ $item->quantity }}</span>
+  </div>
+
+  <div class="flex flex-col items-end justify-between shrink-0">
+    <span class="text-sm font-semibold text-gray-900">₱{{ number_format($item->sub_total, 2) }}</span>
+  </div>
+</div>
+@endforeach
 
       <!-- Order Summary -->
       <div class="bg-white p-6 rounded-2xl shadow">

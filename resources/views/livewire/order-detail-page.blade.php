@@ -117,87 +117,107 @@
         <!-- Products Table -->
         <div class="bg-white overflow-x-auto rounded-lg shadow-md p-6 mb-4 border border-gray-200">
           <h2 class="text-lg font-semibold mb-4">Order Items</h2>
+
           <table class="w-full">
             <thead>
               <tr class="border-b">
                 <th class="text-left font-semibold py-3">Product</th>
-                <th class="text-left font-semibold py-3">Price</th>
+                <th class="text-left font-semibold py-3">Original Price</th>
+                <th class="text-left font-semibold py-3">Discounted Price</th>
                 <th class="text-left font-semibold py-3">Quantity</th>
                 <th class="text-left font-semibold py-3">Total</th>
               </tr>
             </thead>
+
             <tbody>
               @foreach($order->orderItems as $item)
-              @php
-                // Check if item has discount based on stored data
-                $hasDiscount = (!empty($item->original_price) && $item->original_price > $item->unit_price) 
-                            || (!empty($item->discount_amount) && $item->discount_amount > 0);
-                
-                if ($hasDiscount) {
-                    $originalPrice = !empty($item->original_price) 
-                        ? $item->original_price 
-                        : ($item->unit_price + $item->discount_amount);
-                    $savings = $originalPrice - $item->unit_price;
-                }
-              @endphp
-              <tr wire:key="{{ $item->order_itemID }}" class="border-b">
-                <td class="py-4">
-                  <div class="flex items-center">
-                    @if($item->product && $item->product->image_path)
-                      <img src="{{ asset('storage/' . $item->product->image_path) }}" 
-                           alt="{{ $item->product->name }}"
-                           class="h-16 w-16 mr-4 object-cover rounded">
-                    @else
-                      <div class="h-16 w-16 mr-4 bg-gray-200 rounded flex items-center justify-center">
-                        <span class="text-gray-500 text-xs font-semibold">
-                          {{ strtoupper(substr($item->product->name ?? 'Product', 0, 2)) }}
-                        </span>
-                      </div>
-                    @endif
-                    <div>
-                      <span class="font-semibold">{{ $item->product->name }}</span>
-                      @if($item->size || $item->colorway)
-                        <p class="text-xs text-gray-500">
-                          @if($item->colorway) {{ $item->colorway }} @endif
-                          @if($item->size) | Size: {{ $item->size }} @endif
-                        </p>
-                      @endif
+                @php
+                  // Check if the item has a discount
+                  $hasDiscount = (!empty($item->original_price) && $item->original_price > $item->unit_price)
+                              || (!empty($item->discount_amount) && $item->discount_amount > 0);
 
-                      {{-- Show discount badge if item has discount --}}
-                      @if($hasDiscount)
-                        <div class="flex items-center gap-2 mt-1">
-                          <span class="inline-block text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded">
-                            Discounted
+                  $originalPrice = $item->original_price ?? $item->unit_price;
+                  $discountedPrice = $item->unit_price;
+                  $savings = $hasDiscount ? ($originalPrice - $discountedPrice) : 0;
+                @endphp
+
+                <tr class="border-b hover:bg-gray-50 transition">
+                  <!-- Product -->
+                  <td class="py-4">
+                    <div class="flex items-center">
+                      @if($item->product && $item->product->image_path)
+                        <img src="{{ asset('storage/' . $item->product->image_path) }}"
+                             alt="{{ $item->product->name }}"
+                             class="h-16 w-16 mr-4 object-cover rounded">
+                      @else
+                        <div class="h-16 w-16 mr-4 bg-gray-200 rounded flex items-center justify-center">
+                          <span class="text-gray-500 text-xs font-semibold">
+                            {{ strtoupper(substr($item->product->name ?? 'Product', 0, 2)) }}
                           </span>
-                          @if(!empty($item->discount_name))
-                            <span class="text-xs text-gray-500">
-                              ({{ $item->discount_name }})
-                            </span>
-                          @endif
                         </div>
                       @endif
+
+                      <div>
+                        <span class="font-semibold text-gray-800">{{ $item->product->name }}</span>
+
+                        {{-- Variant details --}}
+                        @if($item->size || $item->colorway)
+                          <p class="text-xs text-gray-500">
+                            @if($item->colorway) {{ $item->colorway }} @endif
+                            @if($item->size) | Size: {{ $item->size }} @endif
+                          </p>
+                        @endif
+
+                        {{-- Discount info --}}
+                        @if($hasDiscount)
+                          <div class="flex items-center gap-2 mt-1">
+                            <span class="inline-block text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded">
+                              Discounted
+                            </span>
+                            @if($item->discount_name)
+                              <span class="text-xs text-gray-500">
+                                ({{ $item->discount_name }})
+                              </span>
+                            @endif
+                          </div>
+                        @endif
+                      </div>
                     </div>
-                  </div>
-                </td>
-                <td class="py-4">
-                  <div>
-                    {{-- Show original price if discounted --}}
-                    @if($hasDiscount)
-                      <span class="text-xs text-gray-400 line-through block">₱{{ number_format($originalPrice, 2) }}</span>
-                      <span class="font-semibold text-green-600">₱{{ number_format($item->unit_price, 2) }}</span>
-                      <span class="text-xs text-green-600 block">Save ₱{{ number_format($savings, 2) }}</span>
+                  </td>
+
+                  <!-- Original Price -->
+                  <td class="py-4">
+                    @if(!empty($item->original_price) && $item->original_price > $item->unit_price)
+                      <span class="line-through text-gray-400">₱{{ number_format($item->original_price, 2) }}</span>
                     @else
-                      <span class="font-semibold">₱{{ number_format($item->unit_price, 2) }}</span>
+                      <span class="text-gray-500">—</span>
                     @endif
-                  </div>
-                </td>
-                <td class="py-4">
-                  <span class="text-center w-8">{{ $item->quantity }}</span>
-                </td>
-                <td class="py-4">
-                  <span class="font-semibold">₱{{ number_format($item->sub_total, 2) }}</span>
-                </td>
-              </tr>
+                  </td>
+
+                  <!-- Discounted Price -->
+                  <td class="py-4">
+                    @if($hasDiscount)
+                      <div class="flex flex-col">
+                        <span class="font-semibold text-green-600">₱{{ number_format($discountedPrice, 2) }}</span>
+                        <span class="text-xs text-green-600">Save ₱{{ number_format($savings, 2) }}</span>
+                      </div>
+                    @else
+                      <span class="font-semibold text-gray-800">₱{{ number_format($discountedPrice, 2) }}</span>
+                    @endif
+                  </td>
+
+                  <!-- Quantity -->
+                  <td class="py-4 text-center">
+                    <span>{{ $item->quantity }}</span>
+                  </td>
+
+                  <!-- Total -->
+                  <td class="py-4">
+                    <span class="font-semibold text-gray-900">
+                      ₱{{ number_format($item->sub_total, 2) }}
+                    </span>
+                  </td>
+                </tr>
               @endforeach
             </tbody>
           </table>

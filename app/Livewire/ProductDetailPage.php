@@ -22,16 +22,21 @@ class ProductDetailPage extends Component
 
     public function mount($productId)
     {
-        $this->product = Product::with(['category', 'brand', 'variants', 'discounts'])->findOrFail($productId);
-        
+        // Load product with relationships
+        $this->product = Product::with(['category', 'brand', 'variants', 'discounts'])
+            ->findOrFail($productId);
+
+        // Default to first variant if available
         if ($this->product->variants->isNotEmpty()) {
             $this->selectedVariant = $this->product->variants->first();
             $this->selectedColor = $this->selectedVariant->colorway ?? null;
             $this->selectedSize = $this->selectedVariant->size ?? null;
         }
 
+        // Load cart if logged in
         if (Auth::check()) {
             $customer = Customer::where('user_id', Auth::id())->first();
+
             if ($customer) {
                 $this->cartItems = CartItem::with('product', 'variant')
                     ->where('customerID', $customer->customerID)
@@ -43,6 +48,7 @@ class ProductDetailPage extends Component
     public function selectVariant($variantId)
     {
         $this->selectedVariant = $this->product->variants->find($variantId);
+
         if ($this->selectedVariant) {
             $this->selectedColor = $this->selectedVariant->colorway;
             $this->selectedSize = $this->selectedVariant->size;
@@ -77,20 +83,37 @@ class ProductDetailPage extends Component
             return;
         }
 
-        // Get base price
-        $unitPrice = $variant ? ($variant->price ?? $this->product->price) : $this->product->price;
+        // Base price (from variant or product)
+        $originalPrice = $variant
+            ? ($variant->price ?? $this->product->price)
+            : $this->product->price;
 
-        // Apply discount if available
-        $discount = $this->product->discount;
-        if ($discount) {
-            if ($discount->discount_type === 'Percentage') {
-                $unitPrice -= $unitPrice * ($discount->amount / 100);
+        // Apply discount (if active)
+        $activeDiscount = $this->product->discounts
+            ->where('is_active', true)
+            ->filter(fn($discount) =>
+                (is_null($discount->start_date) || $discount->start_date <= now()) &&
+                (is_null($discount->end_date) || $discount->end_date >= now())
+            )
+            ->first();
+
+        $discountAmount = 0;
+        $discountName = null;
+        $unitPrice = $originalPrice;
+
+        if ($activeDiscount) {
+            $discountName = $activeDiscount->discount_name ?? 'Discount';
+
+            if ($activeDiscount->discount_type === 'Percentage') {
+                $discountAmount = $originalPrice * ($activeDiscount->discount_value / 100);
             } else {
-                $unitPrice -= $discount->amount;
+                $discountAmount = $activeDiscount->discount_value;
             }
-            $unitPrice = max($unitPrice, 0); // prevent negative price
+
+            $unitPrice = max($originalPrice - $discountAmount, 0);
         }
 
+        // Check existing cart item
         $existing = CartItem::where('customerID', $customer->customerID)
             ->where('productID', $this->product->productID)
             ->when($variant, fn($q) => $q->where('product_variant_id', $variant->id))
@@ -98,29 +121,39 @@ class ProductDetailPage extends Component
 
         if ($existing) {
             $newQty = $existing->quantity + $this->quantity;
+
             if ($newQty > $availableStock) {
                 session()->flash('error', 'Cannot add that many items. Not enough stock.');
                 return;
             }
+
             $existing->update([
-                'quantity'  => $newQty,
-                'sub_total' => $unitPrice * $newQty,
+                'quantity'       => $newQty,
+                'unit_price'     => $unitPrice,
+                'original_price' => $originalPrice,
+                'discount_name'  => $discountName,
+                'discount_amount'=> $discountAmount,
+                'sub_total'      => $unitPrice * $newQty,
             ]);
         } else {
             CartItem::create([
-                'customerID'        => $customer->customerID,
-                'productID'         => $this->product->productID,
-                'product_variant_id'=> $variant ? $variant->id : null,
-                'size'              => $variant ? $variant->size : null,
-                'colorway'          => $variant ? $variant->colorway : null,
-                'quantity'          => $this->quantity,
-                'unit_price'        => $unitPrice,
-                'sub_total'         => $unitPrice * $this->quantity,
+                'customerID'         => $customer->customerID,
+                'productID'          => $this->product->productID,
+                'product_variant_id' => $variant ? $variant->id : null,
+                'size'               => $variant ? $variant->size : null,
+                'colorway'           => $variant ? $variant->colorway : null,
+                'quantity'           => $this->quantity,
+                'original_price'     => $originalPrice,
+                'unit_price'         => $unitPrice,
+                'discount_name'      => $discountName,
+                'discount_amount'    => $discountAmount,
+                'sub_total'          => $unitPrice * $this->quantity,
             ]);
         }
 
         session()->flash('message', 'Added to cart.');
 
+        // Refresh cart
         $this->cartItems = CartItem::with('product', 'variant')
             ->where('customerID', $customer->customerID)
             ->get();
@@ -145,20 +178,24 @@ class ProductDetailPage extends Component
 
     public function getCurrentPrice()
     {
-        $basePrice = $this->selectedVariant 
-            ? ($this->selectedVariant->price ?? $this->product->price) 
+        $basePrice = $this->selectedVariant
+            ? ($this->selectedVariant->price ?? $this->product->price)
             : $this->product->price;
-    
+
         $activeDiscount = $this->product->discounts
             ->where('is_active', true)
-            ->filter(function($discount) {
-                return (is_null($discount->start_date) || $discount->start_date <= now())
-                    && (is_null($discount->end_date) || $discount->end_date >= now());
-            })
+            ->filter(fn($discount) =>
+                (is_null($discount->start_date) || $discount->start_date <= now()) &&
+                (is_null($discount->end_date) || $discount->end_date >= now())
+            )
             ->first();
 
         if ($activeDiscount) {
-            return $activeDiscount->getFinalPrice($basePrice);
+            if ($activeDiscount->discount_type === 'Percentage') {
+                return max($basePrice - ($basePrice * ($activeDiscount->discount_value / 100)), 0);
+            } else {
+                return max($basePrice - $activeDiscount->discount_value, 0);
+            }
         }
 
         return $basePrice;
@@ -166,7 +203,9 @@ class ProductDetailPage extends Component
 
     public function getCurrentStock()
     {
-        return $this->selectedVariant ? $this->selectedVariant->stock_quantity : $this->product->total_stock_quantity;
+        return $this->selectedVariant
+            ? $this->selectedVariant->stock_quantity
+            : $this->product->total_stock_quantity;
     }
 
     public function render()

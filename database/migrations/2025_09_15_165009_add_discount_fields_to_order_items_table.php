@@ -12,6 +12,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('order_items', function (Blueprint $table) {
+            $table->unsignedInteger('discountID')->nullable()->after('product_variant_id');
+            $table->foreign('discountID')->references('discountID')->on('discounts')->onDelete('set null');
+
             $table->decimal('original_price', 10, 2)->nullable()->after('unit_price');
             $table->string('discount_name')->nullable()->after('original_price');
             $table->decimal('discount_amount', 10, 2)->default(0)->after('discount_name');
@@ -24,7 +27,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('order_items', function (Blueprint $table) {
-            $table->dropColumn(['original_price', 'discount_name', 'discount_amount']);
+            $table->dropColumn(['discountID', 'original_price', 'discount_name', 'discount_amount']);
         });
     }
 };
