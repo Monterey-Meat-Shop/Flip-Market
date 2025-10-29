@@ -36,7 +36,7 @@ class Product extends Model
         'is_active' => 'boolean',
     ];
 
-    // --- Relationships ---
+    // Relationships
     public function variants(): HasMany
     {
         return $this->hasMany(ProductVariant::class, 'product_id', 'productID');

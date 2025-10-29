@@ -147,4 +147,8 @@ class Order extends Model
         $this->stock_deducted = true;
         $this->saveQuietly();
     }
+    public function getOverallDiscountAttribute()
+    {
+        return $this->orderItems()->sum('discount_amount');
+    }
 }

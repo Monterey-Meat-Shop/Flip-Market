@@ -46,9 +46,7 @@ class OrderDetailPage extends Component
         $this->calculateDiscounts();
     }
 
-    /**
-     * Calculate product-level and coupon-level discounts.
-     */
+    //Calculate product-level and coupon-level discounts
     private function calculateDiscounts()
 {
     $this->productDiscountSavings = 0;

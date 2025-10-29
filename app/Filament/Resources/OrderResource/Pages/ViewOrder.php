@@ -228,35 +228,7 @@ class ViewOrder extends ViewRecord
                                     ->icon('heroicon-o-archive-box')
                                     ->placeholder('— Not Delivered —'),
 
-                            ])->columns(2),
-
-                            Section::make('Products Ordered')
-                                ->schema([
-                                    RepeatableEntry::make('orderItems')
-                                        ->label('Items')
-                                        ->contained(false)
-                                        ->schema([
-                                            TextEntry::make('product.name')
-                                                ->label('Product'),
-                                            TextEntry::make('productvariant.colorway')
-                                                ->label('Colorway'),
-
-                                            TextEntry::make('unit_price')
-                                                ->label('Unit Price')
-                                                ->money('PHP'),
-
-                                            TextEntry::make('quantity')
-                                                ->label('Qty'),
-
-                                            TextEntry::make('line_total')
-                                                ->label('Subtotal')
-                                                ->getStateUsing(fn ($record) => $record->quantity * $record->unit_price)
-                                                ->money('PHP'),
-                                        ])
-                                        ->columns(5)
-                                        ->contained(false),
-                                ]),
-                            
+                            ])->columns(2),     
                     ])->columns(2),
 
                 Group::make()
@@ -265,14 +237,16 @@ class ViewOrder extends ViewRecord
                             ->schema([
                                 ImageEntry::make('payment.screenshot_path')
                                     ->label('Image upload')
-                                    ->height(500) 
+                                    ->height(370) 
                                     ->width(450)
                                     ->defaultImageUrl(fn () => null)
                                     ->visible(fn ($record) => filled($record->payment?->screenshot_path)),
                             ])
-                            ->columnSpan(2),
+                            ->columnSpan(2), 
+                    ])
+                    ->columns(2),
 
-                        Section::make('Order Details')
+                    Section::make('Order Details')
                             ->schema([
                                 TextEntry::make('order_date') 
                                     ->label('Date Placed')
@@ -288,35 +262,59 @@ class ViewOrder extends ViewRecord
                                         default => 'gray',
                                     }),
 
-                                TextEntry::make('discount_name')
+                                TextEntry::make('orderitems.discount.name')
                                     ->label('Discount Applied')
-                                    ->default('None'),
+                                    ->placeholder('None'),
 
-                // 2. Shipping Fee
-                TextEntry::make('shipping_fee')
-                    ->label('Shipping Fee')
-                    ->money('PHP'),
-                
-                // 3. Subtotal (Before Discount)
-                TextEntry::make('subtotal')
-                    ->label('Subtotal')
-                    // Calculate the sum of all line items
-                    ->getStateUsing(function ($record) {
-                        return $record->orderItems->sum(function ($item) {
-                            return $item->quantity * $item->unit_price;
-                        });
-                    })
-                    ->money('PHP'),
+                                TextEntry::make('overall_discount')
+                                    ->label('Overall Discount')
+                                    ->money('PHP')
+                                    ->getStateUsing(fn($record) => $record->orderItems->sum('discount_amount') ?: 0),
 
-                // 4. Final Total (After Discount + Shipping)
-                TextEntry::make('total_price')
-                    ->label('Final Total')
-                    ->size(TextEntrySize::Large) // Make the total stand out
-                    ->weight(FontWeight::Bold)
-                    ->money('PHP')
-                            ])->columns(2),
-                    ])
-                    ->columns(2),
+                                TextEntry::make('shipping.shipping_fee')
+                                    ->label('Shipping Fee')
+                                    ->money('PHP')
+                                    ->getStateUsing(fn($record) => $record->shipping?->shipping_fee ?? 0),
+
+                                TextEntry::make('payment.amount')
+                                    ->label('Final Total')
+                                    ->size(TextEntrySize::Large)
+                                    ->weight(FontWeight::Bold)
+                                    ->money('PHP')
+                            ])->columns(6),
+
+                    Section::make('Products Ordered')
+                        ->schema([
+                            RepeatableEntry::make('orderItems')
+                                ->label('Items')
+                                ->contained(false)
+                                ->schema([
+                                    TextEntry::make('product.name')
+                                        ->label('Product'),
+                                    TextEntry::make('productvariant.colorway')
+                                        ->label('Colorway'),
+                                    TextEntry::make('size')
+                                        ->label('Size')
+                                        ->getStateUsing(fn($record) => $record->size ?? '—'),
+                                    TextEntry::make('quantity')
+                                        ->label('Qty'),
+                                    TextEntry::make('unit_price')
+                                        ->label('Unit Price')
+                                        ->money('PHP'),
+                                    TextEntry::make('discount_amount')
+                                        ->label('Discount Price')
+                                        ->money('PHP')
+                                        ->hidden(fn($record) => $record->discount_amount == 0),
+                                    TextEntry::make('subtotal')
+                                        ->label('Subtotal')
+                                        // Final Calculation: (Quantity * Original Price) - Total Discount Amount
+                                        ->getStateUsing(fn($record) => ($record->quantity * $record->original_price) - $record->discount_amount)
+                                        ->money('PHP'),
+                                ])
+                                ->columns(7)
+                                ->contained(false),
+                        ]),
+
         ]); 
     }
 }
