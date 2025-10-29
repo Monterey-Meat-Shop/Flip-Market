@@ -92,7 +92,7 @@
 
         <!-- Each Item -->
         @foreach($order->orderItems as $item)
-          <div class="flex flex-col sm:flex-row sm:items-start sm:space-x-4 p-4 border-b border-gray-100 last:border-b-0">
+          <div class="flex flex-col sm:flex-row sm:items-start sm:space-x-4 p-4 border-b border-gray-100 last:border-b-0 gap-3">
             <!-- Product Image -->
             <div class="w-28 h-28 flex-shrink-0 mx-auto sm:mx-0">
               @if($item->product && $item->product->image_path)
