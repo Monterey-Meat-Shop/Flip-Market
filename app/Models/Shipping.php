@@ -23,6 +23,7 @@ class Shipping extends Model
 
     protected $casts = [
         'delivered_at' => 'datetime',
+        'shipping_fee' => 'decimal:2',
     ];
 
     protected $attributes = [

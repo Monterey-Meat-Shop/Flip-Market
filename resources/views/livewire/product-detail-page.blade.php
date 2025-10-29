@@ -142,17 +142,33 @@
 
                 <!-- Price -->
                 @php
+                    $basePrice = (isset($selectedVariant) && $product->variants->isNotEmpty())
+                        ? ($selectedVariant->price ?? $product->price)
+                        : $product->price;
+
+                    $originalPrice = $basePrice;
+
                     $activeDiscount = $product->discounts
                         ->where('is_active', true)
-                        ->filter(function($discount) {
+                        ->filter(function ($discount) {
                             return (is_null($discount->start_date) || $discount->start_date <= now())
                                 && (is_null($discount->end_date) || $discount->end_date >= now());
                         })
                         ->first();
 
-                    $originalPrice = $this->getCurrentPrice();
-                    $finalPrice = $activeDiscount ? $activeDiscount->getFinalPrice($originalPrice) : $originalPrice;
+                    // Compute final (discounted) price
+                    if ($activeDiscount) {
+                        if ($activeDiscount->discount_type === 'Percentage') {
+                            $finalPrice = $basePrice - ($basePrice * ($activeDiscount->discount_value / 100));
+                        } else {
+                            $finalPrice = $basePrice - $activeDiscount->discount_value;
+                        }
+                        $finalPrice = max($finalPrice, 0);
+                    } else {
+                        $finalPrice = $basePrice;
+                    }
                 @endphp
+
 
                 <div class="mt-4 flex items-baseline gap-3">
                     @if($activeDiscount)

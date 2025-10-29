@@ -258,7 +258,7 @@
       
       <!-- Cart Items -->
       @foreach($cartItems as $item)
-      <div class="bg-white rounded-lg border border-gray-200 p-4 flex items-center gap-4">
+        <div class="bg-white rounded-lg border border-gray-200 p-4 flex items-center gap-4">
         <!-- Image -->
         <a href="#" class="shrink-0">
           @if($item->product && $item->product->image_path)
@@ -283,16 +283,16 @@
             @if($item->size) Size: {{ $item->size }} @endif
             @if($item->colorway) {{ $item->size ? '|' : '' }} Color: {{ $item->colorway }} @endif
           </p>
-          
+    
           {{-- Show discount badge if applicable --}}
-          @if(isset($item->active_discount))
+          @if(isset($item->active_discount) && $item->active_discount)
             <span class="inline-block mt-1 text-xs px-2 py-0.5 bg-red-100 text-red-600 rounded">
               {{ $item->active_discount->discount_value }}{{ $item->active_discount->discount_type === 'Percentage' ? '%' : '₱' }} OFF
             </span>
           @endif
-          
+    
           {{-- Show price with discount --}}
-          @if(isset($item->active_discount) && isset($item->original_price))
+          @if(isset($item->original_price) && $item->original_price)
             <div class="mt-1">
               <span class="text-xs text-gray-400 line-through">₱{{ number_format($item->original_price, 2) }}</span>
               <span class="text-xs font-semibold text-blue-600 ml-1">₱{{ number_format($item->unit_price, 2) }}</span>

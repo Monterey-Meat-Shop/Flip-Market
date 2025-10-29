@@ -81,13 +81,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/returns/confirmation', [ReturnController::class, 'confirmation'])->name('returns.confirmation');
     Route::get('/returns/{returnId}', [ReturnController::class, 'show'])->name('returns.show');
     
-    // Order details - pass orderId as parameter
+    // Order details
     Route::get('/orders/{orderId}', OrderDetailPage::class)->name('orders.show');
-    
-    // Cart actions
-    Route::post('/cart/add/{productId}', [CartController::class, 'addToCart'])->name('cart.add');
-    Route::post('/cart/remove/{itemId}', [CartController::class, 'removeFromCart'])->name('cart.remove');
-    Route::post('/cart/update/{itemId}', [CartController::class, 'updateQuantity'])->name('cart.update');
     
     Route::get('/logout', function () {
         Auth::logout(); 
