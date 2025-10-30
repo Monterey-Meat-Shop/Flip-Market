@@ -29,13 +29,7 @@ return new class extends Migration
             $table->decimal('price', 10, 2);
             $table->json('image_url')->nullable();
 
-            // Use an enum for a more comprehensive status
             $table->enum('status', ['in_stock', 'pre_order', 'low_stock', 'out_of_stock'])->default('in_stock');
-
-            // These columns are being moved to the new `product_variants` table.
-            // $table->integer('stock_quantity');
-            // $table->json('size')->nullable();
-            //$table->string('colorway')->nullable();
 
             $table->boolean('is_active')->default(true);
             $table->timestamps();

@@ -263,6 +263,7 @@ class ProductResource extends Resource
                 Select::make('status')
                     ->options([
                         'pre_order' => 'Pre-order',
+                        'in_stock' => 'In stock',
                     ])
                     ->label('Status')
                     ->default('in_stock')
@@ -363,46 +364,47 @@ class ProductResource extends Resource
                 TextColumn::make('name')
                     ->searchable()
                     ->sortable(),
-ImageColumn::make('image_url')
-    ->label('Image')
-    ->getStateUsing(fn ($record) => $record->image_url[0] ?? null)
-    ->extraImgAttributes([
-        'class' => 'cursor-pointer hover:scale-105 transition-transform duration-200',
-        'onclick' => "
-            event.stopPropagation();
-            const imgSrc = this.src;
 
-            // Create modal container
-            const modal = document.createElement('div');
-            modal.className = 'fixed inset-0 z-[9999] flex items-center justify-center bg-black bg-opacity-80 cursor-pointer';
-            modal.onclick = () => modal.remove();
+                ImageColumn::make('image_url')
+                    ->label('Image')
+                    ->getStateUsing(fn ($record) => $record->image_url[0] ?? null)
+                    ->extraImgAttributes([
+                        'class' => 'cursor-pointer hover:scale-105 transition-transform duration-200',
+                        'onclick' => "
+                            event.stopPropagation();
+                            const imgSrc = this.src;
 
-            // Create image element
-            const img = document.createElement('img');
-            img.src = imgSrc;
-            img.className = 'max-w-2xl max-h-[80vh] w-auto h-auto rounded-lg shadow-2xl object-contain';
-            img.onclick = (e) => e.stopPropagation();
+                            // Create modal container
+                            const modal = document.createElement('div');
+                            modal.className = 'fixed inset-0 z-[9999] flex items-center justify-center bg-black bg-opacity-80 cursor-pointer';
+                            modal.onclick = () => modal.remove();
 
-            modal.appendChild(img);
-            document.body.appendChild(modal);
+                            // Create image element
+                            const img = document.createElement('img');
+                            img.src = imgSrc;
+                            img.className = 'max-w-2xl max-h-[80vh] w-auto h-auto rounded-lg shadow-2xl object-contain';
+                            img.onclick = (e) => e.stopPropagation();
 
-            // Listen for ESC key to close
-            const closeOnEsc = (e) => {
-                if (e.key === 'Escape') {
-                    modal.remove();
-                    document.removeEventListener('keydown', closeOnEsc);
-                }
-            };
-            document.addEventListener('keydown', closeOnEsc);
-        ",
-    ])
-    ->disableClick(), // prevents row navigation
+                            modal.appendChild(img);
+                            document.body.appendChild(modal);
+
+                            // Listen for ESC key to close
+                            const closeOnEsc = (e) => {
+                                if (e.key === 'Escape') {
+                                    modal.remove();
+                                    document.removeEventListener('keydown', closeOnEsc);
+                                }
+                            };
+                            document.addEventListener('keydown', closeOnEsc);
+                        ",
+                    ])
+                    ->disableClick(), // prevents row navigation
 
 
-TextColumn::make('brand.name')
-    ->label('Brand')
-    ->searchable()
-    ->sortable(),
+                TextColumn::make('brand.name')
+                    ->label('Brand')
+                    ->searchable()
+                    ->sortable(),
 
                 TextColumn::make('category.name')
                     ->label('Category')

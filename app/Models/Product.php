@@ -10,6 +10,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use App\Models\ReturnItem;
+use App\Models\ProductVariant;
 
 class Product extends Model
 {
@@ -73,6 +75,18 @@ class Product extends Model
             return $this->variants->sum('stock_quantity');
         }
         return (int) $this->variants()->sum('stock_quantity');
+    }
+
+    public function returnItems()
+    {
+        return $this->hasManyThrough(
+            ReturnItem::class,
+            ProductVariant::class,
+            'product_id',        
+            'product_variant_id',
+            'productID',         
+            'id'                
+        );
     }
 
     public function getCalculatedStatusAttribute(): string

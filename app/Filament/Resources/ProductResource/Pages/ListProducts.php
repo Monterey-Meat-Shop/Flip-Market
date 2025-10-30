@@ -70,9 +70,6 @@ class ListProducts extends ListRecords
                     ->count())
                 ->badgeColor('danger'),
 
-            'returned' => Tab::make('Returned')
-                ->badgeColor('danger'),
-
             // query for total archived
             'archived' => Tab::make('Archived')
                 ->modifyQueryUsing(fn (Builder $query) => $query->onlyTrashed())

@@ -53,6 +53,11 @@ class ReturnRequest extends Model
         );
     }
 
+    public function return()
+    {
+        return $this->belongsTo(\App\Models\ReturnRequest::class, 'returnID', 'returnID');
+    }
+
     // Get the customer that owns the return request
     public function customer()
     {
@@ -185,5 +190,70 @@ class ReturnRequest extends Model
                 'notes' => $item['notes'] ?? null,
             ];
         });
+    }
+
+    // Restore stock
+     public function restoreStock(): void
+    {
+        if (empty($this->returned_items) || !is_array($this->returned_items)) {
+            return;
+        }
+
+        foreach ($this->returned_items as $item) {
+            $orderItemId = $item['order_itemID'] ?? null;
+            $returnQty = $item['quantity'] ?? 0;
+
+            if (!$orderItemId || $returnQty <= 0) {
+                continue;
+            }
+
+            // Find the order item
+            $orderItem = OrderItem::with('productVariant')->find($orderItemId);
+            
+            if (!$orderItem || !$orderItem->productVariant) {
+                continue;
+            }
+
+            $orderItem->productVariant->increment('stock_quantity', $returnQty);
+        }
+    }
+
+    // Defective products
+    public function storeDefectiveItems(): void
+    {
+        if (empty($this->returned_items)) {
+            return;
+        }
+
+        // Decode returned_items if it's stored as JSON text
+        $items = is_array($this->returned_items)
+            ? $this->returned_items
+            : json_decode($this->returned_items, true);
+
+        if (!is_array($items)) {
+            return;
+        }
+
+        foreach ($items as $item) {
+            $orderItemId = $item['order_itemID'] ?? null;
+            $returnQty = $item['quantity'] ?? 0;
+
+            if (!$orderItemId || $returnQty <= 0) {
+                continue;
+            }
+
+            // Find the order item (to get its variant)
+            $orderItem = \App\Models\OrderItem::with('productVariant')->find($orderItemId);
+            if (!$orderItem || !$orderItem->productVariant) {
+                continue;
+            }
+
+            // Insert defective item into return_items table
+            \App\Models\ReturnItem::create([
+                'returnID' => $this->returnID,
+                'product_variant_id' => $orderItem->product_variant_id,
+                'quantity' => $returnQty,
+            ]);
+        }
     }
 }

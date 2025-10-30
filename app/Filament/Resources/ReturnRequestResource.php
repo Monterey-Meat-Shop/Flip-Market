@@ -411,7 +411,11 @@ class ReturnRequestResource extends Resource
                         $record->order->update([
                             'order_status' => 'return_requested',
                         ]);
-                        
+
+                        // if ($record->return_reason === 'incorrect') {
+                        //     $record->restoreStock();
+                        // }
+
                         Notification::make()
                             ->title('Return Approved')
                             ->success()
@@ -460,6 +464,14 @@ class ReturnRequestResource extends Resource
                         $record->order->update([
                             'order_status' => 'returned',
                         ]);
+
+                        if ($record->return_reason === 'incorrect') {
+                            $record->restoreStock();
+                        }
+
+                        if ($record->return_reason === 'defective') {
+                            $record->storeDefectiveItems();
+                        }
                         
                         Notification::make()
                             ->title('Return Completed')
