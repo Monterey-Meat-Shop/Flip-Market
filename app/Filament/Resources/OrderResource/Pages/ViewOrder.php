@@ -223,10 +223,10 @@ class ViewOrder extends ViewRecord
                                     ->placeholder('— N/A —'),
 
                                 TextEntry::make('shipping.delivered_at')
-    ->label('Delivered Date')
-    ->dateTime('M d, Y h:i A')
-    ->icon('heroicon-o-archive-box')
-    ->placeholder('— Not Delivered —'),
+                                    ->label('Delivered Date')
+                                    ->dateTime('M d, Y h:i A')
+                                    ->icon('heroicon-o-archive-box')
+                                    ->placeholder('— Not Delivered —'),
 
                             ])->columns(2),     
                     ])->columns(2),

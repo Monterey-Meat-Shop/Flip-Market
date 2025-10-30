@@ -35,6 +35,11 @@ class ReportResource extends Resource
     //     ]);
     // }
 
+    public static function canAccess(): bool
+    {
+        return auth()->user()->hasRole(['admin', 'manager']);
+    }
+
     public static function table(Table $table): Table
     {
         return $table->columns([
