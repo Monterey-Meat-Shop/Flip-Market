@@ -31,7 +31,7 @@ return new class extends Migration
             $table->string('reference_number')->nullable();
             $table->string('screenshot_path');
 
-            $table->enum('status', ['unpaid', 'verified', 'completed', 'failed'])->default('unpaid');
+            $table->enum('status', ['unpaid', 'verified', 'paid', 'failed'])->default('unpaid');
 
 
             $table->timestamps();

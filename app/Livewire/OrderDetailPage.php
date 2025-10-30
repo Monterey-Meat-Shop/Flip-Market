@@ -46,58 +46,51 @@ class OrderDetailPage extends Component
         $this->calculateDiscounts();
     }
 
-    //Calculate product-level and coupon-level discounts
+    // Calculate product-level and coupon-level discounts
     private function calculateDiscounts()
 {
     $this->productDiscountSavings = 0;
     $this->originalSubtotal = 0;
 
     foreach ($this->order->orderItems as $item) {
-        // Case 1: Has original price stored (primary check)
-        if (!empty($item->original_price) && $item->original_price > $item->unit_price) {
-            $item->has_discount = true;
-            $item->original_unit_price = $item->original_price;
-            $item->savings_per_unit = $item->original_price - $item->unit_price;
+        $unitPrice = (float) $item->unit_price;
+        $originalPrice = !empty($item->original_price) ? (float) $item->original_price : $unitPrice;
+        $quantity = (int) $item->quantity;
 
-            $itemSavings = $item->savings_per_unit * $item->quantity;
-            $this->productDiscountSavings += $itemSavings;
-            $this->originalSubtotal += $item->original_price * $item->quantity;
-        }
-        // Case 2: Has discount_amount but no original_price
-        elseif (!empty($item->discount_amount) && $item->discount_amount > 0) {
-            $item->has_discount = true;
-            $item->original_unit_price = $item->unit_price + $item->discount_amount;
-            $item->savings_per_unit = $item->discount_amount;
-            
-            // Set original_price for blade access
-            $item->original_price = $item->original_unit_price;
+        // Reset default
+        $item->has_discount = false;
+        $item->original_unit_price = $unitPrice;
+        $item->savings_per_unit = 0;
 
-            $itemSavings = $item->discount_amount * $item->quantity;
+        // Only apply product-level discount if original_price > unit_price
+        if ($originalPrice > $unitPrice) {
+            $item->has_discount = true;
+            $item->original_unit_price = $originalPrice;
+            $item->savings_per_unit = $originalPrice - $unitPrice;
+
+            $itemSavings = $item->savings_per_unit * $quantity;
             $this->productDiscountSavings += $itemSavings;
-            $this->originalSubtotal += $item->original_unit_price * $item->quantity;
-        }
-        // Case 3: No discount
-        else {
-            $item->has_discount = false;
-            $item->original_unit_price = $item->unit_price;
-            $item->savings_per_unit = 0;
-            $this->originalSubtotal += $item->unit_price * $item->quantity;
+            $this->originalSubtotal += $originalPrice * $quantity;
+        } else {
+            $this->originalSubtotal += $unitPrice * $quantity;
         }
     }
 
-    // Calculate coupon discount
+    // Checkout-level coupon discount
+    $this->couponDiscountAmount = 0;
+
     if ($this->order->discount) {
         $itemsTotal = $this->order->orderItems->sum('sub_total');
-        $shippingFee = $this->order->shipping->shipping_fee ?? 0;
+        $shippingFee = $this->order->shipping ? (float) $this->order->shipping->shipping_fee : 0;
         $expectedTotal = $itemsTotal + $shippingFee;
+        $finalAmount = (float) $this->order->final_amount;
 
-        if ($this->order->final_amount < $expectedTotal) {
-            $this->couponDiscountAmount = $expectedTotal - $this->order->final_amount;
-        } else {
-            $this->couponDiscountAmount = 0;
+        if ($finalAmount < $expectedTotal && ($expectedTotal - $finalAmount) > 0.01) {
+            $this->couponDiscountAmount = $expectedTotal - $finalAmount;
         }
     }
 }
+
 
     public function render()
     {

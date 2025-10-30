@@ -8,6 +8,8 @@ use App\Models\ProductVariant;
 use App\Models\CartItem;
 use App\Models\Customer;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class ProductDetailPage extends Component
 {
@@ -60,7 +62,7 @@ class ProductDetailPage extends Component
         $this->selectedImage = $index;
     }
 
-    public function addToCart()
+     public function addToCart()
     {
         if (!Auth::check()) {
             session()->flash('error', 'Please login to add items to cart.');
@@ -76,17 +78,24 @@ class ProductDetailPage extends Component
         }
 
         $variant = $this->selectedVariant;
-        $availableStock = $variant ? $variant->stock_quantity : $this->product->total_stock_quantity;
 
-        if ($availableStock < $this->quantity) {
-            session()->flash('error', 'Not enough stock for selected quantity.');
+        if (!$variant) {
+            session()->flash('error', 'Please select a product variant.');
+            return;
+        }
+
+        // Check total reserved stock across all carts + current request
+        $currentlyReserved = CartItem::where('product_variant_id', $variant->id)->sum('quantity');
+        $availableStock = $variant->stock_quantity;
+
+        // Validate if we can reserve this quantity
+        if (($currentlyReserved + $this->quantity) > $availableStock) {
+            session()->flash('error', 'Not enough stock available.');
             return;
         }
 
         // Base price (from variant or product)
-        $originalPrice = $variant
-            ? ($variant->price ?? $this->product->price)
-            : $this->product->price;
+        $originalPrice = $variant->price ?? $this->product->price;
 
         // Apply discount (if active)
         $activeDiscount = $this->product->discounts
@@ -113,52 +122,77 @@ class ProductDetailPage extends Component
             $unitPrice = max($originalPrice - $discountAmount, 0);
         }
 
-        // Check existing cart item
-        $existing = CartItem::where('customerID', $customer->customerID)
-            ->where('productID', $this->product->productID)
-            ->when($variant, fn($q) => $q->where('product_variant_id', $variant->id))
-            ->first();
+        try {
+            // Check existing cart item
+            $existing = CartItem::where('customerID', $customer->customerID)
+                ->where('productID', $this->product->productID)
+                ->where('product_variant_id', $variant->id)
+                ->first();
 
-        if ($existing) {
-            $newQty = $existing->quantity + $this->quantity;
+            if ($existing) {
+                $newQty = $existing->quantity + $this->quantity;
 
-            if ($newQty > $availableStock) {
-                session()->flash('error', 'Cannot add that many items. Not enough stock.');
-                return;
+                // Re-validate with existing item excluded
+                $otherCartsReserved = CartItem::where('product_variant_id', $variant->id)
+                    ->where('cart_itemID', '!=', $existing->cart_itemID)
+                    ->sum('quantity');
+                
+                if (($otherCartsReserved + $newQty) > $availableStock) {
+                    throw new \Exception('Not enough stock available for this quantity.');
+                }
+
+                // Update cart item - NO stock changes
+                $existing->update([
+                    'quantity'       => $newQty,
+                    'unit_price'     => $unitPrice,
+                    'original_price' => $originalPrice,
+                    'discount_name'  => $discountName,
+                    'discount_amount'=> $discountAmount,
+                    'sub_total'      => $unitPrice * $newQty,
+                ]);
+
+                Log::info("Add to cart (existing) - NO stock change", [
+                    'cart_item_id' => $existing->cart_itemID,
+                    'old_quantity' => $existing->quantity - $this->quantity,
+                    'new_quantity' => $newQty,
+                    'added' => $this->quantity,
+                ]);
+            } else {
+                // Create new cart item - NO stock changes
+                CartItem::create([
+                    'customerID'         => $customer->customerID,
+                    'productID'          => $this->product->productID,
+                    'product_variant_id' => $variant->id,
+                    'size'               => $variant->size,
+                    'colorway'           => $variant->colorway,
+                    'quantity'           => $this->quantity,
+                    'original_price'     => $originalPrice,
+                    'unit_price'         => $unitPrice,
+                    'discount_name'      => $discountName,
+                    'discount_amount'    => $discountAmount,
+                    'sub_total'          => $unitPrice * $this->quantity,
+                ]);
+
+                Log::info("Add to cart (new) - NO stock change", [
+                    'variant_id' => $variant->id,
+                    'quantity' => $this->quantity,
+                    'stock_remains_at' => $availableStock,
+                ]);
             }
 
-            $existing->update([
-                'quantity'       => $newQty,
-                'unit_price'     => $unitPrice,
-                'original_price' => $originalPrice,
-                'discount_name'  => $discountName,
-                'discount_amount'=> $discountAmount,
-                'sub_total'      => $unitPrice * $newQty,
-            ]);
-        } else {
-            CartItem::create([
-                'customerID'         => $customer->customerID,
-                'productID'          => $this->product->productID,
-                'product_variant_id' => $variant ? $variant->id : null,
-                'size'               => $variant ? $variant->size : null,
-                'colorway'           => $variant ? $variant->colorway : null,
-                'quantity'           => $this->quantity,
-                'original_price'     => $originalPrice,
-                'unit_price'         => $unitPrice,
-                'discount_name'      => $discountName,
-                'discount_amount'    => $discountAmount,
-                'sub_total'          => $unitPrice * $this->quantity,
-            ]);
+            session()->flash('message', 'Added to cart.');
+
+            // Refresh cart
+            $this->cartItems = CartItem::with('product', 'variant')
+                ->where('customerID', $customer->customerID)
+                ->get();
+
+            $this->dispatch('cartUpdated');
+
+        } catch (\Exception $e) {
+            Log::error('Add to cart failed: ' . $e->getMessage());
+            session()->flash('error', $e->getMessage());
         }
-
-        session()->flash('message', 'Added to cart.');
-
-        // Refresh cart
-        $this->cartItems = CartItem::with('product', 'variant')
-            ->where('customerID', $customer->customerID)
-            ->get();
-
-        $this->dispatch('cartUpdated');
     }
 
     public function addToFavorites()

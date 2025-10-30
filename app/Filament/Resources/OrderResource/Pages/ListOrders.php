@@ -25,12 +25,13 @@ class ListOrders extends ListRecords
         return [
             null => Tab::make('All')
                 // This badge uses a direct Eloquent query.
-                ->badge(Order::count()),
-            
+                ->badge(Order::count())
+                ->badgeColor('gray'),
+
             'pending' => Tab::make('Pending')
                 ->modifyQueryUsing(fn (Builder $query) => $query->where('order_status', 'pending'))
                 ->badge(Order::where('order_status', 'pending')->count())
-                ->badgeColor('success'),
+                ->badgeColor('warning'),
 
             'processing' => Tab::make('Processing')
                 ->modifyQueryUsing(fn (Builder $query) => $query->where('order_status', 'processing'))

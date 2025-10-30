@@ -69,23 +69,35 @@
 
                   {{-- Quantity Controls and Remove --}}
                   <div class="flex items-center space-x-4">
-                    <div class="flex items-center border rounded">
-                      <button wire:click="decreaseQuantity({{ $item->id }})" class="px-3 py-1">-</button>
-                      <span class="px-3">{{ $item->quantity }}</span>
-                      <button wire:click="increaseQuantity({{ $item->id }})" class="px-3 py-1">+</button>
-                    </div>
+                      <div class="flex flex-col items-center">
+                          <div class="flex items-center border rounded">
+                              <button wire:click="decreaseQuantity({{ $item->cart_itemID }})" class="px-3 py-1 hover:bg-gray-100 transition">-</button>
+                              <span class="px-3">{{ $item->quantity }}</span>
+                              <button wire:click="increaseQuantity({{ $item->cart_itemID }})" class="px-3 py-1 hover:bg-gray-100 transition">+</button>
+                          </div>
+                          {{-- Available Stock Display --}}
+                          @if($item->variant)
+                              @php
+                                  // Show available stock PLUS what's already in cart
+                                  $totalAvailable = $item->variant->stock_quantity + $item->quantity;
+                              @endphp
+                              <span class="text-xs text-gray-500 mt-1">
+                                  {{ $item->variant->stock_quantity }} more available
+                              </span>
+                          @endif
+                      </div>
 
-                    {{-- Subtotal --}}
-                    <p class="font-semibold text-gray-800">
-                      ₱{{ number_format(($activeDiscount ? $item->product->discounted_price : $item->product->price) * $item->quantity, 2) }}
-                    </p>
+                      {{-- Subtotal --}}
+                      <p class="font-semibold text-gray-800">
+                          ₱{{ number_format($item->sub_total, 2) }}
+                      </p>
 
-                    {{-- Remove Button --}}
-                    <button wire:click="removeFromCart({{ $item->id }})"
-                            class="text-red-600 text-sm hover:underline">
-                      Remove
-                    </button>
+                      {{-- Remove Button --}}
+                      <button wire:click="removeFromCart({{ $item->cart_itemID }})" class="text-red-600 hover:text-red-800 transition">
+                          Remove
+                      </button>
                   </div>
+
                 </div>
               @endforeach
             </div>

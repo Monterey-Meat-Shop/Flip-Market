@@ -10,7 +10,11 @@ class OrderStats extends BaseWidget
     protected function getStats(): array
     {
         return [
-            Stat::make('Pending', Order::query()->where('order_status', 'pending')->count()),
+            Stat::make('Pending', fn () => Order::where('order_status', 'pending')->count())
+                ->icon('heroicon-o-clock') 
+                ->color('warning')
+                ->description('Orders waiting to be processed'),
+
             Stat::make('Processing', Order::query()->where('order_status', 'processing')->count()),
             Stat::make('Shipped', Order::query()->where('order_status', 'shipped')->count()),
             Stat::make('Completed', Order::query()->where('order_status', 'completed')->count()),

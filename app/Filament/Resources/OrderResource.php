@@ -478,7 +478,7 @@ class OrderResource extends Resource
                             ->options([
                                 'unpaid' => 'Unpaid',
                                 'verified' => 'Verified',
-                                'completed' => 'Completed',
+                                'paid' => 'Paid',
                                 'failed' => 'Failed',
                             ])
                             ->required()
@@ -692,7 +692,7 @@ class OrderResource extends Resource
                 //         'paid', 'verified' => 'success',
                 //         'failed' => 'danger',
                 //         'unpaid' => 'warning',
-                //         'completed' => 'success',
+                //         'paid' => 'success',
                 //     })
                 //     ->sortable()
                 //     ->formatStateUsing(fn ($state) => $state ?? 'N/A'),
@@ -769,13 +769,13 @@ class OrderResource extends Resource
                             ]);
 
                             $record->payment()->update([
-                                //'status' => 'paid',
-                                'status' => 'completed',
+                                'status' => 'paid',
                             ]);
 
                             if ($shipping) {
                                 $shipping->update([
                                     'shipping_status' => $shippingStatus,
+                                    'delivered_at' => now(),
                                 ]);
                             } else {
                                 \Filament\Notifications\Notification::make()

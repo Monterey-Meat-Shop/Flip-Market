@@ -97,7 +97,7 @@ class CreateOrder extends CreateRecord
         }
 
         // Optional fallback: if payment was paid immediately, ensure deduction (only if not already done)
-        if (in_array(strtolower($payment->status), ['paid', 'verified', 'completed']) && ! ($record->stock_deducted ?? false)) {
+        if (in_array(strtolower($payment->status), ['paid', 'verified']) && ! ($record->stock_deducted ?? false)) {
             $record->deductStockForTransaction();
             Log::info("Stock deducted for Order {$record->orderID} (payment was paid).");
         }

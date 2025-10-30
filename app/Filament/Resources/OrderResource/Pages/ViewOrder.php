@@ -62,13 +62,13 @@ class ViewOrder extends ViewRecord
                     ]);
 
                     $this->record->payment()->update([
-                        'status' => 'completed',
-                        // 'status' => 'paid',
+                        'status' => 'paid',
                     ]);
 
                     if ($shipping) {
                         $shipping->update([
                             'shipping_status' => $shippingStatus,
+                            'delivered_at' => now(),
                         ]);
                     } else {
                         \Filament\Notifications\Notification::make()
@@ -223,10 +223,10 @@ class ViewOrder extends ViewRecord
                                     ->placeholder('— N/A —'),
 
                                 TextEntry::make('shipping.delivered_at')
-                                    ->label('Delivered Date')
-                                    ->dateTime('M d, Y h:i A')
-                                    ->icon('heroicon-o-archive-box')
-                                    ->placeholder('— Not Delivered —'),
+    ->label('Delivered Date')
+    ->dateTime('M d, Y h:i A')
+    ->icon('heroicon-o-archive-box')
+    ->placeholder('— Not Delivered —'),
 
                             ])->columns(2),     
                     ])->columns(2),
@@ -305,10 +305,11 @@ class ViewOrder extends ViewRecord
                                         ->label('Discount Price')
                                         ->money('PHP')
                                         ->hidden(fn($record) => $record->discount_amount == 0),
-                                    TextEntry::make('subtotal')
+                                    TextEntry::make('line_total')
                                         ->label('Subtotal')
-                                        // Final Calculation: (Quantity * Original Price) - Total Discount Amount
-                                        ->getStateUsing(fn($record) => ($record->quantity * $record->original_price) - $record->discount_amount)
+                                        ->getStateUsing(fn($record) => 
+                                            ($record->quantity * $record->unit_price) - $record->discount_amount
+                                        )
                                         ->money('PHP'),
                                 ])
                                 ->columns(7)
