@@ -386,7 +386,7 @@
           Please upload a screenshot of your payment as proof.
         </p>
 
-        <input type="file"
+        <input type="file" required
                wire:model="paymentScreenshot"
                accept="image/*"
                class="w-full text-sm text-gray-800 border border-gray-300 rounded-lg p-2 

@@ -112,115 +112,113 @@
     </div>
     <!-- End Grid -->
 
+    <!-- Order Items -->
     <div class="flex flex-col md:flex-row gap-4 mt-4">
-      <div class="md:w-3/4">
-        <!-- Products Table -->
+    <div class="md:w-3/4">
         <div class="bg-white overflow-x-auto rounded-lg shadow-md p-6 mb-4 border border-gray-200">
-          <h2 class="text-lg font-semibold mb-4">Order Items</h2>
+            <h2 class="text-lg font-semibold mb-4">Order Items</h2>
 
-          <table class="w-full">
-            <thead>
-              <tr class="border-b">
-                <th class="text-left font-semibold py-3">Product</th>
-                <th class="text-left font-semibold py-3">Original Price</th>
-                <th class="text-left font-semibold py-3">Discounted Price</th>
-                <th class="text-left font-semibold py-3">Quantity</th>
-                <th class="text-left font-semibold py-3">Total</th>
-              </tr>
-            </thead>
+            <table class="w-full">
+                <thead>
+                    <tr class="border-b">
+                        <th class="text-left font-semibold py-3">Product</th>
+                        <th class="text-left font-semibold py-3">Original Price</th>
+                        <th class="text-left font-semibold py-3">Discounted Price</th>
+                        <th class="text-left font-semibold py-3">Quantity</th>
+                        <th class="text-left font-semibold py-3">Total</th>
+                    </tr>
+                </thead>
 
-            <tbody>
-              @foreach($order->orderItems as $item)
-                @php
-                  // Check if the item has a discount
-                  $hasDiscount = (!empty($item->original_price) && $item->original_price > $item->unit_price)
-                              || (!empty($item->discount_amount) && $item->discount_amount > 0);
+                <tbody>
+                    @foreach($order->orderItems as $item)
+                        @php
+                            // Use properties set by the OrderDetailPage component's calculateDiscounts method
+                            $has_discount = $item->has_discount ?? false; // Boolean set in PHP
+                            $originalPrice = (float) ($item->original_unit_price ?? $item->unit_price); // Price before product discount
+                            $unitPricePaid = (float) $item->unit_price; // Final unit price paid
+                            $savingsPerUnit = $item->savings_per_unit ?? 0; // Savings per unit (0 if none)
+                            $totalSavings = $savingsPerUnit * $item->quantity; // Total savings for this item line
+                        @endphp
 
-                  $originalPrice = $item->original_price ?? $item->unit_price;
-                  $discountedPrice = $item->unit_price;
-                  $savings = $hasDiscount ? ($originalPrice - $discountedPrice) : 0;
-                @endphp
+                        <tr class="border-b hover:bg-gray-50 transition">
+                            <td class="py-4">
+                                <div class="flex items-center">
+                                    @if($item->product && $item->product->image_path)
+                                        <img src="{{ asset('storage/' . $item->product->image_path) }}"
+                                                alt="{{ $item->product->name }}"
+                                                class="h-16 w-16 mr-4 object-cover rounded">
+                                    @else
+                                        <div class="h-16 w-16 mr-4 bg-gray-200 rounded flex items-center justify-center">
+                                            <span class="text-gray-500 text-xs font-semibold">
+                                                {{ strtoupper(substr($item->product->name ?? 'Product', 0, 2)) }}
+                                            </span>
+                                        </div>
+                                    @endif
 
-                <tr class="border-b hover:bg-gray-50 transition">
-                  <!-- Product -->
-                  <td class="py-4">
-                    <div class="flex items-center">
-                      @if($item->product && $item->product->image_path)
-                        <img src="{{ asset('storage/' . $item->product->image_path) }}"
-                             alt="{{ $item->product->name }}"
-                             class="h-16 w-16 mr-4 object-cover rounded">
-                      @else
-                        <div class="h-16 w-16 mr-4 bg-gray-200 rounded flex items-center justify-center">
-                          <span class="text-gray-500 text-xs font-semibold">
-                            {{ strtoupper(substr($item->product->name ?? 'Product', 0, 2)) }}
-                          </span>
-                        </div>
-                      @endif
+                                    <div>
+                                        <span class="font-semibold text-gray-800">{{ $item->product->name }}</span>
 
-                      <div>
-                        <span class="font-semibold text-gray-800">{{ $item->product->name }}</span>
+                                        {{-- Variant details --}}
+                                        @if($item->size || $item->colorway)
+                                            <p class="text-xs text-gray-500">
+                                                @if($item->colorway) {{ $item->colorway }} @endif
+                                                @if($item->size) | Size: {{ $item->size }} @endif
+                                            </p>
+                                        @endif
 
-                        {{-- Variant details --}}
-                        @if($item->size || $item->colorway)
-                          <p class="text-xs text-gray-500">
-                            @if($item->colorway) {{ $item->colorway }} @endif
-                            @if($item->size) | Size: {{ $item->size }} @endif
-                          </p>
-                        @endif
+                                        {{-- Discount info --}}
+                                        @if($has_discount)
+                                            <div class="flex items-center gap-2 mt-1">
+                                                <span class="inline-block text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded">
+                                                    Discounted
+                                                </span>
+                                                @if($item->discount_name)
+                                                    <span class="text-xs text-gray-500">
+                                                        ({{ $item->discount_name }})
+                                                    </span>
+                                                @endif
+                                            </div>
+                                        @endif
+                                    </div>
+                                </div>
+                            </td>
 
-                        {{-- Discount info --}}
-                        @if($hasDiscount)
-                          <div class="flex items-center gap-2 mt-1">
-                            <span class="inline-block text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded">
-                              Discounted
-                            </span>
-                            @if($item->discount_name)
-                              <span class="text-xs text-gray-500">
-                                ({{ $item->discount_name }})
-                              </span>
-                            @endif
-                          </div>
-                        @endif
-                      </div>
-                    </div>
-                  </td>
+                            <td class="py-4">
+                                @if($has_discount)
+                                    {{-- Display the higher price with a strikethrough --}}
+                                    <span class="line-through text-gray-400">₱{{ number_format($originalPrice, 2) }}</span>
+                                @else
+                                    {{-- Display the unit price as the 'Original Price' (no strikethrough) --}}
+                                    <span class="text-gray-800">₱{{ number_format($unitPricePaid, 2) }}</span>
+                                @endif
+                            </td>
 
-                  <!-- Original Price -->
-                  <td class="py-4">
-                    @if(!empty($item->original_price) && $item->original_price > $item->unit_price)
-                      <span class="line-through text-gray-400">₱{{ number_format($item->original_price, 2) }}</span>
-                    @else
-                      <span class="text-gray-500">—</span>
-                    @endif
-                  </td>
+                            <td class="py-4">
+                                @if($has_discount)
+                                    <div class="flex flex-col">
+                                        {{-- Display the discounted unit price and total savings for the line --}}
+                                        <span class="font-semibold text-green-600">₱{{ number_format($unitPricePaid, 2) }}</span>
+                                        <span class="text-xs text-green-600">Save ₱{{ number_format($totalSavings, 2) }}</span>
+                                    </div>
+                                @else
+                                    {{-- Display ₱0.00 as the discounted price when no discount --}}
+                                    <span class="font-semibold text-gray-800">₱{{ number_format(0.00, 2) }}</span>
+                                @endif
+                            </td>
 
-                  <!-- Discounted Price -->
-                  <td class="py-4">
-                    @if($hasDiscount)
-                      <div class="flex flex-col">
-                        <span class="font-semibold text-green-600">₱{{ number_format($discountedPrice, 2) }}</span>
-                        <span class="text-xs text-green-600">Save ₱{{ number_format($savings, 2) }}</span>
-                      </div>
-                    @else
-                      <span class="font-semibold text-gray-800">₱{{ number_format($discountedPrice, 2) }}</span>
-                    @endif
-                  </td>
+                            <td class="py-4 text-left">
+                                <span>{{ $item->quantity }}</span>
+                            </td>
 
-                  <!-- Quantity -->
-                  <td class="py-4 text-center">
-                    <span>{{ $item->quantity }}</span>
-                  </td>
-
-                  <!-- Total -->
-                  <td class="py-4">
-                    <span class="font-semibold text-gray-900">
-                      ₱{{ number_format($item->sub_total, 2) }}
-                    </span>
-                  </td>
-                </tr>
-              @endforeach
-            </tbody>
-          </table>
+                            <td class="py-4">
+                                <span class="font-semibold text-gray-900">
+                                    ₱{{ number_format($item->sub_total, 2) }}
+                                </span>
+                            </td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
         </div>
 
         <!-- Shipping Address -->
@@ -266,9 +264,9 @@
               <p class="text-sm text-gray-600 mb-2">Payment Screenshot:</p>
               <div class="bg-gray-50 p-3 rounded-lg inline-block">
                 <img src="{{ asset('storage/' . $order->payment->screenshot_path) }}" 
-                     alt="Payment Screenshot"
-                     class="max-w-xs max-h-64 object-contain rounded shadow-md cursor-pointer hover:scale-105 transition"
-                     onclick="window.open(this.src, '_blank')">
+                      alt="Payment Screenshot"
+                      class="max-w-xs max-h-64 object-contain rounded shadow-md cursor-pointer hover:scale-105 transition"
+                      onclick="window.open(this.src, '_blank')">
               </div>
               <p class="text-xs text-gray-500 mt-2">Click image to view full size</p>
             </div>

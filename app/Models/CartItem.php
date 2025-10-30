@@ -9,6 +9,7 @@ class CartItem extends Model
     protected $table = 'cart_items';
     protected $primaryKey = 'cart_itemID';
     public $timestamps = true;
+    protected $keyType = 'int';
 
     protected $fillable = [
         'customerID',

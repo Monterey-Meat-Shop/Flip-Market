@@ -29,8 +29,9 @@ return new class extends Migration
 
             $table->decimal('amount', 8, 2)->default(0);
             $table->string('reference_number')->nullable();
-            $table->string('screenshot_path')->nullable()->default(null);
-            $table->enum('status', ['unpaid', 'paid', 'verified', 'completed'])->default('unpaid');
+            $table->string('screenshot_path');
+
+            $table->enum('status', ['unpaid', 'verified', 'paid', 'failed'])->default('unpaid');
 
 
             $table->timestamps();

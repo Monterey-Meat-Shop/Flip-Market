@@ -104,33 +104,38 @@ class CheckoutPage extends Component
             $product->load('discounts');
         }
 
-        return $product->discounts
+        $discount = $product->discounts
             ->where('is_active', true)
             ->filter(function($discount) {
-                return (is_null($discount->start_date) || $discount->start_date <= now())
-                    && (is_null($discount->end_date) || $discount->end_date >= now());
+                $now = now();
+                $startDateValid = is_null($discount->start_date) || $discount->start_date <= $now;
+                $endDateValid = is_null($discount->end_date) || $discount->end_date >= $now;
+                $hasValidValue = $discount->discount_value > 0;
+            
+                return $startDateValid && $endDateValid && $hasValidValue;
             })
             ->first();
+
+            return $discount;
     }
 
     // Calculate discounted price
     private function calculateDiscountedPrice($basePrice, $discount)
-	{
-		if (!$discount) {
-			return $basePrice;
-		}
+    {
+        if (!$discount) {
+            return $basePrice;
+        }
 
-		if ($discount->discount_type === 'Percentage') {
-			$discountedPrice = $basePrice - ($basePrice * ($discount->discount_value / 100));
-		} elseif ($discount->discount_type === 'Fixed') {
-			// Explicitly handle a fixed amount discount
-			$discountedPrice = $basePrice - $discount->discount_value;
-		} else {
-			$discountedPrice = $basePrice - $discount->discount_value;
-		}
-
-		return max($discountedPrice, 0);
-	}
+        if ($discount->discount_type === 'Percentage') {
+            $discountedPrice = $basePrice - ($basePrice * ($discount->discount_value / 100));
+        } elseif ($discount->discount_type === 'Fixed') {
+            $discountedPrice = $basePrice - $discount->discount_value;
+        } else {
+            // If discount type is unknown, return base price (no discount)
+            return $basePrice;
+        }
+        return max($discountedPrice, 0);
+    }
 
     public function loadCustomerData()
     {
@@ -179,64 +184,48 @@ class CheckoutPage extends Component
         foreach ($this->cartItems as $item) {
             $basePrice = (float) $item->product->price;
             $activeDiscount = $this->getActiveDiscount($item->product);
-        
+
             \Log::info('Processing cart item', [
                 'product' => $item->product->name,
                 'base_price' => $basePrice,
                 'has_discount' => !is_null($activeDiscount),
                 'discount_name' => $activeDiscount?->name ?? 'none',
+                'discount_value' => $activeDiscount?->discount_value ?? 0,
+                'discount_type' => $activeDiscount?->discount_type ?? 'none',
             ]);
-        
-            $item->active_discount = $activeDiscount;
 
-            if ($activeDiscount) {
-                // Calculate discounted price
+            // Default values (no discount)
+            $item->unit_price = round($basePrice, 2);
+            $item->sub_total = round($basePrice * $item->quantity, 2);
+            $item->original_price = null;
+            $item->discount_amount = 0;
+            $item->active_discount = null;
+
+            // Only apply discount if one exists AND is valid
+            if ($activeDiscount && $activeDiscount->discount_value > 0) {
                 $discountedPrice = $this->calculateDiscountedPrice($basePrice, $activeDiscount);
                 $discountDifference = $basePrice - $discountedPrice;
-            
+
                 \Log::info('Discount calculation', [
                     'base' => $basePrice,
                     'discounted' => $discountedPrice,
                     'difference' => $discountDifference,
                 ]);
-            
-                // Only apply if there's actual savings
+
+                // Only apply if there's actual savings (more than 1 cent)
                 if ($discountDifference > 0.01) {
+                    $item->active_discount = $activeDiscount;
                     $item->unit_price = round($discountedPrice, 2);
                     $item->sub_total = round($discountedPrice * $item->quantity, 2);
                     $item->original_price = round($basePrice, 2);
                     $item->discount_amount = round($discountDifference, 2);
-                
-                    $this->productDiscountSavings += $discountDifference * $item->quantity;
-                    $this->originalSubtotal += $basePrice * $item->quantity;
-                } else {
-                    // No meaningful discount
-                    $item->unit_price = round($basePrice, 2);
-                    $item->sub_total = round($basePrice * $item->quantity, 2);
-                    $item->original_price = null;
-                    $item->discount_amount = 0;
-                    $item->active_discount = null;
-                
-                    $this->originalSubtotal += $basePrice * $item->quantity;
-                }
-            } else {
-                // No discount
-                $item->unit_price = round($basePrice, 2);
-                $item->sub_total = round($basePrice * $item->quantity, 2);
-                $item->original_price = null;
-                $item->discount_amount = 0;
-            
-                $this->originalSubtotal += $basePrice * $item->quantity;
-            }
-        }
 
-        $this->cartCount = $this->cartItems->sum('quantity');
-    
-        \Log::info('Cart loaded', [
-            'items_count' => $this->cartItems->count(),
-            'product_discount_savings' => $this->productDiscountSavings,
-            'original_subtotal' => $this->originalSubtotal,
-        ]);
+                    $this->productDiscountSavings += $discountDifference * $item->quantity;
+                }
+            }
+
+            $this->originalSubtotal += $basePrice * $item->quantity;
+        }
     }
 
     public function loadPaymentMethods()

@@ -43,16 +43,21 @@ class ReturnRequestResource extends Resource
     
     public static function getNavigationBadgeColor(): ?string
     {
-        return 'warning';
+        return 'info';
     }
     
     public static function getEloquentQuery(): Builder
     {
-        return parent::getEloquentQuery()
-            ->withoutGlobalScopes([
+        $query = parent::getEloquentQuery()
+            ->with(['order', 'customer', 'customer.user']);
+
+        if (auth()->check() && auth()->user()->role === 'admin') {
+            $query->withoutGlobalScopes([
                 SoftDeletingScope::class,
-            ])
-                ->with(['order', 'customer', 'customer.user']);
+            ]);
+        }
+
+        return $query;
     }
 
     public static function getNavigationGroup(): ?string
@@ -63,6 +68,16 @@ class ReturnRequestResource extends Resource
            return 'Sales';
         }
         return null;
+    }
+
+    public static function canAccess(): bool
+    {
+        return auth()->user()->hasRole(['admin', 'manager']);
+    }
+
+    public static function canDelete($record): bool
+    {
+        return auth()->user()?->hasRole('admin') ?? false;
     }
 
     public static function form(Form $form): Form

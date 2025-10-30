@@ -4,6 +4,7 @@ namespace App\Filament\Resources\OrderResource\Pages;
 
 use App\Filament\Resources\OrderResource;
 use App\Models\Order;
+use App\Models\Shipping;
 use Filament\Actions;
 use Filament\Resources\Pages\ListRecords;
 use Filament\Resources\Pages\ListRecords\Tab;
@@ -24,35 +25,41 @@ class ListOrders extends ListRecords
     {
         return [
             null => Tab::make('All')
-                // This badge uses a direct Eloquent query.
-                ->badge(Order::count()),
-            
+                ->badge(Order::count())
+                ->badgeColor('gray'),
+
             'pending' => Tab::make('Pending')
                 ->modifyQueryUsing(fn (Builder $query) => $query->where('order_status', 'pending'))
                 ->badge(Order::where('order_status', 'pending')->count())
-                ->badgeColor('success'),
+                ->badgeColor('warning'),
 
             'processing' => Tab::make('Processing')
                 ->modifyQueryUsing(fn (Builder $query) => $query->where('order_status', 'processing'))
                 ->badge(Order::where('order_status', 'processing')->count())
-                ->badgeColor('gray'),
+                ->badgeColor('info'),
 
-            'shipped' => Tab::make('Shipped')
-                ->modifyQueryUsing(fn (Builder $query) => $query->where('order_status', 'shipped'))
-                ->badge(Order::where('order_status', 'shipped')->count())
+            'in_transit' => Tab::make('In Transit')
+                ->modifyQueryUsing(function (Builder $query) {
+                    return $query->whereHas('shipping', function ($subQuery) {
+                        $subQuery->where('shipping_status', 'in_transit');
+                    });
+                })
+                ->badge(Shipping::where('shipping_status', 'in_transit')->count())
                 ->badgeColor('info'),
 
             'delivered' => Tab::make('Delivered')
-                ->modifyQueryUsing(fn (Builder $query) => $query->where('order_status', 'delivered'))
-                ->badge(Order::where('order_status', 'delivered')->count())
+                ->modifyQueryUsing(function (Builder $query) {
+                    return $query->whereHas('shipping', function ($subQuery) {
+                        $subQuery->where('shipping_status', 'delivered');
+                    });
+                })
+                ->badge(Shipping::where('shipping_status', 'delivered')->count())
                 ->badgeColor('success'),
 
-            'completed' => Tab::make('Completed')
-                ->modifyQueryUsing(fn (Builder $query) => $query->where('order_status', 'completed'))
-                ->badge(Order::where('order_status', 'completed')->count())
-                ->badgeColor('success'),
-
-            'returned' => Tab::make('Returned'),
+            'returned' => Tab::make('Returned')
+                ->modifyQueryUsing(fn (Builder $query) => $query->where('order_status', 'returned'))
+                ->badge(Order::where('order_status', 'returned')->count())
+                ->badgeColor('danger'),
 
             'archived' => Tab::make('Archived')
                 ->badge(Order::onlyTrashed()->count())
