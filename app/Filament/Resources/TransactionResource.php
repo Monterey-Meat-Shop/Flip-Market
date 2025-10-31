@@ -21,6 +21,7 @@ use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Repeater;
 use Filament\Resources\Resource;
 use Filament\Tables\Table;
+use Filament\Tables\Actions\Action;
 use Filament\Tables\Actions\ActionGroup;
 use Filament\Tables\Actions\BulkActionGroup;
 use Filament\Tables\Actions\DeleteAction;
@@ -736,117 +737,19 @@ class TransactionResource extends Resource
             ])
             ->actions([
                 ActionGroup::make([
-                    ViewAction::make()
-                        ->form([
-                            Section::make('Customer Information')->schema([
-                                Forms\Components\Placeholder::make('customer_name')
-                                    ->label('Customer')
-                                    ->content(
-                                        fn($record) =>
-                                        $record->customer
-                                        ? "{$record->customer->first_name} {$record->customer->last_name}"
-                                        : 'Guest'
-                                    ),
-                                Forms\Components\Placeholder::make('order_date')
-                                    ->label('Order Date')
-                                    ->content(
-                                        fn($record) =>
-                                        $record->order_date?->format('M d, Y H:i')
-                                    ),
-                            ]),
-
-                            Section::make('Cart')->schema([
-                                Forms\Components\Placeholder::make('items')
-                                    ->label('Products')
-                                    ->content(
-                                        fn($record) =>
-                                        $record->orderItems
-                                            ->map(
-                                                fn($i) =>
-                                                "{$i->quantity} × {$i->product->name} ({$i->size}/{$i->colorway})"
-                                                . ($i->discount_label ? " - Discount: {$i->discount_label}" : "")
-                                                . " - ₱" . number_format($i->sub_total, 2)
-                                            )
-                                            ->implode("\n")
-                                    )
-                                    ->columnSpanFull(),
-                                Forms\Components\Placeholder::make('total')
-                                    ->label('Total')
-                                    ->content(
-                                        fn($record) =>
-                                        '₱' . number_format($record->final_amount, 2)
-                                    )
-                                    ->extraAttributes(['class' => 'font-bold text-green-600']),
-                            ]),
-
-                            Section::make('Payment Information')->schema([
-                                Forms\Components\Placeholder::make('method')
-                                    ->label('Payment Method')
-                                    ->content(
-                                        fn($record) =>
-                                        $record->payment?->paymentMethod?->method_name ?? '-'
-                                    ),
-                                Forms\Components\Placeholder::make('qr_code_view')
-                                    ->label('GCash QR Code')
-                                    ->content(function ($record) {
-                                        if ($record->payment?->paymentMethod?->method_name === 'GCash') {
-                                            $qrUrl = asset('images/gshak.png');
-                                            return new \Illuminate\Support\HtmlString(
-                                                '<div class="flex flex-col items-center gap-2">
-                                                    <img 
-                                                        src="' . $qrUrl . '" 
-                                                        alt="GCash QR Code" 
-                                                        class="w-48 h-48 object-contain rounded-lg shadow-md cursor-pointer hover:scale-105 transition-transform"
-                                                        onclick="
-                                                            const modal = document.createElement(\'div\');
-                                                            modal.className = \'fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75 cursor-pointer\';
-                                                            modal.onclick = () => modal.remove();
-                                                            modal.innerHTML = \'<img src=\\\'' . $qrUrl . '\\\' class=\\\'max-w-2xl max-h-screen rounded-lg shadow-2xl\\\'>\';
-                                                            document.body.appendChild(modal);
-                                                        "
-                                                    />
-                                                    <p class="text-xs text-gray-500">Click to enlarge</p>
-                                                </div>'
-                                            );
-                                        }
-                                        return '-';
-                                    })
-                                    ->visible(
-                                        fn($record) =>
-                                        $record->payment?->paymentMethod?->method_name === 'GCash'
-                                    )
-                                    ->columnSpanFull(),
-                                Forms\Components\Placeholder::make('reference_number')
-                                    ->label('Reference Number')
-                                    ->content(
-                                        fn($record) =>
-                                        $record->payment?->reference_number ?? '-'
-                                    )
-                                    ->visible(
-                                        fn($record) =>
-                                        $record->payment?->paymentMethod?->method_name === 'GCash'
-                                    ),
-                                Forms\Components\Placeholder::make('amount')
-                                    ->label('Amount Paid')
-                                    ->content(
-                                        fn($record) =>
-                                        $record->payment
-                                        ? '₱' . number_format($record->payment->amount, 2)
-                                        : '₱0.00'
-                                    ),
-                                Forms\Components\Placeholder::make('status')
-                                    ->label('Payment Status')
-                                    ->content(
-                                        fn($record) =>
-                                        ucfirst($record->payment?->status ?? 'unpaid')
-                                    ),
-                            ]),
-                        ]),
+                    ViewAction::make(),
                     EditAction::make(),
                     DeleteAction::make(),
                     RestoreAction::make(),
                     ForceDeleteAction::make(),
-                ]),
+                    // Print action
+                    Action::make('print')
+                        ->label('Print')
+                        ->icon('heroicon-o-printer')
+                        ->url(fn ($record) => route('filament.transactions.print', $record))
+                        ->openUrlInNewTab()
+                        ->color('secondary'),
+                ])
             ])
             ->bulkActions([BulkActionGroup::make([DeleteBulkAction::make()])]);
     }

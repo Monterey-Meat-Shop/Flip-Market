@@ -13,6 +13,7 @@ use App\Livewire\ProductPage;
 use App\Livewire\ReturnPage;
 
 use App\Http\Controllers\ReturnController;
+use App\Http\Controllers\OrderPrintController;
 
 use App\Livewire\Auth\ResetPassword; // ✅ make sure this import line exists
 use Illuminate\Support\Facades\Mail; // test email route
@@ -32,6 +33,11 @@ Route::middleware(['auth'])->group(function () {
     Volt::route('settings/profile', 'settings.profile')->name('settings.profile');
     Volt::route('settings/password', 'settings.password')->name('settings.password');
     Volt::route('settings/appearance', 'settings.appearance')->name('settings.appearance');
+});
+
+Route::middleware(['auth'])->group(function () {
+    Route::get('filament/transactions/{order}/print', [OrderPrintController::class, 'print'])
+        ->name('filament.transactions.print');
 });
 
 require __DIR__.'/auth.php';
