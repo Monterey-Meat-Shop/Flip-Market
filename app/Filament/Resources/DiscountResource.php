@@ -44,54 +44,64 @@ class DiscountResource extends Resource
                             ->required()
                             ->maxLength(225),
 
-     Select::make('products')
-    ->label('Applies To Product')
-    ->relationship('products', 'name')
-    ->searchable()
-    ->multiple()
-    ->preload()
-    ->options(function (?Discount $record) {
-        $products = Product::pluck('name', 'productID')->toArray();
+                Select::make('products')
+                    ->label('Applies To Product')
+                    ->relationship('products', 'name')
+                    ->searchable()
+                    ->multiple()
+                    ->preload()
+                    ->options(function (?Discount $record) {
+                        // Get products that already have active discounts
+                        $productsWithActiveDiscount = \App\Models\Product::whereHas('discounts', function ($query) {
+                            $query->where('is_active', true)
+                                ->where(function ($q) {
+                                    $q->whereNull('end_date')->orWhere('end_date', '>', now());
+                                });
+                        })->pluck('productID')->toArray();
 
-        return ['__all' => '— Select All Products —'] + $products;
-    })
-    ->helperText('Optional — Leave blank to apply discount to all products, or select specific ones.')
-    ->afterStateUpdated(function ($state, callable $set, callable $get) {
-        if (in_array('__all', $state, true)) {
-            $allProductIds = Product::pluck('productID')->toArray();
-            $selected = array_unique(array_merge(array_diff($state, ['__all']), $allProductIds));
-            $set('products', $selected);
-        }
-    })
-    ->dehydrateStateUsing(fn ($state) => array_filter($state, fn ($id) => $id !== '__all')),
+                        // Get all products excluding those with active discounts
+                        $products = Product::whereNotIn('productID', $productsWithActiveDiscount)
+                            ->pluck('name', 'productID')
+                            ->toArray();
 
+                        return ['__all' => '— Select All Products —'] + $products;
+                    })
+                    ->helperText('Optional — Leave blank to apply discount to all products, or select specific ones. Products with active discounts are excluded.')
+                    ->afterStateUpdated(function ($state, callable $set) {
+                        if (in_array('__all', $state, true)) {
+                            $allProductIds = \App\Models\Product::pluck('productID')->toArray();
+                            $selected = array_unique(array_merge(array_diff($state, ['__all']), $allProductIds));
+                            $set('products', $selected);
+                        }
+                    })
+                    ->dehydrateStateUsing(fn ($state) => array_filter($state, fn ($id) => $id !== '__all')),
 
-                        Select::make('discount_type')
-                            ->label('Discount Type')
-                            ->options([
-                                'Fixed' => 'Fixed Amount',
-                                'Percentage' => 'Percentage',
-                            ]),
+                    Select::make('discount_type')
+                        ->label('Discount Type')
+                        ->options([
+                            'Fixed' => 'Fixed Amount',
+                            'Percentage' => 'Percentage',
+                        ]),
 
-                        TextInput::make('discount_value')
-                            ->required()
-                            ->numeric()
-                            ->rules(['min:0'])
-                            ->helperText('Enter a value (e.g., 10 for ₱10 discount or 10% discount)'),
+                    TextInput::make('discount_value')
+                        ->required()
+                        ->numeric()
+                        ->rules(['min:0'])
+                        ->helperText('Enter a value (e.g., 10 for ₱10 discount or 10% discount)'),
 
-                        DateTimePicker::make('start_date')
-                            ->default(now())
-                            ->required(),
+                    DateTimePicker::make('start_date')
+                        ->default(now())
+                        ->required(),
 
-                        DateTimePicker::make('end_date')
-                            ->required()
-                            ->rule('after:start_date')
-                            ->helperText('End date must be later than start date'),
+                    DateTimePicker::make('end_date')
+                        ->required()
+                        ->rule('after:start_date')
+                        ->helperText('End date must be later than start date'),
 
-                        Toggle::make('is_active')
-                            ->label('Is Active?')
-                            ->required()
-                            ->default(true),
+                    Toggle::make('is_active')
+                        ->label('Is Active?')
+                        ->required()
+                        ->default(true),
 
                     ])->columns(2),
             ]);
