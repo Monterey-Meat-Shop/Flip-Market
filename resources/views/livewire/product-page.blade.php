@@ -41,13 +41,29 @@
                     @endforeach
                 </ul>
             </div>
+<div class="mb-6">
+    <h3 class="text-sm font-semibold text-gray-600 mb-2">Price Range</h3>
+    
+    <div class="flex flex-col space-x-2">
+        <!-- Minimum price -->
+         <div class="flex items-center justify-between">
+                    <label class="text-gray-700">Low</label>
+                    <label class="text-gray-700">High</label>
+         </div>
+         <div class="flex gap-2">
+        <input type="number" min="{{ $minPrice }}" max="{{ $maxPriceSelected }}" wire:model.lazy="minPriceSelected" wire:keydown.enter="updatePriceRange" class="w-1/2 border rounded px-2 py-1" placeholder="Min price"> 
+        <label class="text-gray-700 gap-2">-</label>
+        <input type="number"min="{{ $minPriceSelected }}" max="{{ $maxPrice }}" wire:model.lazy="maxPriceSelected" wire:keydown.enter="updatePriceRange" class="w-1/2 border rounded px-2 py-1" placeholder="Max price">
+    </div>
+    </div>
+     
 
-                <!-- Price Filter -->
-                <div class="mb-6">
-                    <h3 class="text-sm font-semibold text-gray-600 mb-2">Price</h3>
-                    <input type="range" min="100" max="10000" wire:model.live="maxPrice" class="w-full accent-blue-500">
-                    <p class="text-sm text-gray-500 mt-1">Up to ₱{{ number_format($maxPrice) }}</p>
-                </div>
+    
+    <p class="text-sm text-gray-500 mt-1">
+        Showing products between ₱{{ number_format($minPriceSelected) }} and ₱{{ number_format($maxPriceSelected) }}
+    </p>
+</div>
+
 
                 <!-- Clear Filters Button -->
                 <button 
