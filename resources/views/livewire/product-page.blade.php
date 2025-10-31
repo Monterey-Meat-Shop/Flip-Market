@@ -177,10 +177,41 @@
                         </div>
                     @endforelse
                 </div>
+                
+            <div class="flex justify-between items-center mt-6 w-full">
+                
+                <div class="text-gray-600 text-sm">
+                    Showing {{ $products->firstItem() }} to {{ $products->lastItem() }} of {{ $products->total() }} results
+                </div>
+
+                <div class="flex justify-end">
+                    {{ $products->links() }}
+                </div>
+            </div>
+
+            <style>
+                nav[role="navigation"] > div:first-child,
+                nav[role="navigation"] > div > div:first-child {
+                    display: none !important;
+                }
+                nav[role="navigation"] {
+                    display: flex;
+                    justify-content: flex-end;
+                    width: 100%;
+                }
+            </style>
+
+
+
+
             </div>
         </div>
     </section>
+    
 </div>
+
+
+
 
 <!-- Add to Cart JavaScript (optional - for quick add to cart without going to detail page) -->
 <script>
@@ -206,3 +237,4 @@ function addToCart(productId) {
 }
 //new update, eto na chan
 </script>
+
