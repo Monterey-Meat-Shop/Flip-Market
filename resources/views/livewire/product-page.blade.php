@@ -60,9 +60,11 @@
      
 
     
-    <p class="text-sm text-gray-500 mt-1">
-        Showing products between ₱{{ number_format($minPriceSelected) }} and ₱{{ number_format($maxPriceSelected) }}
-    </p>
+   <p class="text-sm text-gray-500 mt-1">
+    Showing products between ₱{{ number_format((float)($minPriceSelected ?? 0)) }}
+    and ₱{{ number_format((float)($maxPriceSelected ?? 0)) }}
+</p>
+
 </div>
 
 
