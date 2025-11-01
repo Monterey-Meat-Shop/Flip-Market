@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Cache;
 
 class ReportsLineChart extends Widget
 {
+    //sales overview
     protected static string $view = 'filament.widgets.reports-line-chart';
 
     protected int | string | array $columnSpan = 'full';

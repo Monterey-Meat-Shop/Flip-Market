@@ -26,29 +26,45 @@
                         </ul>
                     </div>
 
-                    <!-- Brand Filter -->
-                    <div class="mb-6">
-                        <h3 class="text-sm font-semibold text-white mb-2">Brand</h3>
-                        <ul class="space-y-2 text-white">
-                            @foreach($brands as $brand)
-                                <li wire:key="brand-{{ $brand->BrandID }}" class="flex items-center">
-                                    <input type="checkbox"
-                                           id="brand-{{ $brand->BrandID }}"
-                                           wire:model.live="selectedBrands"
-                                           value="{{ $brand->BrandID }}"
-                                           class="mr-2 w-3 h-3 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500 focus:ring-2">
-                                    <label for="brand-{{ $brand->BrandID }}" class="text-xs cursor-pointer hover:text-blue-300 transition-colors">{{ $brand->name }}</label>
-                                </li>
-                            @endforeach
-                        </ul>
-                    </div>
+            <!-- Brand Filter -->
+            <div class="mb-6">
+                <h3 class="text-sm font-semibold text-gray-600 mb-2">Brand</h3>
+                <ul class="space-y-2 text-gray-700">
+                    @foreach($brands as $brand)
+                        <li wire:key="brand-{{ $brand->BrandID }}">
+                        <input type="checkbox"
+                        id="brand-{{ $brand->BrandID }}"
+                        wire:model.live="selectedBrands"
+                        value="{{ $brand->BrandID }}"
+                        class="mr-2">
+                        <label for="brand-{{ $brand->BrandID }}">{{ $brand->name }}</label>
+                        </li>
+                    @endforeach
+                </ul>
+            </div>
+<div class="mb-6">
+    <h3 class="text-sm font-semibold text-gray-600 mb-2">Price Range</h3>
+    
+    <div class="flex flex-col space-x-2">
+        <!-- Minimum price -->
+         <div class="flex items-center justify-between">
+                    <label class="text-gray-700">Low</label>
+                    <label class="text-gray-700">High</label>
+         </div>
+         <div class="flex gap-2">
+        <input type="number" min="{{ $minPrice }}" max="{{ $maxPriceSelected }}" wire:model.lazy="minPriceSelected" wire:keydown.enter="updatePriceRange" class="w-1/2 border rounded px-2 py-1" placeholder="Min price"> 
+        <label class="text-gray-700 gap-2">-</label>
+        <input type="number"min="{{ $minPriceSelected }}" max="{{ $maxPrice }}" wire:model.lazy="maxPriceSelected" wire:keydown.enter="updatePriceRange" class="w-1/2 border rounded px-2 py-1" placeholder="Max price">
+    </div>
+    </div>
+     
 
-                    <!-- Price Filter -->
-                    <div class="mb-6">
-                        <h3 class="text-sm font-semibold text-white mb-2">Price</h3>
-                        <input type="range" min="100" max="10000" wire:model.live="maxPrice" class="w-full accent-blue-500 slider-thumb">
-                        <p class="text-xs text-white mt-1 font-medium">Up to ₱{{ number_format($maxPrice) }}</p>
-                    </div>
+    
+    <p class="text-sm text-gray-500 mt-1">
+        Showing products between ₱{{ number_format($minPriceSelected) }} and ₱{{ number_format($maxPriceSelected) }}
+    </p>
+</div>
+
 
                     <!-- Clear Filters Button -->
                     <button 
@@ -167,66 +183,75 @@
                                     }
                                 </script>
 
-                            </article>
-                        @empty
-                            <div class="col-span-4 text-center py-12">
-                                <svg class="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2 2v-5m16 0h-2M4 13h2m-2 0v9a2 2 0 002 2h2M6 9h12m-6-4v4"></path>
-                                </svg>
-                                <p class="text-gray-600 text-lg font-semibold mt-4">No products found matching your filters.</p>
-                                <p class="text-gray-500 text-sm mt-2">Try adjusting your search criteria or clearing filters.</p>
-                            </div>
-                        @endforelse
-                    </div>
+                        </article>
+                    @empty
+                        <div class="col-span-3 text-center py-12">
+                            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2 2v-5m16 0h-2M4 13h2m-2 0v9a2 2 0 002 2h2M6 9h12m-6-4v4"></path>
+                            </svg>
+                            <p class="text-gray-500 text-lg mt-4">No products found matching your filters.</p>
+                            <p class="text-gray-400 text-sm mt-2">Try adjusting your search criteria or clearing filters.</p>
+                        </div>
+                    @endforelse
+                </div>
+                
+            <div class="flex justify-between items-center mt-6 w-full">
+                
+                <div class="text-gray-600 text-sm">
+                    Showing {{ $products->firstItem() }} to {{ $products->lastItem() }} of {{ $products->total() }} results
+                </div>
+
+                <div class="flex justify-end">
+                    {{ $products->links() }}
                 </div>
             </div>
-        </section>
-    </div>
 
-    <!-- Add to Cart JavaScript (optional - for quick add to cart without going to detail page) -->
-    <script>
-    function addToCart(productId) {
-        // You can implement AJAX cart functionality here
-        // Or redirect to product detail page
-        window.location.href = `/product/${productId}`;
-        
-        // Alternative: AJAX call
-        // fetch('/cart/add', {
-        //     method: 'POST',
-        //     headers: {
-        //         'Content-Type': 'application/json',
-        //         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-        //     },
-        //     body: JSON.stringify({product_id: productId, quantity: 1})
-        // }).then(response => {
-        //     // Handle response
-        //     // Show success message, update cart count, etc.
-        // }).catch(error => {
-        //     console.error('Error adding to cart:', error);
-        // });
-    }
-    </script>
+            <style>
+                nav[role="navigation"] > div:first-child,
+                nav[role="navigation"] > div > div:first-child {
+                    display: none !important;
+                }
+                nav[role="navigation"] {
+                    display: flex;
+                    justify-content: flex-end;
+                    width: 100%;
+                }
+            </style>
 
-    <style>
-    /* Custom slider thumb for better visibility */
-    .slider-thumb::-webkit-slider-thumb {
-        appearance: none;
-        height: 16px;
-        width: 16px;
-        border-radius: 50%;
-        background: #3b82f6;
-        cursor: pointer;
-        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
-    }
 
-    .slider-thumb::-moz-range-thumb {
-        height: 16px;
-        width: 16px;
-        border-radius: 50%;
-        background: #3b82f6;
-        cursor: pointer;
-        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
-        border: none;
-    }
-    </style>
+
+
+            </div>
+        </div>
+    </section>
+    
 </div>
+
+
+
+
+<!-- Add to Cart JavaScript (optional - for quick add to cart without going to detail page) -->
+<script>
+function addToCart(productId) {
+    // You can implement AJAX cart functionality here
+    // Or redirect to product detail page
+    window.location.href = `/product/${productId}`;
+    
+    // Alternative: AJAX call
+    // fetch('/cart/add', {
+    //     method: 'POST',
+    //     headers: {
+    //         'Content-Type': 'application/json',
+    //         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+    //     },
+    //     body: JSON.stringify({product_id: productId, quantity: 1})
+    // }).then(response => {
+    //     // Handle response
+    //     // Show success message, update cart count, etc.
+    // }).catch(error => {
+    //     console.error('Error adding to cart:', error);
+    // });
+}
+//new update, eto na chan
+</script>
+
