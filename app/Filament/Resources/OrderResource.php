@@ -790,23 +790,23 @@ class OrderResource extends Resource
                                 ->send();
                     }),
 
-                    // Tables\Actions\Action::make('reject')
-                    //     ->label('Reject Order')
-                    //     ->icon('heroicon-o-x-circle')
-                    //     ->color('danger')
-                    //     ->requiresConfirmation()
-                    //     ->visible(fn ($record) => $record->order_status === 'pending')
-                    //     ->action(function ($record) {
-                    //         $record->update([
-                    //             'order_status' => 'failed',
-                    //             // 'rejected_at' => now(),
-                    //         ]);
+                    Tables\Actions\Action::make('reject')
+                        ->label('Reject Order')
+                        ->icon('heroicon-o-x-circle')
+                        ->color('danger')
+                        ->requiresConfirmation()
+                        ->visible(fn ($record) => $record->order_status === 'pending')
+                        ->action(function ($record) {
+                            $record->update([
+                                'order_status' => 'failed',
+                                // 'rejected_at' => now(),
+                            ]);
 
-                    //         \Filament\Notifications\Notification::make()
-                    //             ->title('Order Rejected')
-                    //             ->danger()
-                    //             ->send();
-                    //     }),
+                            \Filament\Notifications\Notification::make()
+                                ->title('Order Rejected')
+                                ->danger()
+                                ->send();
+                        }),
 
                     Tables\Actions\Action::make('in_transit')
                         ->label('In Transit')

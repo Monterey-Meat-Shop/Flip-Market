@@ -98,6 +98,9 @@ class MyOrderPage extends Component
             case 'returned':
                 $query->whereIn('order_status', array('return_requested', 'returned'));
                 break;
+            case 'failed':
+                $query->where('order_status', 'Failed');
+                break;
             default: // 'all'
                 break;
         }
@@ -131,6 +134,8 @@ class MyOrderPage extends Component
                 return array('bg-yellow-100', 'text-yellow-600', 'Return Requested');
             case 'returned':
                 return array('bg-gray-100', 'text-red-600', 'Returned');
+            case 'failed':
+                return array('bg-red-100', 'text-red-600', 'Failed');
             default:
                 return array('bg-gray-100', 'text-gray-600', 'Unknown');
         }
@@ -167,10 +172,8 @@ class MyOrderPage extends Component
             }
         }
 
-        // Update order status
         $order->update(array('order_status' => 'Cancelled'));
 
-        // Update payment status if needed
         if ($order->payment) {
             $order->payment->update(array('status' => 'Cancelled'));
         }
