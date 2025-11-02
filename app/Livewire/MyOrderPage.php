@@ -21,18 +21,20 @@ class MyOrderPage extends Component
         'searchQuery' => array('except' => ''),
     );
 
-    public function mount()
+    public function mount($tab = 'all')
     {
         if (!Auth::check()) {
             return redirect()->route('login');
         }
 
         $this->customer = Customer::where('user_id', Auth::id())->first();
-        
+
         if (!$this->customer) {
             session()->flash('error', 'Customer profile not found.');
             return redirect()->route('profile');
         }
+
+        $this->activeTab = $tab;
     }
 
     public function setActiveTab($tab)

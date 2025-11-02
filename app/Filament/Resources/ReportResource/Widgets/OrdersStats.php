@@ -5,6 +5,7 @@ namespace App\Filament\Resources\ReportResource\Widgets;
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
 use App\Models\Order;
+use App\Models\User;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -12,7 +13,7 @@ use Carbon\Carbon;
 
 class OrdersStats extends BaseWidget
 {
-    protected ?string $heading = 'Weekly Orders Report';
+    protected ?string $heading = 'Orders Report';
 
     protected function getStats(): array
     {
@@ -27,6 +28,19 @@ class OrdersStats extends BaseWidget
             return $this->fallbackStats();
         }
 
+
+        
+        // SEPERATION ON ONLINE/WALKIN
+        $guestUser = User::where('email', 'guest@example.com')->first();
+        $guestCustomerId = optional($guestUser?->customer)->customerID;
+        $walkInOrders = Order::where('customerID', $guestCustomerId)->count();
+        $onlineOrders = Order::where('customerID', '!=', $guestCustomerId)->count();
+        $totalOrders = $walkInOrders + $onlineOrders;
+        $walkInPercent = $totalOrders ? round(($walkInOrders / $totalOrders) * 100, 1) : 0;
+        $onlinePercent = $totalOrders ? round(($onlineOrders / $totalOrders) * 100, 1) : 0;
+        // end
+
+
         $amountColumn = Cache::remember("orders_stats:amount_column", $ttl, function () use ($table) {
             foreach (['total', 'total_amount', 'amount', 'grand_total'] as $c) {
                 if (Schema::hasColumn($table, $c)) {
@@ -34,6 +48,8 @@ class OrdersStats extends BaseWidget
                 }
             }
             return null;
+            
+            
         });
 
         // Calculate current week range
@@ -86,21 +102,42 @@ class OrdersStats extends BaseWidget
             : 0;
 
         return [
-            Stat::make('orders_weekly', 'Orders (This Week)')
-                ->value((string) $ordersThisWeek)
-                ->description($ordersGrowth >= 0 
-                    ? '↑ ' . number_format($ordersGrowth, 1) . '% vs last week' 
-                    : '↓ ' . number_format(abs($ordersGrowth), 1) . '% vs last week')
-                ->icon('heroicon-o-shopping-cart')
-                ->color($ordersGrowth >= 0 ? 'success' : 'danger'),
+            // Stat::make('Orders Weekly', 'Orders (This Week)')
+            //     ->value((string) $ordersThisWeek)
+            //     ->description($ordersGrowth >= 0 
+            //         ? '↑ ' . number_format($ordersGrowth, 1) . '% vs last week' 
+            //         : '↓ ' . number_format(abs($ordersGrowth), 1) . '% vs last week')
+            //     ->icon('heroicon-o-shopping-cart')
+            //     ->color($ordersGrowth >= 0 ? 'success' : 'danger'),
 
-            Stat::make('sales_weekly', 'Sales (This Week)')
-                ->value($formatCurrency($salesThisWeek))
-                ->description($salesGrowth >= 0 
-                    ? '↑ ' . number_format($salesGrowth, 1) . '% vs last week' 
-                    : '↓ ' . number_format(abs($salesGrowth), 1) . '% vs last week')
-                ->icon('heroicon-o-currency-dollar')
-                ->color($salesGrowth >= 0 ? 'success' : 'danger'),
+            // Stat::make('Sales Weekly', 'Sales (This Week)')
+            //     ->value($formatCurrency($salesThisWeek))
+            //     ->description($salesGrowth >= 0 
+            //         ? '↑ ' . number_format($salesGrowth, 1) . '% vs last week' 
+            //         : '↓ ' . number_format(abs($salesGrowth), 1) . '% vs last week')
+            //     ->icon('heroicon-o-currency-dollar')
+            //     ->color($salesGrowth >= 0 ? 'success' : 'danger'),
+
+        Stat::make('Online Orders', $onlineOrders)
+               
+                ->descriptionIcon('heroicon-m-globe-alt')
+                ->color('success')
+                ->icon('heroicon-o-globe-alt')
+                ->description("{$onlinePercent}% of total orders"),
+
+
+            Stat::make('Walk-In Orders', $walkInOrders)
+                ->descriptionIcon('heroicon-m-user-group')
+                ->color('warning')
+                ->icon('heroicon-o-user-group')
+                ->description("{$walkInPercent}% of total orders"),
+
+
+            Stat::make('Total Orders', $totalOrders)
+            ->icon('heroicon-o-shopping-bag')
+            ->color('primary')
+            ->description("Overall orders")
+            ->descriptionIcon('heroicon-m-user-group'),
         ];
     }
 

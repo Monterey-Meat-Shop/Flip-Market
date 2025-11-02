@@ -118,6 +118,100 @@
   </div>
 </div>
 
+<!-- section for Category shoes -->
+<section class="bg-gradient-to-b from-gray-50 to-white py-20">
+  <div class="max-w-screen-xl mx-auto px-4">
+    <div class="text-center">
+      <div class="relative flex flex-col items-center mb-12 animate-fade-in-up">
+        <h2 class="text-4xl md:text-5xl font-extrabold text-gray-900">
+          Popular Shoes By
+          <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">
+            Category
+          </span>
+        </h2>
+      </div>
+
+      <div data-hs-carousel='{
+          "loadingClasses": "opacity-0",
+          "dotsItemClasses": "hs-carousel-active:bg-blue-700 hs-carousel-active:border-blue-700 size-3 border border-gray-400 rounded-full cursor-pointer dark:border-neutral-600 dark:hs-carousel-active:bg-blue-500 dark:hs-carousel-active:border-blue-500",
+          "slidesQty": { "xs": 1, "lg": 3 }
+        }'class="relative">
+
+        <div class="hs-carousel w-full overflow-hidden bg-white rounded-lg dark:bg-neutral-900">
+          <div class="relative min-h-[350px] -mx-1"> 
+            <div class="hs-carousel-body absolute top-0 bottom-0 start-0 flex flex-nowrap transition-transform duration-700">
+
+              @foreach ($products as $product)
+              <div class="hs-carousel-slide px-1">
+                <div class="flex justify-center h-full p-4">
+                  <article class="w-full max-w-sm h-[280px] flex flex-col bg-white dark:bg-zinc-800 rounded-lg border border-zinc-200  shadow-sm transition-transform duration-300 hover:shadow-lg hover:scale-[1.02]">
+                    
+                    <a href="{{ route('product.detail', $product->productID) }}" class="block flex-grow flex flex-col">
+                      <div class="relative overflow-hidden rounded-t-lg h-50 flex-shrink-0">
+                        <img 
+                          src="{{ $product->image_path ? asset('storage/' . $product->image_path) : 'https://via.placeholder.com/300' }}" 
+                          alt="{{ $product->name }}" 
+                          class="w-full h-full object-cover"
+                        />
+
+                        <span class="absolute top-2 left-2 {{ $product->badge_color }} bg-opacity-80 text-white text-xs px-2 py-1 rounded">
+                                  {{ $product->brand_name ?? 'No Brand' }}
+                        </span>
+
+                
+
+                     
+                      </div>
+
+                      <div class="p-4 flex flex-col justify-between flex-grow">
+                        <div>
+
+                            <h2 class="text-slate-700 font-semibold text-lg mb-1 line-clamp-1">
+                                  {{ $product->category->name ?? 'No Brand' }}
+                            </h2>
+                            
+                        </div>
+                      </div>
+                    </a>
+                    
+                  </article>
+                </div>
+              </div>
+              @endforeach
+
+            </div>
+          </div>
+        </div>
+
+ <!-- Navigation Buttons -->
+<button 
+  type="button" 
+  class="hs-carousel-prev absolute inset-y-0 -start-10 inline-flex justify-center items-center w-11.5 h-80 text-gray-800 hover:bg-gray-800/10 focus:outline-hidden rounded-s-lg"
+>
+  <svg class="shrink-0 size-5" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="m15 18-6-6 6-6"/>
+  </svg>
+  <span class="sr-only">Previous</span>
+</button>
+
+<button 
+  type="button" 
+  class="hs-carousel-next absolute inset-y-0 -end-10 inline-flex justify-center items-center w-11.5 h-80 text-gray-800 hover:bg-gray-800/10 focus:outline-hidden rounded-e-lg"
+>
+  <svg class="shrink-0 size-5" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="m9 18 6-6-6-6"/>
+  </svg>
+  <span class="sr-only">Next</span>
+</button>
+
+
+      <div class="hs-carousel-pagination flex justify-center gap-x-2 mt-2 relative"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
 <!-- Brand Images Section -->
 <section class="bg-gradient-to-b from-gray-50 to-white py-20">
   <div class="max-w-screen-xl mx-auto px-4">
@@ -139,6 +233,8 @@
         </p> -->
       </div>
       
+
+      
       <!-- Brand Cards with Horizontal Scroll - Centered -->
       <div class="flex justify-center">
         <div class="relative inline-block">
@@ -154,6 +250,7 @@
         </div>
       </div>
 
+      
       <!-- Auto-Sliding Logo Section -->
       <div class="mt-16 overflow-hidden">
         <div class="relative">
@@ -308,3 +405,20 @@
 </style>
 
 </div>
+
+<script>
+document.addEventListener('livewire:load', () => {
+    // initialize carousel when page loads
+    window.HSCarousel?.autoInit();
+
+    // re-initialize after every Livewire DOM update
+    Livewire.hook('message.processed', () => {
+        window.HSCarousel?.autoInit();
+    });
+});
+
+// for Livewire v3 SPA navigation (if you go to another page and come back)
+document.addEventListener('livewire:navigated', () => {
+    window.HSCarousel?.autoInit();
+});
+</script>

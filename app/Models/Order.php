@@ -146,4 +146,29 @@ class Order extends Model
     {
         return $this->orderItems()->sum('discount_amount');
     }
+
+    // this is how notification will be created 
+protected static function booted()
+{
+    static::updated(function ($order) {
+        if ($order->isDirty('order_status')) {
+            $user = $order->customer?->user;
+
+            if ($user) {
+                Notification_Customer::create([
+                    'user_id'    => $user->id,
+                    'orderID'    => $order->orderID,  // link notification to order
+                    'shippingID' => $order->shipping?->shippingID ?? null, // optional if exists
+                    'message'    => "Your order #{$order->orderID} status has been updated to {$order->order_status}.",
+                    'is_read'    => false,
+                ]);
+            }
+        }
+    });
+}
+
+
+
+
+
 }
