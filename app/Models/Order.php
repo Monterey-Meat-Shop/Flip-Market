@@ -156,7 +156,7 @@ protected static function booted()
             $user = $order->customer?->user;
 
             if ($user) {
-                Notifications::create([
+                Notification_Customer::create([
                     'user_id'    => $user->id,
                     'orderID'    => $order->orderID,  // link notification to order
                     'shippingID' => $order->shipping?->shippingID ?? null, // optional if exists

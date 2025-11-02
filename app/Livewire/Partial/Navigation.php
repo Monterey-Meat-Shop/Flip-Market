@@ -2,7 +2,7 @@
 
 namespace App\Livewire\Partial;
 
-use App\Models\Notifications;
+use App\Models\Notification_Customer;
 use App\Models\Order;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
@@ -18,13 +18,13 @@ class Navigation extends Component
         if (Auth::check()) {
             $userId = Auth::id();
             // Fetch latest 5 notifications
-            $this->notifications = Notifications::where('user_id', $userId)
+            $this->notifications = Notification_Customer::where('user_id', $userId)
                 ->latest()
                 ->take(5)
                 ->get();
 
             // Count unread notifications
-            $this->unreadCount = Notifications::where('user_id', $userId)
+            $this->unreadCount = Notification_Customer::where('user_id', $userId)
                 ->where('is_read', false)
                 ->count();
         }
@@ -35,12 +35,12 @@ class Navigation extends Component
             $userId = Auth::id();
 
             // Mark all unread as read
-            Notifications::where('user_id', $userId)
+            Notification_Customer::where('user_id', $userId)
                 ->where('is_read', false)
                 ->update(['is_read' => true]);
 
             // Refresh list and unread count
-            $this->notifications = Notifications::where('user_id', $userId)
+            $this->notifications = Notification_Customer::where('user_id', $userId)
                 ->latest()
                 ->take(5)
                 ->get();

@@ -76,7 +76,7 @@ protected static function booted()
             $user = $shipping->order?->customer?->user;
 
             if ($user) {
-                Notifications::create([
+                Notification_Customer::create([
                     'user_id'    => $user->id,
                     'orderID'    => $shipping->orderID,          
                     'shippingID' => $shipping->shippingID,       

@@ -2,10 +2,10 @@
 
 namespace App\Livewire;
 
+use App\Models\Notification_Customer;
 use Livewire\Component;
 use Livewire\WithPagination;
 use App\Models\Customer;
-use App\Models\Notifications;
 use Illuminate\Support\Facades\Auth;
 
 class NotificationPage extends Component
@@ -20,16 +20,16 @@ class NotificationPage extends Component
         $customer = Customer::where('user_id', Auth::id())->first();
 
         if (!$customer) {
-            return Notifications::whereNull('id');
+            return Notification_Customer::whereNull('id');
         }
 
-        return Notifications::where('user_id', $customer->user_id)
+        return Notification_Customer::where('user_id', $customer->user_id)
             ->orderByDesc('created_at');
     }
 
     public function markAsRead($id)
     {
-        $notification = Notifications::where('id', $id)
+        $notification = Notification_Customer::where('id', $id)
             ->where('user_id', Auth::id())
             ->first();
 
@@ -42,7 +42,7 @@ class NotificationPage extends Component
 
     public function markAllAsRead()
     {
-        Notifications::where('user_id', Auth::id())
+        Notification_Customer::where('user_id', Auth::id())
             ->where('is_read', false)
             ->update(['is_read' => true]);
 
