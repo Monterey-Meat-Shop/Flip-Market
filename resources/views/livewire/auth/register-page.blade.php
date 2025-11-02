@@ -1,6 +1,6 @@
-<main class="w-full max-w-5xl mx-auto relative z-10 py-4 px-4">
+<main class="w-full max-w-5xl mx-auto relative z-10 py-6 px-4">
 
-  {{-- ✅ Floating Toast Notification --}}
+  {{-- Floating Toast Notification --}}
   @if ($successMessage)
     <div 
       x-data="{ show: true }" 
@@ -12,91 +12,83 @@
       x-transition:leave="transition ease-in duration-200"
       x-transition:leave-start="opacity-100"
       x-transition:leave-end="opacity-0"
-      class="fixed bottom-6 right-6 z-50 max-w-sm w-full bg-green-100 border border-green-300 text-green-800 rounded-xl shadow-lg p-4 flex items-start gap-3"
+      class="fixed bottom-6 right-6 z-50 max-w-sm w-full bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl shadow-lg p-4 flex items-start gap-3"
     >
-      <svg class="w-6 h-6 text-green-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg class="w-6 h-6 text-emerald-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
       </svg>
       <div class="flex-1 text-sm font-medium leading-relaxed">
         {{ $successMessage }}
       </div>
-      <button @click="show = false" class="text-green-700 hover:text-green-900 focus:outline-none">
+      <button @click="show = false" class="text-emerald-700 hover:text-emerald-900 focus:outline-none">
         ✖
       </button>
     </div>
   @endif
 
-  <form wire:submit.prevent="register">
+  <form wire:submit.prevent="register" class="space-y-6">
 
     <!-- Account Information Card -->
-    <div class="glass-effect rounded-2xl shadow-xl mb-4 overflow-hidden card-hover">
-      <div class="bg-gray-900 p-2.5">
-        <div class="flex items-center gap-2">
-          <div class="w-8 h-8 bg-white bg-opacity-20 rounded-lg flex items-center justify-center">
-            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-            </svg>
-          </div>
-          <h2 class="text-lg font-bold text-white">Account Information</h2>
+    <section class="rounded-2xl shadow-sm overflow-hidden border border-gray-200 bg-white">
+      <div class="px-4 py-3 bg-gradient-to-r from-slate-900 to-slate-800 text-white flex items-center gap-3">
+        <div class="w-10 h-10 rounded-lg bg-white bg-opacity-10 flex items-center justify-center">
+          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+          </svg>
+        </div>
+        <div>
+          <h2 class="text-lg font-semibold">Account Information</h2>
+          <p class="text-xs text-slate-300">Your account credentials</p>
         </div>
       </div>
 
       <div class="p-4 grid grid-cols-1 md:grid-cols-2 gap-3">
-
         <!-- First Name -->
-        <div class="relative group">
-          <label for="FirstName" class="block text-xs font-semibold mb-1 text-gray-700">First Name</label>
+        <div class="relative">
+          <label for="FirstName" class="block text-xs font-semibold mb-1 text-slate-700">First Name</label>
           <input type="text" id="FirstName" wire:model="firstname"
-            class="w-full py-2 px-3 rounded-lg border-2 border-gray-200 text-gray-800 text-sm
-                   focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none input-focus" />
-          @error('firstname')
-            <p class="text-xs text-red-600 mt-1">{{ $message }}</p>
-          @enderror
+            class="w-full py-2 px-3 rounded-lg border border-gray-200 text-slate-900 text-sm
+                   focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none" />
+          @error('firstname') <p class="text-xxs text-red-600 mt-1">{{ $message }}</p> @enderror
         </div>
 
         <!-- Last Name -->
-        <div class="relative group">
-          <label for="LastName" class="block text-xs font-semibold mb-1 text-gray-700">Last Name</label>
+        <div class="relative">
+          <label for="LastName" class="block text-xs font-semibold mb-1 text-slate-700">Last Name</label>
           <input type="text" id="LastName" wire:model="lastname"
-            class="w-full py-2 px-3 rounded-lg border-2 border-gray-200 text-gray-800 text-sm
-                   focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none input-focus" />
-          @error('lastname')
-            <p class="text-xs text-red-600 mt-1">{{ $message }}</p>
-          @enderror
+            class="w-full py-2 px-3 rounded-lg border border-gray-200 text-slate-900 text-sm
+                   focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none" />
+          @error('lastname') <p class="text-xxs text-red-600 mt-1">{{ $message }}</p> @enderror
         </div>
 
         <!-- Email -->
-        <div class="relative group">
-          <label for="email" class="block text-xs font-semibold mb-1 text-gray-700">Email</label>
+        <div class="relative">
+          <label for="email" class="block text-xs font-semibold mb-1 text-slate-700">Email</label>
           <input type="email" id="email" wire:model="email"
-            class="w-full py-2 px-3 rounded-lg border-2 border-gray-200 text-gray-800 text-sm
-                   focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none input-focus" />
-          @error('email')
-            <p class="text-xs text-red-600 mt-1">{{ $message }}</p>
-          @enderror
+            class="w-full py-2 px-3 rounded-lg border border-gray-200 text-slate-900 text-sm
+                   focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none" />
+          @error('email') <p class="text-xxs text-red-600 mt-1">{{ $message }}</p> @enderror
         </div>
 
         <!-- Phone -->
-        <div class="relative group">
-          <label for="phone" class="block text-xs font-semibold mb-1 text-gray-700">Phone</label>
+        <div class="relative">
+          <label for="phone" class="block text-xs font-semibold mb-1 text-slate-700">Phone</label>
           <input type="text" id="phone" wire:model="phone"
-            class="w-full py-2 px-3 rounded-lg border-2 border-gray-200 text-gray-800 text-sm
-                   focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none input-focus" />
-          @error('phone')
-            <p class="text-xs text-red-600 mt-1">{{ $message }}</p>
-          @enderror
+            class="w-full py-2 px-3 rounded-lg border border-gray-200 text-slate-900 text-sm
+                   focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none" />
+          @error('phone') <p class="text-xxs text-red-600 mt-1">{{ $message }}</p> @enderror
         </div>
 
         <!-- Password -->
-        <div class="relative group" x-data="{ showPassword: false }">
-          <label for="password" class="block text-xs font-semibold mb-1 text-gray-700">Password</label>
+        <div class="relative" x-data="{ showPassword: false }">
+          <label for="password" class="block text-xs font-semibold mb-1 text-slate-700">Password</label>
           <div class="relative">
             <input :type="showPassword ? 'text' : 'password'" id="password" wire:model="password"
-              class="w-full py-2 px-3 pr-10 rounded-lg border-2 border-gray-200 text-gray-800 text-sm
-                     focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none input-focus" />
+              class="w-full py-2 px-3 pr-10 rounded-lg border border-gray-200 text-slate-900 text-sm
+                     focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none" />
             <button type="button" @click="showPassword = !showPassword"
-              class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-blue-600 focus:outline-none transition">
+              class="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-600 focus:outline-none">
               <svg x-show="!showPassword" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                   d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -112,21 +104,19 @@
               </svg>
             </button>
           </div>
-          @error('password')
-            <p class="text-xs text-red-600 mt-1">{{ $message }}</p>
-          @enderror
+          @error('password') <p class="text-xxs text-red-600 mt-1">{{ $message }}</p> @enderror
         </div>
 
         <!-- Confirm Password -->
-        <div class="relative group" x-data="{ showConfirmPassword: false }">
-          <label for="password_confirmation" class="block text-xs font-semibold mb-1 text-gray-700">Confirm Password</label>
+        <div class="relative" x-data="{ showConfirmPassword: false }">
+          <label for="password_confirmation" class="block text-xs font-semibold mb-1 text-slate-700">Confirm Password</label>
           <div class="relative">
             <input :type="showConfirmPassword ? 'text' : 'password'" id="password_confirmation"
               wire:model="password_confirmation"
-              class="w-full py-2 px-3 pr-10 rounded-lg border-2 border-gray-200 text-gray-800 text-sm
-                     focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none input-focus" />
+              class="w-full py-2 px-3 pr-10 rounded-lg border border-gray-200 text-slate-900 text-sm
+                     focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none" />
             <button type="button" @click="showConfirmPassword = !showConfirmPassword"
-              class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-blue-600 focus:outline-none transition">
+              class="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-600 focus:outline-none">
               <svg x-show="!showConfirmPassword" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                   d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -143,80 +133,80 @@
               </svg>
             </button>
           </div>
-          @error('password_confirmation')
-            <p class="text-xs text-red-600 mt-1">{{ $message }}</p>
-          @enderror
+          @error('password_confirmation') <p class="text-xxs text-red-600 mt-1">{{ $message }}</p> @enderror
         </div>
       </div>
-    </div>
+    </section>
 
     <!-- Billing & Shipping Information Card -->
-    <div class="glass-effect rounded-2xl shadow-xl mb-4 overflow-hidden card-hover">
-      <div class="bg-gray-900 p-2.5">
-        <div class="flex items-center gap-2">
-          <div class="w-8 h-8 bg-white bg-opacity-20 rounded-lg flex items-center justify-center">
-            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 
+    <section class="rounded-2xl shadow-sm overflow-hidden border border-gray-200 bg-white">
+      <div class="px-4 py-3 bg-gradient-to-r from-slate-900 to-slate-800 text-white flex items-center gap-3">
+        <div class="w-10 h-10 rounded-lg bg-white bg-opacity-10 flex items-center justify-center">
+          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 
                    0l-4.244-4.243a8 8 0 1111.314 0z" />
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-          </div>
-          <h2 class="text-lg font-bold text-white">Billing & Shipping Information</h2>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+        </div>
+        <div>
+          <h2 class="text-lg font-semibold">Billing & Shipping Information</h2>
+          <p class="text-xs text-slate-300">Where we’ll ship your order</p>
         </div>
       </div>
 
       <div class="p-4 grid grid-cols-1 md:grid-cols-2 gap-3">
-        <div class="relative group">
-          <label for="postal_code" class="block text-xs font-semibold mb-1 text-gray-700">Postal Code</label>
+        <div>
+          <label for="postal_code" class="block text-xs font-semibold mb-1 text-slate-700">Postal Code</label>
           <input type="text" id="postal_code" wire:model="postal_code"
-            class="w-full py-2 px-3 rounded-lg border-2 border-gray-200 text-gray-800 text-sm
-                   focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none input-focus" />
-          @error('postal_code')
-            <p class="text-xs text-red-600 mt-1">{{ $message }}</p>
-          @enderror
+            class="w-full py-2 px-3 rounded-lg border border-gray-200 text-slate-900 text-sm
+                   focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none" />
+          @error('postal_code') <p class="text-xxs text-red-600 mt-1">{{ $message }}</p> @enderror
         </div>
 
-        <div class="relative group">
-          <label for="address_line_1" class="block text-xs font-semibold mb-1 text-gray-700">Address Line 1</label>
+        <div>
+          <label for="address_line_1" class="block text-xs font-semibold mb-1 text-slate-700">Address Line 1</label>
           <input type="text" id="address_line_1" wire:model="address_line_1"
-            class="w-full py-2 px-3 rounded-lg border-2 border-gray-200 text-gray-800 text-sm
-                   focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none input-focus" />
-          @error('address_line_1')
-            <p class="text-xs text-red-600 mt-1">{{ $message }}</p>
-          @enderror
+            class="w-full py-2 px-3 rounded-lg border border-gray-200 text-slate-900 text-sm
+                   focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none" />
+          @error('address_line_1') <p class="text-xxs text-red-600 mt-1">{{ $message }}</p> @enderror
         </div>
 
-        <div class="relative group">
-          <label for="city" class="block text-xs font-semibold mb-1 text-gray-700">City</label>
-          <input type="text" id="city" wire:model="city"
-            class="w-full py-2 px-3 rounded-lg border-2 border-gray-200 text-gray-800 text-sm
-                   focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none input-focus" />
-          @error('city')
-            <p class="text-xs text-red-600 mt-1">{{ $message }}</p>
-          @enderror
-        </div>
+        <div class="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-3">
+          <!-- Province (LEFT) -->
+          <div>
+            <label for="province" class="block text-xs font-semibold mb-1 text-slate-700">Province</label>
+            <select id="province" wire:model="province"
+              class="w-full py-2 px-3 rounded-lg border border-gray-200 text-slate-900 text-sm
+                     focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none">
+              <option value="">-- Select province --</option>
+              {{-- options injected by JS --}}
+            </select>
+            @error('province') <p class="text-xxs text-red-600 mt-1">{{ $message }}</p> @enderror
+          </div>
 
-        <div class="relative group">
-          <label for="province" class="block text-xs font-semibold mb-1 text-gray-700">Province</label>
-          <input type="text" id="province" wire:model="province"
-            class="w-full py-2 px-3 rounded-lg border-2 border-gray-200 text-gray-800 text-sm
-                   focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none input-focus" />
-          @error('province')
-            <p class="text-xs text-red-600 mt-1">{{ $message }}</p>
-          @enderror
+          <!-- City / Municipality (RIGHT) -->
+          <div>
+            <label for="city" class="block text-xs font-semibold mb-1 text-slate-700">City / Municipality</label>
+            <select id="city" wire:model="city"
+              class="w-full py-2 px-3 rounded-lg border border-gray-200 text-slate-900 text-sm
+                     focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none">
+              <option value="">-- Select city / municipality --</option>
+              {{-- options injected by JS --}}
+            </select>
+            @error('city') <p class="text-xxs text-red-600 mt-1">{{ $message }}</p> @enderror
+          </div>
         </div>
       </div>
-    </div>
+    </section>
 
     <!-- Action Buttons -->
     <div class="flex flex-col sm:flex-row justify-between items-center gap-3">
       <a href="/login"
-         class="py-2.5 px-8 inline-flex justify-center items-center gap-x-2 
-                text-sm font-bold rounded-full bg-blue-600 text-white 
-                hover:bg-blue-700 shadow-lg hover:shadow-xl transition 
-                btn-hover border-2 border-blue-200">
+         class="py-2.5 px-6 inline-flex justify-center items-center gap-x-2 
+                text-sm font-semibold rounded-full bg-transparent text-slate-700 
+                hover:bg-slate-50 border border-slate-200 transition">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                 d="M15 12H3m6 6l-6-6 6-6" />
@@ -225,10 +215,9 @@
       </a>
 
       <button type="submit" wire:loading.attr="disabled"
-        class="py-2.5 px-8 inline-flex justify-center items-center gap-x-2 
-               text-sm font-bold rounded-full bg-blue-600 text-white 
-               hover:bg-blue-700 shadow-lg hover:shadow-xl transition 
-               btn-hover border-2 border-blue-200">
+        class="py-2.5 px-6 inline-flex justify-center items-center gap-x-2 
+               text-sm font-semibold rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white 
+               hover:opacity-95 shadow-lg transition">
         <span wire:loading.remove>Create Account</span>
         <span wire:loading>Creating...</span>
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -241,14 +230,76 @@
   </form>
 
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-    body { font-family: 'Inter', sans-serif; }
-    .glass-effect { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.3); }
-    .input-focus { transition: all 0.3s ease; }
-    .input-focus:focus { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(29,78,216,0.15); }
-    .btn-hover { transition: all 0.3s ease; }
-    .btn-hover:hover { transform: translateY(-2px); }
-    .card-hover { transition: all 0.3s ease; }
-    .card-hover:hover { box-shadow: 0 12px 28px rgba(0,0,0,0.08); }
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+    :root { --card-radius: 12px; }
+    body { font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; }
+    .text-xxs { font-size: 11px; }
+    section { border-radius: var(--card-radius); overflow: hidden; }
+    input:focus, select:focus { box-shadow: 0 6px 18px rgba(59,130,246,0.08); }
   </style>
 </main>
+
+<script>
+    (function () {
+      // path to dataset (place the file in public/data/philippines.json)
+      const DATA_URL = '/data/philippines.json';
+
+      const provinceEl = document.getElementById('province');
+      const cityEl = document.getElementById('city');
+
+      // initial values from Livewire (blade variables)
+      const initialProvince = @json($province ?? '');
+      const initialCity = @json($city ?? '')
+
+      function clearSelect(el) {
+        while (el.options.length > 1) el.remove(1);
+      }
+
+      function populateProvinces(data) {
+        clearSelect(provinceEl);
+        Object.keys(data).sort().forEach(p => {
+          const opt = document.createElement('option');
+          opt.value = p;
+          opt.text = p;
+          if (p === initialProvince) opt.selected = true;
+          provinceEl.appendChild(opt);
+        });
+        // trigger change to populate cities if initial province present
+        provinceEl.dispatchEvent(new Event('change'));
+      }
+
+      function populateCities(data, province) {
+        clearSelect(cityEl);
+        if (!province || !data[province]) return;
+        data[province].forEach(city => {
+          const opt = document.createElement('option');
+          opt.value = city;
+          opt.text = city;
+          if (city === initialCity) opt.selected = true;
+          cityEl.appendChild(opt);
+        });
+      }
+
+      // load dataset
+      fetch(DATA_URL)
+        .then(r => {
+          if (!r.ok) throw new Error('Locations JSON not found');
+          return r.json();
+        })
+        .then(data => {
+          populateProvinces(data);
+
+          // when province changes populate cities
+          provinceEl.addEventListener('change', function () {
+            populateCities(data, this.value);
+          });
+
+          // if user already selected province via Livewire, populate cities and keep selection
+          if (initialProvince) populateCities(data, initialProvince);
+        })
+        .catch(err => {
+          console.warn('Failed to load PH locations:', err);
+          // fallback: keep selects empty so user can type later by enabling an input fallback (not implemented here)
+        });
+    })();
+  </script>

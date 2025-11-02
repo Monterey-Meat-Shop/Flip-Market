@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Http; // ✅ Added for API calls
 use Illuminate\Support\Facades\Mail; // ✅ Added for sending emails
 use Livewire\Component;
 use Illuminate\Auth\Events\Registered; // ✅ Added for triggering Laravel’s built-in verification
+use Illuminate\Validation\Rule;
 
 class RegisterPage extends Component
 {
@@ -55,6 +56,30 @@ class RegisterPage extends Component
     // validation using livewire :<<
     public function register()
     {
+        // Load provinces/cities dataset
+        $dataPath = public_path('data/philippines.json');
+        $locations = [];
+        if (file_exists($dataPath)) {
+            $locations = json_decode(file_get_contents($dataPath), true) ?: [];
+        }
+        $allowedProvinces = array_keys($locations);
+        $allowedCities = $locations[$this->province] ?? [];
+
+        // Dynamic rules: prefer exact match against dataset; fallback to relaxed pattern
+        $provinceRules = ['required', 'max:255'];
+        if (!empty($allowedProvinces)) {
+            $provinceRules[] = Rule::in($allowedProvinces);
+        } else {
+            $provinceRules[] = 'regex:/^[A-Za-z0-9\s\-\.\'\(\)&]+$/';
+        }
+
+        $cityRules = ['required', 'max:255'];
+        if (!empty($allowedCities)) {
+            $cityRules[] = Rule::in($allowedCities);
+        } else {
+            $cityRules[] = 'regex:/^[A-Za-z0-9\s\-\.\'\(\)&]+$/';
+        }
+
         $this->validate([
             'firstname' => ['required', 'max:255', 'regex:/^[A-Za-z\s\-]+$/'],
             'lastname'  => ['required', 'max:255', 'regex:/^[A-Za-z\s\-]+$/'],
@@ -69,8 +94,8 @@ class RegisterPage extends Component
             'postal_code' => 'required|numeric|digits_between:4,10',
             'address_line_1' => 'required|max:255',
             'address_line_2' => 'max:255',
-            'city' => ['required', 'max:255', 'regex:/^[A-Za-z\s\-]+$/'],
-            'province' => ['required', 'max:255', 'regex:/^[A-Za-z\s\-]+$/'],
+            'city' => $cityRules,
+            'province' => $provinceRules,
             'phone' => [
                 'required',
                 'regex:/^[0-9]{10,11}$/',
