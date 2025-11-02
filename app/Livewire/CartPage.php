@@ -8,7 +8,6 @@ use App\Models\Customer;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Log;
 
 class CartPage extends Component
 {
@@ -18,7 +17,6 @@ class CartPage extends Component
     public $canCheckout = true;
     public $stockIssues = [];
 
-    protected $listeners = ['cartUpdated' => 'loadCart'];
     protected $listeners = ['cartUpdated' => 'loadCart'];
 
     public function mount()
