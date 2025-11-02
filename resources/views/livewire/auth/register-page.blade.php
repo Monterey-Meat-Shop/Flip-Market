@@ -1,15 +1,28 @@
 <main class="w-full max-w-5xl mx-auto relative z-10 py-4 px-4">
 
-  {{-- ✅ Flash Message for Verification Notice --}}
-  @if (session('verification_notice'))
+  {{-- ✅ Floating Toast Notification --}}
+  @if ($successMessage)
     <div 
       x-data="{ show: true }" 
-      x-init="setTimeout(() => show = false, 6000)" 
+      x-init="setTimeout(() => show = false, 7000)" 
       x-show="show"
-      x-transition
-      class="mb-4 p-3 rounded-lg bg-green-100 border border-green-300 text-green-800 text-sm font-medium shadow"
+      x-transition:enter="transform ease-out duration-300 transition"
+      x-transition:enter-start="translate-y-2 opacity-0 sm:translate-y-0 sm:translate-x-2"
+      x-transition:enter-end="translate-y-0 opacity-100 sm:translate-x-0"
+      x-transition:leave="transition ease-in duration-200"
+      x-transition:leave-start="opacity-100"
+      x-transition:leave-end="opacity-0"
+      class="fixed bottom-6 right-6 z-50 max-w-sm w-full bg-green-100 border border-green-300 text-green-800 rounded-xl shadow-lg p-4 flex items-start gap-3"
     >
-        {{ session('verification_notice') }}
+      <svg class="w-6 h-6 text-green-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+      </svg>
+      <div class="flex-1 text-sm font-medium leading-relaxed">
+        {{ $successMessage }}
+      </div>
+      <button @click="show = false" class="text-green-700 hover:text-green-900 focus:outline-none">
+        ✖
+      </button>
     </div>
   @endif
 
@@ -197,36 +210,33 @@
       </div>
     </div>
 
-   <!-- Action Buttons -->
-<div class="flex flex-col sm:flex-row justify-between items-center gap-3">
+    <!-- Action Buttons -->
+    <div class="flex flex-col sm:flex-row justify-between items-center gap-3">
+      <a href="/login"
+         class="py-2.5 px-8 inline-flex justify-center items-center gap-x-2 
+                text-sm font-bold rounded-full bg-blue-600 text-white 
+                hover:bg-blue-700 shadow-lg hover:shadow-xl transition 
+                btn-hover border-2 border-blue-200">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M15 12H3m6 6l-6-6 6-6" />
+        </svg>
+        <span>Back to Login</span>
+      </a>
 
-  <!-- 🔙 Back to Login Button (Now same design as Create Account) -->
-  <a href="/login"
-     class="py-2.5 px-8 inline-flex justify-center items-center gap-x-2 
-            text-sm font-bold rounded-full bg-blue-600 text-white 
-            hover:bg-blue-700 shadow-lg hover:shadow-xl transition 
-            btn-hover border-2 border-blue-200">
-    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-            d="M15 12H3m6 6l-6-6 6-6" />
-    </svg>
-    <span>Back to Login</span>
-  </a>
-
-  <!-- ✅ Create Account Button -->
-  <button type="submit"
-    class="py-2.5 px-8 inline-flex justify-center items-center gap-x-2 
-           text-sm font-bold rounded-full bg-blue-600 text-white 
-           hover:bg-blue-700 shadow-lg hover:shadow-xl transition 
-           btn-hover border-2 border-blue-200">
-    <span>Create Account</span>
-    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-            d="M13 7l5 5m0 0l-5 5m5-5H6" />
-    </svg>
-  </button>
-
-</div>
+      <button type="submit" wire:loading.attr="disabled"
+        class="py-2.5 px-8 inline-flex justify-center items-center gap-x-2 
+               text-sm font-bold rounded-full bg-blue-600 text-white 
+               hover:bg-blue-700 shadow-lg hover:shadow-xl transition 
+               btn-hover border-2 border-blue-200">
+        <span wire:loading.remove>Create Account</span>
+        <span wire:loading>Creating...</span>
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M13 7l5 5m0 0l-5 5m5-5H6" />
+        </svg>
+      </button>
+    </div>
 
   </form>
 

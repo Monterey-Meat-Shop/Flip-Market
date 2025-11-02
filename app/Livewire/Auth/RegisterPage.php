@@ -26,6 +26,9 @@ class RegisterPage extends Component
     public $province;
     public $postal_code;
 
+    // ✅ NEW: Success message property
+    public $successMessage = null;
+
     // ✅ Email validation using MailboxLayer API
     public function checkEmailValidity($email)
     {
@@ -122,7 +125,11 @@ class RegisterPage extends Component
             // Silent fail — you can log this if needed
         }
 
-        return redirect()->route('login')->with('message', 'Account created successfully! Please check your email to verify your account before logging in.');
+        // ✅ Show success message instead of redirect
+        $this->successMessage = '🎉 Account created successfully! A verification and welcome email were sent to ' . $this->email . '. Please check your inbox.';
+
+        // Optional: clear form inputs
+        $this->reset(['firstname','lastname','email','password','password_confirmation','phone','address_line_1','address_line_2','city','province','postal_code']);
     }
 
     public function render()
