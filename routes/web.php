@@ -11,7 +11,7 @@ use App\Livewire\MyAccountPage;
 use App\Livewire\OrderDetailPage;
 
 use App\Http\Controllers\CartController;
-use App\Http\Controllers\ReturnController;
+use App\Http\Controllers\ReturnController as ReturnCtrl;
 use App\Livewire\NotificationPage;
 use App\Livewire\ProductDetailPage;
 use App\Livewire\ProductPage;
@@ -91,4 +91,6 @@ Route::middleware('auth')->group(function () {
         return redirect('/');
     });
 });
+
+Route::get('/returns', [ReturnCtrl::class, 'index'])->name('returns.index');
 
