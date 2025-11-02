@@ -35,7 +35,7 @@ class Customer extends Model
 
     public function address()
     {
-        return $this->hasMany(Address::class, 'customerID', 'customerID');
+        return $this->hasOne(Address::class, 'customerID', 'customerID');
     }
      
     public function cartItems()
