@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\NotificationController;
 use App\Livewire\Auth\LoginPage;
 use App\Livewire\Auth\RegisterPage;
 use App\Livewire\CartPage;
@@ -11,7 +12,7 @@ use App\Livewire\OrderDetailPage;
 
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\ReturnController;
-
+use App\Livewire\NotificationPage;
 use App\Livewire\ProductDetailPage;
 use App\Livewire\ProductPage;
 use App\Livewire\ReturnPage;
@@ -51,12 +52,17 @@ Route::middleware('auth')->group(function () {
     Route::get('/my-orders', MyOrderPage::class)->name('my.orders');
     Route::get('/my-account', MyAccountPage::class)->name('my.account');
 
+    Route::get('/notifications', NotificationPage::class)->name('notifications.page');
+
+    // Backend endpoints (for marking read, etc.)
+    Route::post('/notifications/{id}/read', [NotificationPage::class, 'markAsRead'])->name('notifications.markAsRead');
+    Route::post('/notifications/read-all', [NotificationPage::class, 'markAllAsRead'])->name('notifications.markAllAsRead');
+
     // Return routes 
     Route::get('/return/{orderId}', ReturnPage::class)->name('return.page');
     Route::post('/returns/{order}/submit', [ReturnController::class, 'submit'])->name('returns.submit');
     Route::get('/returns/confirmation', [ReturnController::class, 'confirmation'])->name('returns.confirmation');
     Route::get('/returns/{returnId}', [ReturnController::class, 'show'])->name('returns.show');
-    
     // Order details - pass orderId as parameter
     Route::get('/orders/{orderId}', OrderDetailPage::class)->name('orders.show');
     
