@@ -8,6 +8,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Notifications\NewOrderNotification;
+use Illuminate\Support\Facades\Notification;
 
 class Order extends Model
 {
@@ -65,28 +67,23 @@ class Order extends Model
 
     public function shippingAddress(): BelongsTo
     {
-        // Links 'address_choice' on the orders table to 'addressID' on the addresses table
         return $this->belongsTo(Address::class, 'address_choice', 'addressID');
     }
 
     public function getFormattedShippingAddressAttribute(): string
-{
-    // 1. Try to get the specific address linked by address_choice
-    $address = $this->shippingAddress;
+    {
+        $address = $this->shippingAddress;
 
-    // 2. If no specific address is linked (address_choice is null), try to use the customer's first address.
-    if (!$address && $this->customer) {
-        $address = $this->customer->address->first();
-    }
-    
-    // 3. Return the formatted address or the fallback text
-    if ($address) {
-        // We know Address::getFullAddressAttribute() exists, so we call it.
-        return $address->full_address;
-    }
+        if (!$address && $this->customer) {
+            $address = $this->customer->address->first();
+        }
+        
+        if ($address) {
+            return $address->full_address;
+        }
 
-    return '— Address Not Found or Selected —';
-}
+        return '— Address Not Found or Selected —';
+    }
 
     public function returnRequest()
     {
@@ -104,7 +101,6 @@ class Order extends Model
         foreach ($this->orderItems as $item) {
             if ($item->productVariant) {
                 $item->productVariant->decrement('stock_quantity', $item->quantity);
-                // ensure product status exists
                 if (method_exists($item->productVariant->product, 'refreshProductStatus')) {
                     $item->productVariant->product->refreshProductStatus();
                 }
@@ -116,7 +112,6 @@ class Order extends Model
             }
         }
 
-        // mark as done so we don't deduct again
         $this->stock_deducted = true;
         $this->saveQuietly();
     }
@@ -143,10 +138,10 @@ class Order extends Model
             }
         }
 
-        // mark as done
         $this->stock_deducted = true;
         $this->saveQuietly();
     }
+    
     public function getOverallDiscountAttribute()
     {
         return $this->orderItems()->sum('discount_amount');
