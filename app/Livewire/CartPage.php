@@ -113,6 +113,63 @@ class CartPage extends Component
         $this->dispatch('cartUpdated', $this->cartCount);
     }
 
+    public function validateStockForCheckout()
+    {
+        $this->stockIssues = [];
+        $this->canCheckout = true;
+
+        foreach ($this->cartItems as $item) {
+            if ($item->variant) {
+                $item->variant->refresh();
+            } else {
+                $item->product->refresh();
+            }
+
+            $warehouseStock = $item->variant 
+                ? $item->variant->stock_quantity 
+                : $item->product->total_stock_quantity;
+
+            // ✅ FIX: User already has items in cart, warehouse stock is what's LEFT
+            // They can't have negative warehouse stock
+            if ($warehouseStock < 0) {
+                $this->canCheckout = false;
+                $this->stockIssues[] = [
+                    'product' => $item->product->name ?? 'Unknown Product',
+                    'size' => $item->size,
+                    'colorway' => $item->colorway,
+                    'requested' => $item->quantity,
+                    'available' => $item->quantity + $warehouseStock, // What they can actually have
+                ];
+            }
+        }
+    }
+
+    public function proceedToCheckout()
+    {
+        if (!Auth::check()) {
+            session()->flash('error', 'Please login to proceed.');
+            return redirect()->route('login');
+        }
+
+        $this->loadCart();
+
+        if (!$this->canCheckout) {
+            $this->dispatch('checkout-error', 
+                message: 'Some items in your cart exceed available stock. Please update quantities before proceeding.'
+            );
+            return;
+        }
+
+        if ($this->cartItems->isEmpty()) {
+            $this->dispatch('checkout-error', 
+                message: 'Your cart is empty. Please add items before checkout.'
+            );
+            return;
+        }
+
+        return redirect()->route('checkout');
+    }
+
     public function increaseQuantity($cartItemId)
     {
         $item = CartItem::with('variant')->where('cart_itemID', $cartItemId)->first();

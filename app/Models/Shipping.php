@@ -67,4 +67,27 @@ class Shipping extends Model
     {
         return self::SHIPPING_METHODS;
     }
+
+
+protected static function booted()
+{
+    static::updated(function ($shipping) {
+        // Only trigger when the shipping status changes
+        if ($shipping->isDirty('shipping_status')) {
+            $user = $shipping->order?->customer?->user;
+
+            if ($user) {
+                Notification_Customer::create([
+                    'user_id'    => $user->id,
+                    'orderID'    => $shipping->orderID,          
+                    'shippingID' => $shipping->shippingID,       
+                    'message'    => "Your order #{$shipping->order->orderID} shipping status is now {$shipping->shipping_status}.",
+                    'is_read'    => false,
+                ]);
+            }
+        }
+    });
+}
+
+
 }

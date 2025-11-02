@@ -11,30 +11,19 @@ use Illuminate\Http\RedirectResponse;
 
 class OrderDetailPage extends Component
 {
-    // Public properties mapped to the view
     public $order;
     public $orderId;
     public $productDiscountSavings = 0.0;
     public $couponDiscountAmount = 0.0;
     public $originalSubtotal = 0.0;
 
-    /**
-     * Mount the component and load the order data.
-     * * NOTE: The explicit return type hint (e.g., : RedirectResponse|null) 
-     * has been removed to avoid "void can only be used as a standalone type" 
-     * errors in environments running older PHP versions (pre 8.1).
-     *
-     * @param string $orderId The ID of the order to load.
-     * @return RedirectResponse|null
-     */
-    public function mount(string $orderId) // <-- Type hint removed here
+    public function mount(string $orderId)
     {
-        // 1. Authentication Check
         if (!Auth::check()) {
             return redirect()->route('login');
         }
 
-        // 2. Customer Authorization Check
+        // customer authorization
         $customer = Customer::where('user_id', Auth::id())->first();
 
         if (!$customer) {
@@ -44,7 +33,7 @@ class OrderDetailPage extends Component
 
         $this->orderId = $orderId;
 
-        // 3. Load order with relationships and specific authorization
+        // load order with relationships and specific authorization
         $this->order = Order::where('orderID', $orderId)
             ->where('customerID', $customer->customerID)
             ->with([
@@ -59,28 +48,21 @@ class OrderDetailPage extends Component
 
         $this->calculateDiscounts();
         
-        // No explicit return is needed here, Livewire handles the flow.
     }
 
-    /**
-     * Calculate product-level and coupon-level discounts.
-     * Uses rounding to handle floating-point arithmetic for currency.
-     */
     private function calculateDiscounts(): void
     {
         $this->productDiscountSavings = 0.0;
         $this->originalSubtotal = 0.0;
 
-        // --- 1. Product-Level Discount Calculation ---
+        // discount calculation
         foreach ($this->order->orderItems as $item) {
             $unitPrice = (float) $item->unit_price;
-            // Use null-coalescing and ensure we cast to float for safety
+
             $originalPrice = (float) ($item->original_price ?? $unitPrice);
             $quantity = (int) $item->quantity;
 
-            // --- NEW: This is the price the customer *actually paid* per unit ---
             $item->discounted_unit_price = round($unitPrice, 2); 
-            // ------------------------------------------------------------------
 
             // Reset defaults
             $item->has_discount = false;
@@ -106,7 +88,7 @@ class OrderDetailPage extends Component
         $this->originalSubtotal = round($this->originalSubtotal, 2);
 
 
-        // --- 2. Checkout-Level Coupon Discount Calculation ---
+        // discount calculation
         $this->couponDiscountAmount = 0.0;
 
         if ($this->order->discount) {

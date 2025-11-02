@@ -3,9 +3,11 @@
 namespace App\Filament\Resources\OrderResource\Pages;
 
 use App\Filament\Resources\OrderResource;
+use App\Notifications\NewOrderNotification;
 use Filament\Resources\Pages\CreateRecord;
 use Filament\Notifications\Notification;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Notification as NotificationFacade;
 
 class CreateOrder extends CreateRecord
 {
@@ -16,10 +18,10 @@ class CreateOrder extends CreateRecord
         Log::info('Order items data before create:', $data['orderItems'] ?? []);
         Log::info('MutateFormDataBeforeCreate called:', $data);
 
-        // Calculate final amount from order items (which already have discounted prices)
+        // Calculate final amount from order items
         $finalAmount = collect($data['orderItems'] ?? [])->sum('sub_total');
         $data['final_amount'] = $finalAmount;
-        $data['total_amount'] = $finalAmount; // Keep both fields in sync
+        $data['total_amount'] = $finalAmount;
 
         $data['order_status'] = $data['order_status'] ?? 'pending';
         $data['shipping_method'] = $data['shipping_method'] ?? 'pickup';
@@ -68,18 +70,16 @@ class CreateOrder extends CreateRecord
 
         $payment = $record->payment()->create($paymentData);
 
-        // --- Shipping (OrderResource only) ---
         $record->shipping()->create([
             'shipping_method' => $formData['shipping_method'] ?? 'jnt',
             'shipping_status' => $formData['shipping_status'] ?? 'processing',
         ]);
 
-        // --- Update order status (persisted) ---
+        // update order status
         $record->update([
             'order_status' => $formData['order_status'] ?? 'pending',
         ]);
 
-        // refresh so we get latest attributes (and relationships are present)
         $record->refresh();
 
         // Log final order totals with discount information
@@ -96,10 +96,26 @@ class CreateOrder extends CreateRecord
             Log::info("Stock deducted for Order {$record->orderID} (pending flow).");
         }
 
-        // Optional fallback: if payment was paid immediately, ensure deduction (only if not already done)
+        // if payment was paid immediately, ensure deduction (only if not already done)
         if (in_array(strtolower($payment->status), ['paid', 'verified']) && ! ($record->stock_deducted ?? false)) {
             $record->deductStockForTransaction();
             Log::info("Stock deducted for Order {$record->orderID} (payment was paid).");
+        }
+
+        // notify admins
+        if ($record->order_status === 'pending') {
+            try {
+                $admins = \App\Models\User::role(['admin', 'manager'])->get();
+                
+                if ($admins->count() > 0) {
+                    NotificationFacade::send($admins, new NewOrderNotification($record));
+                    Log::info("Bell notification sent to {$admins->count()} admin(s)/manager(s) for Order {$record->orderID}");
+                } else {
+                    Log::warning("No admins or managers found to notify for Order {$record->orderID}");
+                }
+            } catch (\Exception $e) {
+                Log::error("Failed to send notification for Order {$record->orderID}: " . $e->getMessage());
+            }
         }
     }
 

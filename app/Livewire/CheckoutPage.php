@@ -6,6 +6,7 @@ use Livewire\Component;
 use Livewire\WithFileUploads;
 use App\Models\CartItem;
 use App\Models\Customer;
+use App\Models\User;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Payment;
@@ -13,8 +14,11 @@ use App\Models\PaymentMethod;
 use App\Models\Shipping;
 use App\Models\Address;
 use App\Models\Discount;
+use App\Notifications\NewOrderNotification;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Log;
 
 class CheckoutPage extends Component
 {
@@ -185,7 +189,7 @@ class CheckoutPage extends Component
             $basePrice = (float) $item->product->price;
             $activeDiscount = $this->getActiveDiscount($item->product);
 
-            \Log::info('Processing cart item', [
+            Log::info('Processing cart item', [
                 'product' => $item->product->name,
                 'base_price' => $basePrice,
                 'has_discount' => !is_null($activeDiscount),
@@ -206,7 +210,7 @@ class CheckoutPage extends Component
                 $discountedPrice = $this->calculateDiscountedPrice($basePrice, $activeDiscount);
                 $discountDifference = $basePrice - $discountedPrice;
 
-                \Log::info('Discount calculation', [
+                Log::info('Discount calculation', [
                     'base' => $basePrice,
                     'discounted' => $discountedPrice,
                     'difference' => $discountDifference,
@@ -536,6 +540,24 @@ class CheckoutPage extends Component
                     'shipping_status' => 'pending',
                     'shipping_fee' => $this->deliveryFee,
                 ]);
+
+                // notification to admin
+                try {
+                    $order->refresh();
+                    $order->load(['customer', 'payment', 'orderItems']);
+                    
+                    // Get all users with admin or manager roles
+                    $admins = User::role(['admin', 'manager'])->get();
+                    
+                    if ($admins->count() > 0) {
+                        Notification::send($admins, new NewOrderNotification($order));
+                        Log::info("Bell notification sent to {$admins->count()} admin(s)/manager(s) for Order #{$order->orderID}");
+                    } else {
+                        Log::warning("No admins or managers found to notify for Order #{$order->orderID}");
+                    }
+                } catch (\Exception $e) {
+                    Log::error("Failed to send notification for Order #{$order->orderID}: " . $e->getMessage());
+                }
 
                 CartItem::where('customerID', $this->customer->customerID)->delete();
 
