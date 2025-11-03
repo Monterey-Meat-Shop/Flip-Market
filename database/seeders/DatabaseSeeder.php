@@ -2,9 +2,9 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\Hash;
+use App\Models\User;
+use Illuminate\Support\Str;
 
 class DatabaseSeeder extends Seeder
 {
@@ -20,6 +20,18 @@ class DatabaseSeeder extends Seeder
             PaymentMethodSeeder::class,
             GuestCustomerSeeder::class,
         ]);
+
+        // Create or update admin to avoid duplicate key errors
+        User::updateOrCreate(
+            ['email' => 'admin@gmail.com'],
+            [
+                'name' => 'Admin',
+                'last_name' => 'Admin',
+                'email_verified_at' => now(),
+                'password' => bcrypt(env('ADMIN_PASSWORD', 'password123')),
+                'remember_token' => Str::random(10),
+            ]
+        );
 
         // Admin user
         $adminUser = User::factory()->create([

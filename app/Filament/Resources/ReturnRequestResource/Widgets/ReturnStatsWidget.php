@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Filament\Widgets;
+namespace App\Filament\Resources\ReturnRequestResource\Widgets;
 
 use App\Models\ReturnRequest;
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
@@ -47,6 +47,9 @@ class ReturnStatsWidget extends BaseWidget
                 ->description('Total orders returned')
                 ->descriptionIcon($returnRate > 10 ? 'heroicon-m-arrow-trending-up' : 'heroicon-m-arrow-trending-down')
                 ->color($returnRate > 10 ? 'danger' : 'success'),
+            Stat::make('total_returns')
+                ->label('Total Returns')
+                ->value(ReturnRequest::count()),
         ];
     }
 }

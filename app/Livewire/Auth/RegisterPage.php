@@ -30,27 +30,65 @@ class RegisterPage extends Component
     // ✅ NEW: Success message property
     public $successMessage = null;
 
-    // ✅ Email validation using MailboxLayer API
+    // ✅ Email validation using MailboxLayer API (safe/fail-open)
     public function checkEmailValidity($email)
     {
-        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        // quick format check first
+        if (! filter_var($email, FILTER_VALIDATE_EMAIL)) {
             return false;
         }
 
-        $response = Http::get('https://apilayer.net/api/check', [
-            'access_key' => env('MAILBOXLAYER_API_KEY'),
-            'email' => $email,
-            'smtp' => 1,
-            'format' => 1,
-        ]);
+        $apiKey = env('MAILBOXLAYER_API_KEY');
+
+        // if no API key configured, skip external check (do not block)
+        if (empty($apiKey)) {
+            return true;
+        }
+
+        try {
+            $response = Http::timeout(5)->get('https://apilayer.net/api/check', [
+                'access_key' => $apiKey,
+                'email' => $email,
+                'smtp' => 1,
+                'format' => 1,
+            ]);
+        } catch (\Throwable $e) {
+            // API request failed (network, timeout, etc.) — do not block registration
+            return true;
+        }
 
         if ($response->failed()) {
-            return false;
+            // upstream service error — allow registration to proceed
+            return true;
         }
 
         $data = $response->json();
 
-        return $data['format_valid'] && $data['smtp_check'] && $data['mx_found'];
+        if (!is_array($data) || empty($data)) {
+            // unexpected payload — don't block user
+            return true;
+        }
+
+        // If provider returned an error payload, allow registration (avoid false negatives)
+        if (isset($data['success']) && $data['success'] === false) {
+            return true;
+        }
+
+        // Only use checks that exist in the response. If none exist, allow registration.
+        $hasFormat = array_key_exists('format_valid', $data);
+        $hasSmtp   = array_key_exists('smtp_check', $data);
+        $hasMx     = array_key_exists('mx_found', $data);
+
+        if (! ($hasFormat || $hasSmtp || $hasMx)) {
+            return true;
+        }
+
+        $formatValid = $hasFormat ? (bool) $data['format_valid'] : true;
+        $smtpCheck   = $hasSmtp   ? (bool) $data['smtp_check']   : true;
+        $mxFound     = $hasMx     ? (bool) $data['mx_found']     : true;
+
+        // require all available checks to be truthy
+        return $formatValid && $smtpCheck && $mxFound;
     }
 
     // validation using livewire :<<
