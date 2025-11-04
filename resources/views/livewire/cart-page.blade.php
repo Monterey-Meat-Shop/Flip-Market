@@ -64,12 +64,11 @@
                   {{-- Product Image --}}
                   <a href="{{ route('product.detail', $item->product->productID ?? 0) }}" class="shrink-0">
                     <img 
-                      class="h-20 w-20 object-cover rounded"
-                      src="{{ $item->product && $item->product->image_path 
-                          ? asset('storage/' . $item->product->image_path) 
-                          : 'https://via.placeholder.com/150' }}"
-                      alt="{{ $item->product->name ?? 'Unknown Product' }}" 
-                    />
+  class="h-20 w-20 object-cover rounded"
+  src="{{ image_url($item->product->image_path, 'https://via.placeholder.com/150') }}" 
+  alt="{{ $item->product->name ?? 'Unknown Product' }}" 
+/>
+
                   </a>
 
                   {{-- Product Info --}}

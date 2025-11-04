@@ -367,7 +367,7 @@ class ProductResource extends Resource
 
                 ImageColumn::make('image_url')
                     ->label('Image')
-                    ->getStateUsing(fn ($record) => $record->image_url[0] ?? null)
+                    ->getStateUsing(fn ($record) => image_url($record->image_url[0] ?? null))
                     ->extraImgAttributes([
                         'class' => 'cursor-pointer hover:scale-105 transition-transform duration-200',
                         'onclick' => "
