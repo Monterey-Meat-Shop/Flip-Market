@@ -795,16 +795,33 @@ class OrderResource extends Resource
                         ->icon('heroicon-o-x-circle')
                         ->color('danger')
                         ->requiresConfirmation()
+                        ->modalHeading('Reject Order')
+                        ->modalDescription('Are you sure you want to reject this order? The stock will be restored.')
+                        ->modalSubmitActionLabel('Yes, Reject Order')
                         ->visible(fn ($record) => $record->order_status === 'pending')
                         ->action(function ($record) {
+
+                            foreach ($record->orderItems as $item) {
+                                if ($item->productVariant) {
+                                    $item->productVariant->increment('stock_quantity', $item->quantity);
+                                } elseif ($item->product) {
+                                    $item->product->increment('stock_quantity', $item->quantity);
+                                }
+                            }
+
                             $record->update([
-                                'order_status' => 'failed',
-                                // 'rejected_at' => now(),
+                                'stock_deducted' => false,
+                                'order_status' => 'cancelled',
                             ]);
 
+                            if ($record->payment) {
+                                $record->payment->update(['status' => 'failed']);
+                            }
+
                             \Filament\Notifications\Notification::make()
-                                ->title('Order Rejected')
-                                ->danger()
+                                ->title('Order Rejected Successfully')
+                                ->body("Order #{$record->orderID} has been rejected and products have been restocked.")
+                                ->success()
                                 ->send();
                         }),
 

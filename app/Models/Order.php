@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use App\Notifications\NewOrderNotification;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Log;
 
 class Order extends Model
 {
@@ -90,6 +91,87 @@ class Order extends Model
         return $this->hasOne(ReturnRequest::class, 'orderID', 'orderID');
     }
 
+    // Check if the order has insufficient stock
+    public function hasInsufficientStock(): bool
+    {
+        $this->load('orderItems.productVariant', 'orderItems.product');
+
+        foreach ($this->orderItems as $item) {
+            if ($item->productVariant) {
+                $availableStock = $item->productVariant->stock_quantity;
+                if ($item->quantity > $availableStock) {
+                    Log::warning("Insufficient stock for Order {$this->orderID}, Item: {$item->product->name}, Variant: {$item->productVariant->id}, Required: {$item->quantity}, Available: {$availableStock}");
+                    return true;
+                }
+            } elseif ($item->product) {
+                $availableStock = $item->product->total_stock_quantity;
+                if ($item->quantity > $availableStock) {
+                    Log::warning("Insufficient stock for Order {$this->orderID}, Product: {$item->product->name}, Required: {$item->quantity}, Available: {$availableStock}");
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    // Auto-reject the order if it has insufficient stock
+    public function autoRejectIfOutOfStock(): bool
+    {
+        if ($this->order_status !== 'pending') {
+            return false; // Only check pending orders
+        }
+
+        if ($this->hasInsufficientStock()) {
+            Log::info("Auto-rejecting Order {$this->orderID} due to insufficient stock.");
+            
+            // Restock products if they were already deducted
+            $this->restockProducts();
+            
+            // Update order status
+            $this->update([
+                'order_status' => 'cancelled',
+            ]);
+
+            Log::info("Order {$this->orderID} auto-rejected and products restocked.");
+            
+            return true; // Order was rejected
+        }
+
+        return false; // Order is fine
+    }
+
+    // Restock the products that were already deducted
+    public function restockProducts(): void
+    {
+        if (! $this->stock_deducted) {
+            Log::info("Order {$this->orderID} stock not deducted — skipping restock.");
+            return;
+        }
+
+        $this->load('orderItems.productVariant', 'orderItems.product');
+
+        foreach ($this->orderItems as $item) {
+            if ($item->productVariant) {
+                $item->productVariant->increment('stock_quantity', $item->quantity);
+
+                if (method_exists($item->productVariant->product, 'refreshProductStatus')) {
+                    $item->productVariant->product->refreshProductStatus();
+                }
+            } elseif ($item->product) {
+                $item->product->increment('stock_quantity', $item->quantity);
+
+                if (method_exists($item->product, 'refreshProductStatus')) {
+                    $item->product->refreshProductStatus();
+                }
+            }
+        }
+
+        $this->update(['stock_deducted' => false]);
+
+        Log::info("Order {$this->orderID} restocked successfully.");
+    }
+
     public function deductStockForTransaction(): void
     {
         if ($this->stock_deducted) {
@@ -148,27 +230,22 @@ class Order extends Model
     }
 
     // this is how notification will be created 
-protected static function booted()
-{
-    static::updated(function ($order) {
-        if ($order->isDirty('order_status')) {
-            $user = $order->customer?->user;
+    protected static function booted()
+    {
+        static::updated(function ($order) {
+            if ($order->isDirty('order_status')) {
+                $user = $order->customer?->user;
 
-            if ($user) {
-                Notification_Customer::create([
-                    'user_id'    => $user->id,
-                    'orderID'    => $order->orderID,  // link notification to order
-                    'shippingID' => $order->shipping?->shippingID ?? null, // optional if exists
-                    'message'    => "Your order #{$order->orderID} status has been updated to {$order->order_status}.",
-                    'is_read'    => false,
-                ]);
+                if ($user) {
+                    Notification_Customer::create([
+                        'user_id'    => $user->id,
+                        'orderID'    => $order->orderID,  // link notification to order
+                        'shippingID' => $order->shipping?->shippingID ?? null, // optional if exists
+                        'message'    => "Your order #{$order->orderID} status has been updated to {$order->order_status}.",
+                        'is_read'    => false,
+                    ]);
+                }
             }
-        }
-    });
-}
-
-
-
-
-
+        });
+    }
 }

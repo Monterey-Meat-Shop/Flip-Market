@@ -17,7 +17,7 @@ use App\Livewire\ProductDetailPage;
 use App\Livewire\ProductPage;
 use App\Livewire\ReturnPage;
 
-use App\Http\Controllers\ReturnController;
+
 
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;

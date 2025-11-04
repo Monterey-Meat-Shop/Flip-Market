@@ -448,6 +448,7 @@ class CheckoutPage extends Component
                     'postal_code' => $selectedAddress->postal_code,
                     'city' => $selectedAddress->city,
                     'province' => $selectedAddress->province,
+                    'stock_deducted' => true,
                 ]);
 
                 // Create order items

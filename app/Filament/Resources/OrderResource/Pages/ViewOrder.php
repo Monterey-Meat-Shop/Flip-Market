@@ -84,21 +84,38 @@ class ViewOrder extends ViewRecord
                 }),
 
             Actions\Action::make('reject')
-                ->label('Reject Order')
-                ->icon('heroicon-o-x-circle')
-                ->color('danger')
-                ->requiresConfirmation()
-                ->visible(fn () => $this->record->order_status === 'pending')
-                ->action(function () {
-                    $this->record->update([
-                        'order_status' => 'failed',
-                    ]);
+               ->label('Reject Order')
+               ->icon('heroicon-o-x-circle')
+               ->color('danger')
+               ->requiresConfirmation()
+               ->modalHeading('Reject Order')
+               ->modalDescription('Are you sure you want to reject this order? The stock will be restored.')
+               ->modalSubmitActionLabel('Yes, Reject Order')
+               ->visible(fn () => $this->record->order_status === 'pending')
+               ->action(function () {
+                   foreach ($this->record->orderItems as $item) {
+                       if ($item->productVariant) {
+                           $item->productVariant->increment('stock_quantity', $item->quantity);
+                       } elseif ($item->product) {
+                           $item->product->increment('stock_quantity', $item->quantity);
+                       }
+                   }
 
-                    \Filament\Notifications\Notification::make()
-                        ->title('Order Rejected')
-                        ->danger()
-                        ->send();
-                }),
+                   $this->record->update([
+                       'stock_deducted' => false,
+                       'order_status' => 'cancelled',
+                   ]);
+
+                   if ($this->record->payment) {
+                       $this->record->payment->update(['status' => 'failed']);
+                   }
+
+                   \Filament\Notifications\Notification::make()
+                       ->title('Order Rejected Successfully')
+                       ->body("Order #{$this->record->orderID} has been rejected and products have been restocked.")
+                       ->success()
+                       ->send();
+               }),
 
             Actions\Action::make('in_transit')
                 ->label('In Transit')
@@ -315,6 +332,7 @@ class ViewOrder extends ViewRecord
                                 ->columns(7)
                                 ->contained(false),
                         ]),
+                        
 
         ]); 
     }
