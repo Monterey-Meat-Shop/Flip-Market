@@ -501,7 +501,6 @@ class ReturnRequestResource extends Resource
                                     ]);
                                 }
                             }
-                            
                             Notification::make()
                                 ->title('Returns Approved')
                                 ->success()

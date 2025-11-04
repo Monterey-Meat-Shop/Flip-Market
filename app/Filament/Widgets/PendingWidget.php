@@ -21,14 +21,23 @@ class PendingWidget extends BaseWidget
         return $table
             ->query(Order::query())
             ->columns([
-                TextColumn::make('orderID')->label('Order ID')->sortable(),
-                TextColumn::make('shipping.shipping_status')->label('Shipping Status')->badge(),
-                TextColumn::make('payment_status')->label('Payment Status')->badge(),
-                TextColumn::make('order_status')->label('Order Status')->badge(),
-                TextColumn::make('total_amount')->label('Total')->money('php')->color('success'),
+                // TextColumn::make('orderID')->label('Order ID')->sortable(),
                 TextColumn::make('order_date')
                     ->label('Order Date')
                     ->dateTime('M d, Y H:i'),
+                TextColumn::make('order_status')
+                    ->label('Order Status')
+                    ->color('warning')
+                    ->badge(),
+                TextColumn::make('shipping.shipping_status')
+                    ->label('Shipping Status')
+                    ->badge()
+                    ->color('warning'),
+                TextColumn::make('payment_status')
+                    ->label('Payment Status')
+                    ->badge()
+                    ->color('warning'),
+                TextColumn::make('total_amount')->label('Total')->money('php')->color('success'),
             ])
             ->filters([
                 SelectFilter::make('order_status')

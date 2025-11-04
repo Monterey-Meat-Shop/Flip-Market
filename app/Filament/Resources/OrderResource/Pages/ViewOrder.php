@@ -48,7 +48,10 @@ class ViewOrder extends ViewRecord
                 ->icon('heroicon-o-check-circle')
                 ->color('success')
                 ->requiresConfirmation()
-                ->visible(fn () => $this->record->order_status === 'pending')
+                ->visible(fn () =>
+                    auth()->user()->hasRole('manager') &&
+                    $this->record->order_status === 'pending'
+                )
                 ->action(function () {
                     $shipping = $this->record->shipping;
                     $shippingStatus = 'processing';
@@ -76,14 +79,14 @@ class ViewOrder extends ViewRecord
                             ->warning()
                             ->send();
                     }
-                    
+        
                     \Filament\Notifications\Notification::make()
                         ->title('Order Accepted')
                         ->success()
                         ->send();
                 }),
 
-            Actions\Action::make('reject')
+            Actions\Action::make('reject')            
                ->label('Reject Order')
                ->icon('heroicon-o-x-circle')
                ->color('danger')
@@ -91,7 +94,10 @@ class ViewOrder extends ViewRecord
                ->modalHeading('Reject Order')
                ->modalDescription('Are you sure you want to reject this order? The stock will be restored.')
                ->modalSubmitActionLabel('Yes, Reject Order')
-               ->visible(fn () => $this->record->order_status === 'pending')
+               ->visible(fn () =>
+                   auth()->user()->hasRole('manager') &&
+                   $this->record->order_status === 'pending'
+               )
                ->action(function () {
                    foreach ($this->record->orderItems as $item) {
                        if ($item->productVariant) {
@@ -122,7 +128,10 @@ class ViewOrder extends ViewRecord
                 ->icon('heroicon-o-truck')
                 ->color('warning')
                 ->requiresConfirmation()
-                ->visible(fn () => $this->record->shipping?->shipping_status === 'processing')
+                ->visible(fn () =>
+                    auth()->user()->hasRole('manager') &&
+                    $this->record->shipping?->shipping_status === 'processing'
+                )
                 ->action(function () {
                     $this->record->shipping->update([
                         'shipping_status' => 'in_transit',
@@ -133,13 +142,16 @@ class ViewOrder extends ViewRecord
                         ->warning()
                         ->send();
                 }),
-                
+    
             Actions\Action::make('deliver')
                 ->label('Delivered')
                 ->icon('heroicon-o-truck')
                 ->color('success')
                 ->requiresConfirmation()
-                ->visible(fn () => $this->record->shipping?->shipping_status === 'in_transit')
+                ->visible(fn () =>
+                    auth()->user()->hasRole('manager') &&
+                    $this->record->shipping?->shipping_status === 'in_transit'
+                )
                 ->action(function () {
                     $shipping = $this->record->shipping;
 
@@ -154,7 +166,7 @@ class ViewOrder extends ViewRecord
                             ->send();
                         return;
                     }
-                    
+        
                     $this->record->update([
                         'order_status' => 'completed',
                     ]);

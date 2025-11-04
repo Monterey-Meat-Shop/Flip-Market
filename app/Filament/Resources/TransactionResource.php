@@ -85,7 +85,7 @@ class TransactionResource extends Resource
 
     public static function canCreate(): bool
     {
-        return auth()->user()->hasRole(['admin', 'cashier']);
+        return auth()->user()->hasRole('cashier');
     }
 
     public static function canEdit(Model $record): bool
