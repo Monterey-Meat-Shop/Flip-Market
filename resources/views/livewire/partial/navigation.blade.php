@@ -62,99 +62,110 @@
             <livewire:cart-counter />
           </a>
 
-          @auth
+        @auth
           <div class="relative flex items-center" x-data="{ openNotif: false }">
-            <span class="text-sm font-medium text-gray-700 cursor-pointer hover:text-blue-600" @click="openNotif = !openNotif">
-              Notifications
-            </span>
+              <span class="text-sm font-medium text-gray-700 cursor-pointer hover:text-blue-600" @click="openNotif = !openNotif">
+                Notifications
+              </span>
 
-            <button @click="openNotif = !openNotif" class="relative flex items-center justify-center w-9 h-9 rounded-lg text-gray-700 hover:bg-blue-50 transition-colors" aria-label="Notifications">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="w-5 h-5">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                  d="M15 17h5l-1.405-1.405A2.032 2.032 0 0 1 18 14.158V11a6 6 0 0 0-5-5.917V5a1 1 0 0 0-2 0v.083A6 6 0 0 0 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 1 1-6 0v-1m6 0H9" />
-              </svg>
+          <button @click="openNotif = !openNotif"class="relative flex items-center justify-center w-9 h-9 rounded-lg text-gray-700 hover:bg-blue-50 transition-colors" aria-label="Notifications">
 
-              @if($unreadCount > 0)
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="w-5 h-5">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                d="M15 17h5l-1.405-1.405A2.032 2.032 0 0 1 18 14.158V11a6 6 0 0 0-5-5.917V5a1 1 0 0 0-2 0v.083A6 6 0 0 0 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 1 1-6 0v-1m6 0H9" />
+            </svg>
+
+            @if($unreadCount > 0)
+              <!-- Notification badge -->
               <span class="absolute top-0 right-0 inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-bold leading-none text-white bg-red-600 rounded-full">
                 {{ $unreadCount }}
               </span>
-              @endif
-            </button>
+            @endif
+          </button>
 
-            <div x-show="openNotif" @click.away="openNotif = false" x-transition 
-              class="absolute right-0 top-full mt-1 w-64 bg-white shadow-lg rounded-lg border border-gray-200 z-50">
-              <div class="p-2">
-                <h4 class="text-sm font-semibold mb-2">Notifications</h4>
-                <ul class="divide-y divide-gray-100 max-h-64 overflow-y-auto">
-                  @forelse($notifications as $notif)
-                    <li 
+          <!-- Notification Dropdown -->
+          <div x-show="openNotif" @click.away="openNotif = false" x-transition 
+               class="absolute right-0 top-full mt-1 w-64 bg-white shadow-lg rounded-lg border border-gray-200 z-50"
+          >
+            <div class="p-2">
+              <h4 class="text-sm font-semibold mb-2">Notifications</h4>
+              <ul class="divide-y divide-gray-100 max-h-64 overflow-y-auto">
+                @forelse($notifications as $notif)
+                  <li 
                       wire:click="markAllAsReadAndRedirect('{{ route('my.orders') }}')"
-                      class="px-3 py-2 cursor-pointer hover:bg-blue-100 transition {{ $notif->is_read ? 'bg-white' : 'bg-blue-50' }}">
-                      <span class="text-[13px] font-medium text-gray-800">
-                        {{ $notif->message }}
-                      </span>
-                      <span class="block text-gray-400 text-[11px]">
-                        {{ $notif->created_at->diffForHumans() }}
-                      </span>
-                    </li>
-                  @empty
-                    <li class="px-3 py-2 text-gray-400 text-sm">No new notifications</li>
-                  @endforelse
-                </ul>
-                <a href="{{ route('notifications.page') }}" class="block text-center text-blue-500 text-[13px] mt-2 py-1 hover:underline">
-                  View All
-                </a>
-              </div>
+                      class="px-3 py-2 cursor-pointer hover:bg-blue-100 transition 
+                      {{ $notif->is_read ? 'bg-white' : 'bg-blue-50' }}"
+                  >
+                    <span class="text-[13px] font-medium text-gray-800">
+                      {{ $notif->message }}
+                    </span>
+                    <span class="block text-gray-400 text-[11px]">
+                      {{ $notif->created_at->diffForHumans() }}
+                    </span>
+                  </li>
+                @empty
+                  <li class="px-3 py-2 text-gray-400 text-sm">No new notifications</li>
+                @endforelse
+              </ul>
+
+              <a href="{{ route('notifications.page') }}" class="block text-center text-blue-500 text-[13px] mt-2 py-1 hover:underline">
+                View All
+              </a>
             </div>
           </div>
-          @endauth
+        </div>
+        @endauth
 
           <!-- ACCOUNT (GUEST) -->
           @guest
           <a wire:navigate 
             href="/login"
             class="group inline-flex items-center gap-1.5 px-3 py-2 rounded-lg font-medium text-[13px] text-gray-700 hover:bg-blue-50 transition-all duration-200">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" class="w-[18px] h-[18px] text-gray-700 group-hover:text-blue-500 transition-colors duration-200">
+            <svg xmlns="http://www.w3.org/2000/svg" 
+                 fill="none" 
+                 viewBox="0 0 24 24" 
+                 stroke-width="1.8" 
+                 stroke="currentColor" 
+                 class="w-[18px] h-[18px] text-gray-700 group-hover:text-blue-500 transition-colors duration-200">
               <path stroke-linecap="round" stroke-linejoin="round" 
-                d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4zM4 20a8 8 0 0 1 16 0z" />
+                    d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4zM4 20a8 8 0 0 1 16 0z" />
             </svg>
             <span>ACCOUNT</span>
           </a>
+
           @endguest
 
           <!-- ACCOUNT (AUTH) -->
           @auth
-          <div class="relative" x-data="{ dropdown: false, userName: '{{ auth()->user()->name }}' }" 
-               x-init="
-                  window.addEventListener('userNameUpdated', e => { 
-                    userName = e.detail; 
-                  });">
-            <button @click="dropdown = !dropdown" class="group inline-flex items-center gap-1.5 px-3 py-2 rounded-lg font-medium text-[13px] text-gray-700 hover:bg-blue-50 transition-all duration-200">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-[18px] h-[18px] text-gray-700 group-hover:text-blue-500 transition-colors duration-200">
-                <path fill-rule="evenodd" 
-                  d="M12 2.25a4.5 4.5 0 0 0-4.5 4.5 4.5 4.5 0 0 0 9 0 4.5 4.5 0 0 0-4.5-4.5Zm-7.5 18a7.5 7.5 0 0 1 15 0 .75.75 0 0 1-.75.75H5.25a.75.75 0 0 1-.75-.75Z" 
-                  clip-rule="evenodd" />
-              </svg>
-              <span x-text="userName"></span>
-              <svg class="w-3.5 h-3.5 group-hover:text-blue-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path d="M6 9l6 6 6-6"/>
-              </svg>
-            </button>
+            <div class="relative" x-data="{ dropdown: false }">
+              <button @click="dropdown = !dropdown" class="group inline-flex items-center gap-1.5 px-3 py-2 rounded-lg font-medium text-[13px] text-gray-700 hover:bg-blue-50 transition-all duration-200">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-[18px] h-[18px] text-gray-700 group-hover:text-blue-500 transition-colors duration-200">
+                  <path fill-rule="evenodd" 
+                        d="M12 2.25a4.5 4.5 0 0 0-4.5 4.5 4.5 4.5 0 0 0 9 0 4.5 4.5 0 0 0-4.5-4.5Zm-7.5 18a7.5 7.5 0 0 1 15 0 .75.75 0 0 1-.75.75H5.25a.75.75 0 0 1-.75-.75Z" 
+                        clip-rule="evenodd" />
+                </svg>
+                <span>{{ auth()->user()->name }}</span>
+                <svg class="w-3.5 h-3.5 group-hover:text-blue-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path d="M6 9l6 6 6-6"/>
+                </svg>
+              </button>
 
-            <div 
-              x-show="dropdown"
-              @click.away="dropdown = false"
-              x-transition
-              class="absolute right-0 mt-2 w-44 bg-white shadow-md rounded-lg p-2 border border-gray-200 z-50"
-            >
-              <a href="{{ route('my.orders') }}" class="block px-3 py-1.5 text-[13px] hover:bg-gray-100">My Orders</a>
-              <a href="#" class="block px-3 py-1.5 text-[13px] hover:bg-gray-100">My Favorites</a>
-              <a href="{{ route('my.account') }}" class="block px-3 py-1.5 text-[13px] hover:bg-gray-100">My Account</a>
-              <a href="/logout" class="block px-3 py-1.5 text-[13px] hover:bg-gray-100 text-red-600">Logout</a>
+             <div 
+                x-show="dropdown"
+                @click.away="dropdown = false"
+                x-transition
+                class="absolute right-0 mt-2 w-44 bg-white shadow-md rounded-lg p-2 border border-gray-200 z-50"
+              >
+                <a href="{{ route('my.orders') }}" class="block px-3 py-1.5 text-[13px] hover:bg-gray-100">My Orders</a>
+                <a href="{{ route('favorites') }}" 
+                   class="block px-3 py-1.5 text-[13px] hover:bg-gray-100">
+                   My Favorites
+                </a>
+                <a href="{{ route('my.account') }}" class="block px-3 py-1.5 text-[13px] hover:bg-gray-100">My Account</a>
+                <a href="/logout" class="block px-3 py-1.5 text-[13px] hover:bg-gray-100 text-red-600">Logout</a>
+              </div>
             </div>
-          </div>
           @endauth
-
         </div>
       </div>
     </div>

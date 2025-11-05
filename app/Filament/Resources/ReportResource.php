@@ -20,7 +20,17 @@ class ReportResource extends Resource
 {
     protected static ?string $model = Report::class;
     protected static ?string $navigationIcon = 'heroicon-o-document-text';
-    protected static ?string $navigationLabel = 'Reports';
+    protected static ?string $navigationLabel = 'Sales Reports';
+
+    public static function getNavigationGroup(): ?string
+    {
+        $user = auth()->user();
+    
+        if ($user && $user->hasRole('admin')) {
+           return 'Reports';
+        }
+        return null;
+    }
 
     // public static function form(Form $form): Form
     // {

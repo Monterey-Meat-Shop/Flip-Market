@@ -93,7 +93,14 @@ class CategoryResource extends Resource
                 ActionGroup::make([
                     ViewAction::make(),
                     EditAction::make(),
-                    DeleteAction::make(),
+                    DeleteAction::make()
+                    ->label('Archive')
+                        ->modalHeading('Archive Category')
+                        ->modalDescription('Are you sure you want to archive this category? You can restore it later if needed.')
+                        ->modalSubmitActionLabel('Archive') 
+                        ->modalCancelActionLabel('Cancel') 
+                        ->color('danger')
+                        ->icon('heroicon-o-archive-box'),
                     RestoreAction::make(),
                     ForceDeleteAction::make(),
                 ])

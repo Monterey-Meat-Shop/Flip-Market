@@ -9,6 +9,7 @@ use App\Livewire\CheckoutPage;
 use App\Livewire\MyOrderPage;
 use App\Livewire\MyAccountPage;
 use App\Livewire\OrderDetailPage;
+use App\Livewire\FavoritePage;
 
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\ReturnController as ReturnCtrl;
@@ -70,6 +71,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/checkout', CheckoutPage::class)->name('checkout');
     Route::get('/my-orders', MyOrderPage::class)->name('my.orders');
     Route::get('/my-account', MyAccountPage::class)->name('my.account');
+    Route::get('/favorites', FavoritePage::class)->name('favorites');
 
     Route::get('/notifications', NotificationPage::class)->name('notifications.page');
 

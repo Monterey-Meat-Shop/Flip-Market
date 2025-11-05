@@ -16,7 +16,7 @@ class ReturnItemResource extends Resource
     protected static ?string $model = ReturnItem::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-archive-box';
-    protected static ?string $navigationLabel = 'Return Products';
+    protected static ?string $navigationLabel = 'Returns';
     protected static ?string $pluralLabel = 'Defective Products';
 
     public static function getNavigationGroup(): ?string

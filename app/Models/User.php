@@ -48,6 +48,16 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail // â
         return $this->hasOne(Customer::class, 'user_id', 'id');
     }
 
+    public function favorites()
+    {
+        return $this->hasMany(Favorite::class);
+    }
+
+    public function favoriteProducts()
+    {
+        return $this->belongsToMany(Product::class, 'favorites');
+    }
+
     public function canAccessPanel(Panel $panel): bool
     {
         // Only allow active (non-deleted) users with specific roles

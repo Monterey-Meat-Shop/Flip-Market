@@ -14,6 +14,11 @@ class Kernel extends ConsoleKernel
     {
         // Runs your discount deactivation command every minute
         $schedule->command('discounts:deactivate')->everyMinute();
+
+        $schedule->command('orders:check-stock')
+            ->everyFiveMinutes()
+            ->withoutOverlapping()
+            ->appendOutputTo(storage_path('logs/order-stock-check.log'));
     }
 
     /**

@@ -98,8 +98,14 @@ class PaymentResource extends Resource
                 ActionGroup::make([
                     Tables\Actions\ViewAction::make(),
                     Tables\Actions\EditAction::make(),
-                    Tables\Actions\DeleteAction::make(),
-                    // These actions are now correct for managing soft deletes.
+                    Tables\Actions\DeleteAction::make()
+                        ->label('Archive')
+                        ->modalHeading('Archive Payment Method')
+                        ->modalDescription('Are you sure you want to archive this payment method? You can restore it later if needed.')
+                        ->modalSubmitActionLabel('Archive') 
+                        ->modalCancelActionLabel('Cancel') 
+                        ->color('danger')
+                        ->icon('heroicon-o-archive-box'),
                     Tables\Actions\RestoreAction::make(),
                     Tables\Actions\ForceDeleteAction::make(),
                 ])

@@ -14,7 +14,14 @@ class EditBrand extends EditRecord
     protected function getHeaderActions(): array
     {
         return [
-            Actions\DeleteAction::make(),
+            Actions\DeleteAction::make()
+                        ->label('Archive')
+                        ->modalHeading('Archive Brand')
+                        ->modalDescription('Are you sure you want to archive this brand? You can restore it later if needed.')
+                        ->modalSubmitActionLabel('Archive') 
+                        ->modalCancelActionLabel('Cancel') 
+                        ->color('danger')
+                        ->icon('heroicon-o-archive-box'),
         ];
     }
 

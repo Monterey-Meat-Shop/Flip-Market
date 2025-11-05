@@ -20,10 +20,25 @@ class DataReports extends Page
 
     protected static string $view = 'filament.pages.data-reports';
 
-protected function getHeaderWidgets(): array
+    public static function getNavigationGroup(): ?string
+    {
+        $user = auth()->user();
+    
+        if ($user && $user->hasRole('admin')) {
+           return 'Reports';
+        }
+        return null;
+    }
+
+    public static function canAccess(): bool
+    {
+        return auth()->user()->hasRole(['admin', 'manager']);
+    }
+
+    protected function getHeaderWidgets(): array
     {
 
-    //Chart Object Here
+        //Chart Object Here
         return [
             StockStatsWidget::class,
             SalesReport::class, 
@@ -31,7 +46,7 @@ protected function getHeaderWidgets(): array
         ];
 
     }
-protected function getHeaderActions(): array
+    protected function getHeaderActions(): array
     {
         return [
             Action::make('export_pdf')
@@ -63,6 +78,4 @@ protected function getHeaderActions(): array
                 }),
         ];
     }
-
- 
 }

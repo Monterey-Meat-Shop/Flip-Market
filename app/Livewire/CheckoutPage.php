@@ -426,6 +426,15 @@ class CheckoutPage extends Component
                 return;
             }
 
+            $paymentMethod = PaymentMethod::find($this->selectedPaymentMethod);
+            $methodName = strtolower($paymentMethod->method_name ?? '');
+
+            if ($methodName !== 'cash on delivery' && !$this->paymentScreenshot) {
+                $this->addError('paymentScreenshot', 'A payment screenshot is required for this payment method.');
+                $this->isProcessing = false;
+                return;
+            }
+
             $this->validateStock();
 
             DB::transaction(function () {
@@ -448,6 +457,7 @@ class CheckoutPage extends Component
                     'postal_code' => $selectedAddress->postal_code,
                     'city' => $selectedAddress->city,
                     'province' => $selectedAddress->province,
+                    'stock_deducted' => true,
                 ]);
 
                 // Create order items

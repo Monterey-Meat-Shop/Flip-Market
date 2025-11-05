@@ -129,14 +129,24 @@
                     @endif
                 </div>
 
-                <!-- Stock Status -->
-                <div class="flex items-center gap-2 mt-3">
-                    @if($this->getCurrentStock() <= 2 && $this->getCurrentStock() > 0)
-                        <span class="text-xs px-2.5 py-0.5 rounded bg-red-100 text-red-600">Only {{ $this->getCurrentStock() }} left!</span>
-                    @elseif($this->getCurrentStock() > 0)
-                        <span class="text-xs px-2.5 py-0.5 rounded bg-green-100 text-green-600">In Stock</span>
+                <!-- Stock Status / Pre-order Badge -->
+                <div class="mt-4 flex items-center gap-2">
+                    @if($product->status === 'pre_order')
+                        <span class="text-xs px-2.5 py-0.5 rounded bg-yellow-100 text-yellow-700 font-semibold">
+                            PRE-ORDER
+                        </span>
+                    @elseif($product->total_stock_quantity <= 0)
+                        <span class="text-xs px-2.5 py-0.5 rounded bg-red-100 text-red-600 font-semibold">
+                            OUT OF STOCK
+                        </span>
+                    @elseif($product->total_stock_quantity <= 2)
+                        <span class="text-xs px-2.5 py-0.5 rounded bg-orange-100 text-orange-600 font-semibold">
+                            ONLY {{ $product->total_stock_quantity }} LEFT!
+                        </span>
                     @else
-                        <span class="text-xs px-2.5 py-0.5 rounded bg-gray-100 text-gray-600">Out of Stock</span>
+                        <span class="text-xs px-2.5 py-0.5 rounded bg-green-100 text-green-600 font-semibold">
+                            IN STOCK
+                        </span>
                     @endif
                 </div>
 
@@ -192,15 +202,16 @@
                 @if($this->getAvailableSizes()->isNotEmpty())
                     <div class="mt-6">
                         <h3 class="mb-3 text-sm font-semibold text-gray-900">Size</h3>
-                        <div class="flex gap-2 flex-wrap">
+                        <div class="flex flex-wrap gap-3">
                             @foreach($this->getAvailableSizes() as $size)
                                 @php
                                     $variant = $product->variants->where('size', $size)->first();
                                 @endphp
+
                                 <button 
                                     wire:click="selectVariant({{ $variant->id }})"
-                                    class="px-3 py-2 border rounded-lg text-sm {{ $selectedSize == $size ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-300 hover:border-gray-400' }}"
-                                >
+                                    class="px-3 py-2 border rounded-lg text-sm transition
+                                    {{ $selectedSize == $size ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-300 hover:border-gray-400' }}">
                                     {{ $size }}
                                 </button>
                             @endforeach
@@ -208,25 +219,67 @@
                     </div>
                 @endif
 
-                <!-- Quantity + Add to Favorites -->
-                <div class="mt-6 flex items-center gap-3">
-                    <label for="quantity" class="text-sm font-medium text-gray-900">Quantity:</label>
+                <!-- Quantity + Stock + Add to Favorites -->
+                <div class="mt-6 flex items-center flex-wrap gap-3">
 
-               
-                    
-                    <!-- ETO APPROACH KO YA -->
-                      <input wire:model="quantity"id="quantity" type="number" min="1" max="{{  $this->getCurrentStock() }}" 
-                      class="w-20 border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
-                    <!-- END APPROACH -->
+                    <!-- Quantity -->
+                    <div class="flex items-center gap-2">
+                        <label for="quantity" class="text-sm font-medium text-gray-900">Quantity:</label>
+                        <input 
+                            wire:model="quantity"
+                            id="quantity"
+                            type="number"
+                            min="1"
+                            max="{{ $this->getCurrentStock() }}"
+                            class="w-20 border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                        >
+                    </div>
 
-                    <button 
-                        wire:click="addToFavorites"
-                        class="px-4 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50 flex items-center gap-2"
-                    >
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+                    <!-- Stock info (styled same as buttons) -->
+                    @if($selectedVariant)
+                        <div class="flex items-center">
+                            @if($selectedVariant->status === 'pre_order')
+                                <div class="px-4 py-2 border border-yellow-300 bg-yellow-50 text-yellow-700 rounded-lg text-sm font-medium">
+                                    PRE-ORDER
+                                </div>
+                            @elseif($selectedVariant->stock_quantity <= 0)
+                                <div class="px-4 py-2 border border-red-300 bg-red-50 text-red-600 rounded-lg text-sm font-medium">
+                                    OUT OF STOCK
+                                </div>
+                            @elseif($selectedVariant->stock_quantity <= 2)
+                                <div class="px-4 py-2 border border-orange-300 bg-orange-50 text-orange-600 rounded-lg text-sm font-medium">
+                                    ONLY {{ $selectedVariant->stock_quantity }} LEFT!
+                                </div>
+                            @else
+                                <div class="px-4 py-2 border border-green-300 bg-green-50 text-green-700 rounded-lg text-sm font-medium">
+                                    {{ $selectedVariant->stock_quantity }} available
+                                </div>
+                            @endif
+                        </div>
+                    @endif
+
+                    @php
+                        $isFavorited = false;
+                        if (Auth::check()) {
+                            $customer = \App\Models\Customer::where('user_id', Auth::id())->first();
+                            if ($customer) {
+                                $isFavorited = \App\Models\Favorite::where('customerID', $customer->customerID)
+                                    ->where('productID', $product->productID)
+                                    ->exists();
+                            }
+                        }
+                    @endphp
+
+                    <!-- Add to favorites -->
+                    <button wire:click="addToFavorites" 
+                        class="px-4 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50 flex items-center gap-2">
+                        <svg class="w-4 h-4 {{ $isFavorited ? 'text-red-500 fill-current' : '' }}" 
+                             fill="{{ $isFavorited ? 'currentColor' : 'none' }}" 
+                             stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                  d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
                         </svg>
-                        Add to favorites
+                        {{ $isFavorited ? 'Remove favorites' : 'Add to favorites' }}
                     </button>
                 </div>
 

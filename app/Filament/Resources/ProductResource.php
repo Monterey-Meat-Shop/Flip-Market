@@ -504,7 +504,14 @@ class ProductResource extends Resource
                     ViewAction::make(),
                     EditAction::make()
                         ->url(fn (Product $record): string => route('filament.admin.resources.products.edit', ['record' => $record])),
-                    DeleteAction::make(),
+                    DeleteAction::make()
+                        ->label('Archive')
+                        ->modalHeading('Archive Product')
+                        ->modalDescription('Are you sure you want to archive this product? You can restore it later if needed.')
+                        ->modalSubmitActionLabel('Archive') 
+                        ->modalCancelActionLabel('Cancel') 
+                        ->color('danger')
+                        ->icon('heroicon-o-archive-box'),
                     RestoreAction::make(),
                     ForceDeleteAction::make(),
                 ])

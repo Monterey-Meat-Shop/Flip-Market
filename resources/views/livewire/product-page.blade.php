@@ -9,64 +9,99 @@
                 <aside class="bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl p-4 shadow-2xl lg:col-span-1 h-fit sticky top-4 border border-gray-700">
                     <h2 class="text-lg font-bold text-white mb-4 tracking-wide">Filters</h2>
 
-                    <!-- Category Filter -->
-                    <div class="mb-6">
-                        <h3 class="text-sm font-semibold text-white mb-2">Category</h3>
-                        <ul class="space-y-2 text-white">
-                            @foreach($categories as $category)
-                                <li wire:key="category-{{ $category->CategoryID }}" class="flex items-center">
-                                    <input type="checkbox"
-                                           id="category-{{ $category->CategoryID }}"
-                                           wire:model.live="selectedCategories"
-                                           value="{{ $category->CategoryID }}"
-                                           class="mr-2 w-3 h-3 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500 focus:ring-2">
-                                    <label for="category-{{ $category->CategoryID }}" class="text-xs cursor-pointer hover:text-blue-300 transition-colors">{{ $category->name }}</label>
-                                </li>
-                            @endforeach
-                        </ul>
+                <!-- Price Range -->
+                <div class="mb-6">
+                    <h3 class="text-sm font-semibold text-gray-600 mb-2">Price Range</h3>
+        
+                    <div class="flex flex-col space-x-2">
+                        <div class="flex items-center justify-between">
+                            <label class="text-gray-700">Low</label>
+                            <label class="text-gray-700">High</label>
+                        </div>
+                        <div class="flex gap-2">
+                            <input type="number" 
+                                min="{{ $minPrice }}" 
+                                max="{{ $maxPriceSelected }}" 
+                                wire:model.lazy="minPriceSelected" 
+                                wire:keydown.enter="updatePriceRange" 
+                                class="w-1/2 border rounded px-2 py-1" 
+                                placeholder="Min price"> 
+                            <label class="text-gray-700">-</label>
+                            <input type="number"
+                                min="{{ $minPriceSelected }}" 
+                                max="{{ $maxPrice }}" 
+                                wire:model.lazy="maxPriceSelected" 
+                                wire:keydown.enter="updatePriceRange" 
+                                class="w-1/2 border rounded px-2 py-1" 
+                                placeholder="Max price">
+                        </div>
                     </div>
+        
+                    <p class="text-sm text-gray-500 mt-1">
+                        Showing products between ₱{{ number_format($minPriceSelected) }} and ₱{{ number_format($maxPriceSelected) }}
+                    </p>
+                </div>
 
-            <!-- Brand Filter -->
-            <div class="mb-6">
-                <h3 class="text-sm font-semibold text-gray-600 mb-2">Brand</h3>
-                <ul class="space-y-2 text-gray-700">
-                    @foreach($brands as $brand)
-                        <li wire:key="brand-{{ $brand->BrandID }}">
-                        <input type="checkbox"
-                        id="brand-{{ $brand->BrandID }}"
-                        wire:model.live="selectedBrands"
-                        value="{{ $brand->BrandID }}"
-                        class="mr-2">
-                        <label for="brand-{{ $brand->BrandID }}">{{ $brand->name }}</label>
+                <!-- Sale and Pre-Order Filter -->
+                <div class="mb-6">
+                    <h3 class="text-sm font-semibold text-gray-600 mb-2">Availability</h3>
+                    <ul class="space-y-2 text-gray-700">
+                        <li>
+                            <input 
+                                type="checkbox"
+                                id="on-sale"
+                                wire:model.live="filterSale"
+                                wire:change="$refresh"
+                                class="mr-2 cursor-pointer"
+                            >
+                            <label for="on-sale" class="cursor-pointer">On Sale</label>
                         </li>
-                    @endforeach
-                </ul>
-            </div>
-<div class="mb-6">
-    <h3 class="text-sm font-semibold text-gray-600 mb-2">Price Range</h3>
-    
-    <div class="flex flex-col space-x-2">
-        <!-- Minimum price -->
-         <div class="flex items-center justify-between">
-                    <label class="text-gray-700">Low</label>
-                    <label class="text-gray-700">High</label>
-         </div>
-         <div class="flex gap-2">
-        <input type="number" min="{{ $minPrice }}" max="{{ $maxPriceSelected }}" wire:model.lazy="minPriceSelected" wire:keydown.enter="updatePriceRange" class="w-1/2 border rounded px-2 py-1" placeholder="Min price"> 
-        <label class="text-gray-700 gap-2">-</label>
-        <input type="number"min="{{ $minPriceSelected }}" max="{{ $maxPrice }}" wire:model.lazy="maxPriceSelected" wire:keydown.enter="updatePriceRange" class="w-1/2 border rounded px-2 py-1" placeholder="Max price">
-    </div>
-    </div>
-     
+                        <li>
+                            <input 
+                                type="checkbox"
+                                id="pre-order"
+                                wire:model.live="filterPreOrder"
+                                wire:change="$refresh"
+                                class="mr-2 cursor-pointer"
+                            >
+                            <label for="pre-order" class="cursor-pointer">Pre-Order</label>
+                        </li>
+                    </ul>
+                </div>
 
-    
-   <p class="text-sm text-gray-500 mt-1">
-    Showing products between ₱{{ number_format((float)($minPriceSelected ?? 0)) }}
-    and ₱{{ number_format((float)($maxPriceSelected ?? 0)) }}
-</p>
+                <!-- Category Filter -->
+                <div class="mb-6">
+                    <h3 class="text-sm font-semibold text-gray-600 mb-2">Category</h3>
+                    <ul class="space-y-2 text-gray-700">
+                        @foreach($categories as $category)
+                            <li wire:key="category-{{ $category->CategoryID }}">
+                                <input type="checkbox"
+                                    id="category-{{ $category->CategoryID }}"
+                                    wire:model.live="selectedCategories"
+                                    value="{{ $category->CategoryID }}"
+                                    class="mr-2">
+                                <label for="category-{{ $category->CategoryID }}">{{ $category->name }}</label>
+                            </li>
+                        @endforeach
+                    </ul>
+                </div>
 
-</div>
-
+                <!-- Brand Filter -->
+                <div class="mb-6">
+                    <h3 class="text-sm font-semibold text-gray-600 mb-2">Brand</h3>
+                    <ul class="space-y-2 text-gray-700">
+                        @foreach($brands as $brand)
+                            <li wire:key="brand-{{ $brand->BrandID }}">
+                                <input type="checkbox"
+                                    id="brand-{{ $brand->BrandID }}"
+                                    wire:model.live="selectedBrands"
+                                    value="{{ $brand->BrandID }}"
+                                    class="mr-2">
+                                <label for="brand-{{ $brand->BrandID }}">{{ $brand->name }}</label>
+                            </li>
+                        @endforeach
+                    </ul>
+                </div>
 
                     <!-- Clear Filters Button -->
                     <button 
@@ -104,23 +139,24 @@
                                             </span>
                                         @endif
 
-                                        @if($product->discounted_price < $product->price)
-                                            <span class="absolute top-2 right-2 bg-gradient-to-r from-red-500 to-red-600 text-white text-xs font-bold px-2 py-1 rounded-full shadow-md animate-pulse">
-                                                SALE
-                                            </span>
-                                        @endif
-                                        
-                                        <!-- Stock Status Badge -->
-                                        @if($product->total_stock_quantity <= 0)
-                                            <span class="absolute top-2 right-2 bg-gradient-to-r from-red-500 to-red-600 text-white text-xs px-2 py-1 rounded-full font-semibold shadow-md">
-                                                Out of Stock
-                                            </span>
-                                        {{-- @elseif($product->total_stock_quantity <= 5)
-                                            <span class="absolute top-2 right-2 bg-gradient-to-r from-orange-500 to-orange-600 text-white text-xs px-2 py-1 rounded-full font-semibold shadow-md">
-                                                Low Stock
-                                            </span> --}}
-                                        @endif
-                                    </div>
+                                    @if($product->discounted_price < $product->price)
+                                        <span class="absolute top-2 right-2 bg-red-600 text-white text-xs font-bold px-2 py-1 rounded shadow-md">
+                                            SALE
+                                        </span>
+                                    @endif
+
+                                    @if(strtolower($product->status) === 'pre_order')
+                                        <span class="absolute top-2 right-2 bg-yellow-500 text-white text-xs font-bold px-2 py-1 rounded shadow-md">
+                                            PRE-ORDER
+                                        </span>
+                                    @endif
+
+                                    @if($product->total_stock_quantity <= 0)
+                                        <span class="absolute top-2 right-2 bg-red-500 text-white text-xs px-2 py-1 rounded">
+                                            Out of Stock
+                                        </span>
+                                    @endif
+                                </div>
 
                                     <div class="p-4 flex flex-col justify-between h-28">
                                         <div>
@@ -227,11 +263,7 @@
             </div>
         </div>
     </section>
-    
 </div>
-
-
-
 
 <!-- Add to Cart JavaScript (optional - for quick add to cart without going to detail page) -->
 <script>
@@ -255,6 +287,5 @@ function addToCart(productId) {
     //     console.error('Error adding to cart:', error);
     // });
 }
-//new update, eto na chan
 </script>
 

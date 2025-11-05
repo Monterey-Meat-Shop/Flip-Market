@@ -754,9 +754,11 @@ class OrderResource extends Resource
                         ->icon('heroicon-o-check-circle')
                         ->color('success')
                         ->requiresConfirmation()
-                        ->visible(fn (Order $record) => $record->order_status === 'pending')
+                        ->visible(fn (Order $record) =>
+                            auth()->user()->hasRole('manager') &&
+                            $record->order_status === 'pending'
+                        )
                         ->action(function (Order $record) {
-                    
                             $shipping = $record->shipping;
                             $shippingStatus = 'processing'; 
 
@@ -782,31 +784,52 @@ class OrderResource extends Resource
                                     ->title('Warning: Shipping record missing for this order.')
                                     ->warning()
                                     ->send();
-                            }
+                            }                    
 
                             \Filament\Notifications\Notification::make()
                                 ->title('Order Accepted')
                                 ->success()
                                 ->send();
-                    }),
+                        }),
 
                     Tables\Actions\Action::make('reject')
                         ->label('Reject Order')
                         ->icon('heroicon-o-x-circle')
                         ->color('danger')
                         ->requiresConfirmation()
+                        ->modalHeading('Reject Order')
+                        ->modalDescription('Are you sure you want to reject this order? The stock will be restored.')
+                        ->modalSubmitActionLabel('Yes, Reject Order')
                         ->visible(fn ($record) => $record->order_status === 'pending')
                         ->action(function ($record) {
+
+                            foreach ($record->orderItems as $item) {
+                                if ($item->productVariant) {
+                                    $item->productVariant->increment('stock_quantity', $item->quantity);
+                                } elseif ($item->product) {
+                                    $item->product->increment('stock_quantity', $item->quantity);
+                                }
+                            }
+
                             $record->update([
-                                'order_status' => 'failed',
-                                // 'rejected_at' => now(),
+                                'stock_deducted' => false,
+                                'order_status' => 'cancelled',
                             ]);
 
+                            if ($record->payment) {
+                                $record->payment->update(['status' => 'failed']);
+                            }
+
                             \Filament\Notifications\Notification::make()
-                                ->title('Order Rejected')
-                                ->danger()
+                                ->title('Order Rejected Successfully')
+                                ->body("Order #{$record->orderID} has been rejected and products have been restocked.")
+                                ->success()
                                 ->send();
-                        }),
+                        })
+                        ->visible(fn (Order $record) =>
+                            auth()->user()->hasRole('manager') &&
+                                                    $record->order_status === 'pending'
+                        ),
 
                     Tables\Actions\Action::make('in_transit')
                         ->label('In Transit')
@@ -824,7 +847,11 @@ class OrderResource extends Resource
                                 ->title('Order In Transit')
                                 ->warning()
                                 ->send();
-                        }),
+                        })
+                        ->visible(fn (Order $record) =>
+                            auth()->user()->hasRole('manager') &&
+                                                    $record->shipping?->shipping_status === 'processing'
+                        ),
 
                     Tables\Actions\Action::make('deliver')
                         ->label('Delivered')
@@ -856,7 +883,12 @@ class OrderResource extends Resource
                                 ->title('Order Delivered')
                                 ->success()
                                 ->send();
-                        }),
+                        })
+                        ->visible(fn (Order $record) =>
+                            auth()->user()->hasRole('manager') &&
+                            $record->shipping?->shipping_status === 'in_transit'
+                        ),
+
                 ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
