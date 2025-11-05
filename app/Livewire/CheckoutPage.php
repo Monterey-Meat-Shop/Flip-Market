@@ -540,8 +540,9 @@ class CheckoutPage extends Component
                     'payment_methodID' => $this->selectedPaymentMethod,
                     'amount' => $this->totalAmount,
                     'reference_number' => $referenceNumber,
-                    'screenshot_path' => $screenshotPath,
+                    'screenshot_path' => $screenshotPath ?? null, // ✅ add null fallback
                     'status' => 'unpaid',
+                
                 ]);
 
                 Shipping::create([
