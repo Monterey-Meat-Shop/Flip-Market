@@ -9,13 +9,13 @@ class Notification_Customer extends Model
 {
    use HasFactory;
     
-protected $fillable = [
-    'user_id',
-    'orderID',     // the order the notification belongs to
-    'shippingID',  // optional: related shipping
-    'message',
-    'is_read',
-];
+   protected $fillable = [
+       'user_id',
+       'orderID',     // the order the notification belongs to
+       'shippingID',  // optional: related shipping
+       'message',
+       'is_read',
+   ];
 
     public function user()
     {

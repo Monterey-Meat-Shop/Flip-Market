@@ -7,6 +7,7 @@ use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\CartItem;
 use App\Models\Customer;
+use App\Models\Favorite;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -197,6 +198,36 @@ class ProductDetailPage extends Component
 
     public function addToFavorites()
     {
+        if (!Auth::check()) {
+            session()->flash('error', 'Please login to add favorites.');
+            return;
+        }
+
+        $user = Auth::user();
+        $customer = Customer::where('user_id', $user->id)->first();
+
+        if (!$customer) {
+            session()->flash('error', 'Please complete your customer profile first.');
+            return;
+        }
+
+        // Check if this product is already favorited
+        $existing = Favorite::where('customerID', $customer->customerID)
+            ->where('productID', $this->product->productID)
+            ->first();
+
+        if ($existing) {
+            // If already exists, remove it (toggle favorite)
+            $existing->delete();
+            session()->flash('message', 'Removed from favorites.');
+            return;
+        }
+
+        // Otherwise, add new favorite
+        Favorite::create([
+            'customerID' => $customer->customerID,
+            'productID' => $this->product->productID,
+        ]);
         session()->flash('message', 'Product added to favorites!');
     }
 

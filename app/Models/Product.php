@@ -59,6 +59,16 @@ class Product extends Model
         return $this->hasMany(OrderItem::class, 'productID', 'productID');
     }
 
+    public function favorites()
+    {
+        return $this->hasMany(Favorite::class);
+    }
+
+    public function favoredByUsers()
+    {
+        return $this->belongsToMany(User::class, 'favorites');
+    }
+
     public function discounts()
     {
     return $this->belongsToMany(Discount::class, 'discount_product', 'product_id', 'discount_id');
