@@ -129,12 +129,15 @@ class TransactionResource extends Resource
                                 name: 'customer',
                                 titleAttribute: 'first_name',
                                 modifyQueryUsing: fn(Builder $query) =>
-                                $query->where('first_name', 'guest')->orderBy('first_name')
+                                    $query->where('first_name', 'guest')->orderBy('first_name')
                             )
                             ->getOptionLabelFromRecordUsing(fn(Model $record) =>
                                 "{$record->first_name} {$record->last_name}")
-                            ->searchable()
-                            ->preload()
+                            ->default(function () {
+                                return \App\Models\Customer::where('first_name', 'guest')->value('customerID');
+                            })
+                            ->disabled()
+                            ->dehydrated()
                             ->required(),
 
                         DateTimePicker::make('order_date')
@@ -524,6 +527,7 @@ class TransactionResource extends Resource
 
                             Select::make('status')
                                 ->label('Payment Status')
+                                ->disabled()
                                 ->options([
                                     'unpaid' => 'Unpaid',
                                     'paid' => 'Paid',
@@ -694,6 +698,12 @@ class TransactionResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->query(
+                 static::getEloquentQuery()
+                    ->whereHas('customer.user', function ($query) {
+                        $query->where('email', 'guest@example.com');
+                })
+            )
             ->defaultSort('orderID', 'desc')
             ->columns([
                 TextColumn::make('customer.first_name')->label('Customer Name'),
@@ -842,8 +852,8 @@ class TransactionResource extends Resource
                                     ),
                             ]),
                         ]),
-                    EditAction::make(),
-                    DeleteAction::make(),
+                    // EditAction::make(),
+                    // DeleteAction::make(),
                     RestoreAction::make(),
                     ForceDeleteAction::make(),
                 ]),

@@ -17,14 +17,14 @@ class EditUser extends EditRecord
     protected function getHeaderActions(): array
     {
         return [
-            Actions\DeleteAction::make()
-                        ->label('Archive')
-                        ->modalHeading('Archive User')
-                        ->modalDescription('Are you sure you want to archive this user? You can restore it later if needed.')
-                        ->modalSubmitActionLabel('Archive') 
-                        ->modalCancelActionLabel('Cancel') 
-                        ->color('danger')
-                        ->icon('heroicon-o-archive-box'),
+            // Actions\DeleteAction::make()
+            //             ->label('Archive')
+            //             ->modalHeading('Archive User')
+            //             ->modalDescription('Are you sure you want to archive this user? You can restore it later if needed.')
+            //             ->modalSubmitActionLabel('Archive') 
+            //             ->modalCancelActionLabel('Cancel') 
+            //             ->color('danger')
+            //             ->icon('heroicon-o-archive-box'),
         ];
     }
 

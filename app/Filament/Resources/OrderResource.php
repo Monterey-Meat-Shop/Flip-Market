@@ -661,6 +661,12 @@ class OrderResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->query(
+                static::getEloquentQuery()
+                    ->whereHas('customer.user', function ($query) {
+                        $query->where('email', '!=', 'guest@example.com');
+                    })
+            )
             ->defaultSort('orderID', 'desc')
             ->columns([
                 // TextColumn::make('orderID')
@@ -668,10 +674,18 @@ class OrderResource extends Resource
                 //     ->searchable()
                 //     ->sortable(),
 
-                 TextColumn::make('payment.reference_number')
-                    ->label('Reference No.')
-                    ->sortable()
-                    ->formatStateUsing(fn ($state) => $state ?? 'N/A'),
+                //  TextColumn::make('payment.reference_number')
+                //     ->label('Reference No.')
+                //     ->sortable()
+                //     ->formatStateUsing(fn ($state) => $state ?? 'N/A'),
+
+                TextColumn::make('customer.first_name')
+                   ->label('Customer')
+                   ->searchable(['customer.first_name', 'customer.last_name'])
+                   ->sortable()
+                   ->formatStateUsing(fn ($state, $record) => 
+                       trim("{$record->customer?->first_name} {$record->customer?->last_name}")
+                   ),
 
                 TextColumn::make('payment.paymentMethod.method_name')
                     ->label('Payment')
@@ -724,12 +738,6 @@ class OrderResource extends Resource
                     })
                     ->formatStateUsing(fn ($state) => $state ?? 'N/A'),
 
-                TextColumn::make('customer.first_name')//make customer full name
-                    ->label('Customer')
-                    ->searchable()
-                    ->sortable()
-                    ->formatStateUsing(fn ($state, $record) => $record->customer?->first_name)
-                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('order_date')->dateTime()->sortable()->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('updated_at')->dateTime()->sortable()->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('deleted_at')->label('Archived Date')->dateTime()->sortable()->toggleable(isToggledHiddenByDefault: true),
@@ -737,15 +745,15 @@ class OrderResource extends Resource
             ->actions([
                     Tables\Actions\ViewAction::make(),
                     // Tables\Actions\EditAction::make(),
-                    Tables\Actions\DeleteAction::make()
-                        ->label('Archive')
-                        ->modalHeading('Archive Order')
-                        ->modalDescription('Are you sure you want to archive this order? You can restore it later if needed.')
-                        ->modalSubmitActionLabel('Archive') 
-                        ->modalCancelActionLabel('Cancel') 
-                        ->color('danger')
-                        ->icon('heroicon-o-archive-box')
-                        ->visible(fn ($record) => in_array($record->order_status, ['completed', 'cancelled', 'returned'])),
+                    // Tables\Actions\DeleteAction::make()
+                        // ->label('Archive')
+                        // ->modalHeading('Archive Order')
+                        // ->modalDescription('Are you sure you want to archive this order? You can restore it later if needed.')
+                        // ->modalSubmitActionLabel('Archive') 
+                        // ->modalCancelActionLabel('Cancel') 
+                        // ->color('danger')
+                        // ->icon('heroicon-o-archive-box')
+                        // ->visible(fn ($record) => in_array($record->order_status, ['completed', 'cancelled', 'returned'])),
                     Tables\Actions\RestoreAction::make(),
                     Tables\Actions\ForceDeleteAction::make(),
 

@@ -183,7 +183,9 @@ class DiscountResource extends Resource
                         ->modalSubmitActionLabel('Archive') 
                         ->modalCancelActionLabel('Cancel') 
                         ->color('danger')
-                        ->icon('heroicon-o-archive-box'),
+                        ->icon('heroicon-o-archive-box')
+                        ->disabled(fn ($record) => $record->is_active === true)
+                        ->tooltip(fn ($record) => $record->is_active ? 'Cannot archive an active discount.' : null),
                     Tables\Actions\RestoreAction::make(),
                     Tables\Actions\ForceDeleteAction::make(),
                 ])
