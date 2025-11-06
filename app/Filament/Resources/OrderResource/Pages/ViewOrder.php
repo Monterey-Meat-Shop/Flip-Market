@@ -7,7 +7,6 @@ use Filament\Actions;
 use Filament\Resources\Pages\ViewRecord;
 
 use Filament\Infolists\Infolist;
-use Filament\Infolists\Components;
 use Filament\Infolists\Components\Section;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Infolists\Components\ImageEntry;
@@ -15,8 +14,6 @@ use Filament\Infolists\Components\Group;
 use Filament\Infolists\Components\Grid;
 use Filament\Infolists\Components\RepeatableEntry;
 use Filament\Infolists\Components\TextEntry\TextEntrySize;
-use Filament\Infolists\Components\TextEntry\TextEntryWeight;
-use Filament\Support\Enums\Alignment;
 use Filament\Support\Enums\FontWeight;
 
 class ViewOrder extends ViewRecord
@@ -27,19 +24,20 @@ class ViewOrder extends ViewRecord
     {
         return [
             Actions\EditAction::make(),
+
             Actions\DeleteAction::make()
                 ->label('Archive')
                 ->modalHeading('Archive Order')
                 ->modalDescription('Are you sure you want to archive this order? You can restore it later if needed.')
-                ->modalSubmitActionLabel('Archive') 
-                ->modalCancelActionLabel('Cancel') 
+                ->modalSubmitActionLabel('Archive')
+                ->modalCancelActionLabel('Cancel')
                 ->color('danger')
                 ->icon('heroicon-o-archive-box')
                 ->visible(fn () => in_array($this->record->order_status, ['completed', 'cancelled', 'returned'])),
-                
+
             Actions\RestoreAction::make()
                 ->visible(fn () => $this->record->trashed()),
-                
+
             Actions\ForceDeleteAction::make()
                 ->visible(fn () => $this->record->trashed()),
 
@@ -79,49 +77,49 @@ class ViewOrder extends ViewRecord
                             ->warning()
                             ->send();
                     }
-        
+
                     \Filament\Notifications\Notification::make()
                         ->title('Order Accepted')
                         ->success()
                         ->send();
                 }),
 
-            Actions\Action::make('reject')            
-               ->label('Reject Order')
-               ->icon('heroicon-o-x-circle')
-               ->color('danger')
-               ->requiresConfirmation()
-               ->modalHeading('Reject Order')
-               ->modalDescription('Are you sure you want to reject this order? The stock will be restored.')
-               ->modalSubmitActionLabel('Yes, Reject Order')
-               ->visible(fn () =>
-                   auth()->user()->hasRole('manager') &&
-                   $this->record->order_status === 'pending'
-               )
-               ->action(function () {
-                   foreach ($this->record->orderItems as $item) {
-                       if ($item->productVariant) {
-                           $item->productVariant->increment('stock_quantity', $item->quantity);
-                       } elseif ($item->product) {
-                           $item->product->increment('stock_quantity', $item->quantity);
-                       }
-                   }
+            Actions\Action::make('reject')
+                ->label('Reject Order')
+                ->icon('heroicon-o-x-circle')
+                ->color('danger')
+                ->requiresConfirmation()
+                ->modalHeading('Reject Order')
+                ->modalDescription('Are you sure you want to reject this order? The stock will be restored.')
+                ->modalSubmitActionLabel('Yes, Reject Order')
+                ->visible(fn () =>
+                    auth()->user()->hasRole('manager') &&
+                    $this->record->order_status === 'pending'
+                )
+                ->action(function () {
+                    foreach ($this->record->orderItems as $item) {
+                        if ($item->productVariant) {
+                            $item->productVariant->increment('stock_quantity', $item->quantity);
+                        } elseif ($item->product) {
+                            $item->product->increment('stock_quantity', $item->quantity);
+                        }
+                    }
 
-                   $this->record->update([
-                       'stock_deducted' => false,
-                       'order_status' => 'cancelled',
-                   ]);
+                    $this->record->update([
+                        'stock_deducted' => false,
+                        'order_status' => 'cancelled',
+                    ]);
 
-                   if ($this->record->payment) {
-                       $this->record->payment->update(['status' => 'failed']);
-                   }
+                    if ($this->record->payment) {
+                        $this->record->payment->update(['status' => 'failed']);
+                    }
 
-                   \Filament\Notifications\Notification::make()
-                       ->title('Order Rejected Successfully')
-                       ->body("Order #{$this->record->orderID} has been rejected and products have been restocked.")
-                       ->success()
-                       ->send();
-               }),
+                    \Filament\Notifications\Notification::make()
+                        ->title('Order Rejected Successfully')
+                        ->body("Order #{$this->record->orderID} has been rejected and products have been restocked.")
+                        ->success()
+                        ->send();
+                }),
 
             Actions\Action::make('in_transit')
                 ->label('In Transit')
@@ -142,7 +140,7 @@ class ViewOrder extends ViewRecord
                         ->warning()
                         ->send();
                 }),
-    
+
             Actions\Action::make('deliver')
                 ->label('Delivered')
                 ->icon('heroicon-o-truck')
@@ -160,13 +158,13 @@ class ViewOrder extends ViewRecord
                             'shipping_status' => 'delivered',
                         ]);
                     } else {
-                         \Filament\Notifications\Notification::make()
+                        \Filament\Notifications\Notification::make()
                             ->title('Error: Cannot mark as delivered, shipping record missing.')
                             ->danger()
                             ->send();
                         return;
                     }
-        
+
                     $this->record->update([
                         'order_status' => 'completed',
                     ]);
@@ -179,7 +177,7 @@ class ViewOrder extends ViewRecord
         ];
     }
 
-    public function infolist(Infolist $infolist): infolist
+    public function infolist(Infolist $infolist): Infolist
     {
         return $infolist
             ->schema([
@@ -224,7 +222,8 @@ class ViewOrder extends ViewRecord
                                             'pending', 'processing' => 'warning',
                                             'failed', 'cancelled', 'refunded' => 'danger',
                                             default => 'gray',
-                                        }),
+                                        })
+                                        ->placeholder('— N/A —'),
 
                                     TextEntry::make('payment.amount')
                                         ->label('Total Amount to Pay')
@@ -251,14 +250,35 @@ class ViewOrder extends ViewRecord
                                     })
                                     ->placeholder('— N/A —'),
 
+                                // NOTE ROW FOR LALAMOVE BOOKING CHOICE
+                                TextEntry::make('shipping.lalamove_booking_option')
+                                    ->label('Lalamove Booking')
+                                    ->formatStateUsing(function ($state, $record) {
+                                        if (! $record->shipping ||
+                                            strtoupper($record->shipping->shipping_method) !== 'LALAMOVE') {
+                                            return '—';
+                                        }
+
+                                        return match ($state) {
+                                            'customer' => 'Note: Customer will book Lalamove and pay the driver directly.',
+                                            'store'    => 'Note: Store will book Lalamove (fee added to this order).',
+                                            default    => '—',
+                                        };
+                                    })
+                                    ->visible(function ($record) {
+                                        return $record->shipping
+                                            && strtoupper($record->shipping->shipping_method) === 'LALAMOVE';
+                                    }),
+
                                 TextEntry::make('shipping.delivered_at')
                                     ->label('Delivered Date')
                                     ->dateTime('M d, Y h:i A')
                                     ->icon('heroicon-o-archive-box')
                                     ->placeholder('— Not Delivered —'),
-
-                            ])->columns(2),     
-                    ])->columns(2),
+                            ])
+                            ->columns(2),
+                    ])
+                    ->columns(2),
 
                 Group::make()
                     ->schema([
@@ -266,86 +286,86 @@ class ViewOrder extends ViewRecord
                             ->schema([
                                 ImageEntry::make('payment.screenshot_path')
                                     ->label('Image upload')
-                                    ->height(370) 
+                                    ->height(370)
                                     ->width(450)
                                     ->defaultImageUrl(fn () => null)
                                     ->visible(fn ($record) => filled($record->payment?->screenshot_path)),
                             ])
-                            ->columnSpan(2), 
+                            ->columnSpan(2),
                     ])
                     ->columns(2),
 
-                    Section::make('Order Details')
+                Section::make('Order Details')
+                    ->schema([
+                        TextEntry::make('order_date')
+                            ->label('Date Placed')
+                            ->dateTime('M d, Y h:i A')
+                            ->icon('heroicon-o-calendar'),
+
+                        TextEntry::make('order_status')
+                            ->label('Order Status')
+                            ->badge()
+                            ->color(fn (string $state): string => match (strtolower($state)) {
+                                'pending', 'processing' => 'warning',
+                                'completed' => 'success',
+                                'failed', 'cancelled', 'refunded' => 'danger',
+                                default => 'gray',
+                            }),
+
+                        TextEntry::make('orderitems.discount.name')
+                            ->label('Discount Applied')
+                            ->placeholder('None'),
+
+                        TextEntry::make('overall_discount')
+                            ->label('Overall Discount')
+                            ->money('PHP')
+                            ->getStateUsing(fn ($record) => $record->orderItems->sum('discount_amount') ?: 0),
+
+                        TextEntry::make('shipping.shipping_fee')
+                            ->label('Shipping Fee')
+                            ->money('PHP')
+                            ->getStateUsing(fn ($record) => $record->shipping?->shipping_fee ?? 0),
+
+                        TextEntry::make('payment.amount')
+                            ->label('Final Total')
+                            ->size(TextEntrySize::Large)
+                            ->weight(FontWeight::Bold)
+                            ->money('PHP'),
+                    ])
+                    ->columns(6),
+
+                Section::make('Products Ordered')
+                    ->schema([
+                        RepeatableEntry::make('orderItems')
+                            ->label('Items')
+                            ->contained(false)
                             ->schema([
-                                TextEntry::make('order_date') 
-                                    ->label('Date Placed')
-                                    ->dateTime('M d, Y h:i A')
-                                    ->icon('heroicon-o-calendar'),
-                                TextEntry::make('order_status')
-                                    ->label('Order Status')
-                                    ->badge()
-                                    ->color(fn (string $state): string => match (strtolower($state)) {
-                                        'pending', 'processing' => 'warning',
-                                        'completed' => 'success',
-                                        'failed', 'cancelled', 'refunded' => 'danger',
-                                        default => 'gray',
-                                    }),
-
-                                TextEntry::make('orderitems.discount.name')
-                                    ->label('Discount Applied')
-                                    ->placeholder('None'),
-
-                                TextEntry::make('overall_discount')
-                                    ->label('Overall Discount')
+                                TextEntry::make('product.name')
+                                    ->label('Product'),
+                                TextEntry::make('productvariant.colorway')
+                                    ->label('Colorway'),
+                                TextEntry::make('size')
+                                    ->label('Size')
+                                    ->getStateUsing(fn ($record) => $record->size ?? '—'),
+                                TextEntry::make('quantity')
+                                    ->label('Qty'),
+                                TextEntry::make('unit_price')
+                                    ->label('Unit Price')
+                                    ->money('PHP'),
+                                TextEntry::make('discount_amount')
+                                    ->label('Discount Price')
                                     ->money('PHP')
-                                    ->getStateUsing(fn($record) => $record->orderItems->sum('discount_amount') ?: 0),
-
-                                TextEntry::make('shipping.shipping_fee')
-                                    ->label('Shipping Fee')
-                                    ->money('PHP')
-                                    ->getStateUsing(fn($record) => $record->shipping?->shipping_fee ?? 0),
-
-                                TextEntry::make('payment.amount')
-                                    ->label('Final Total')
-                                    ->size(TextEntrySize::Large)
-                                    ->weight(FontWeight::Bold)
-                                    ->money('PHP')
-                            ])->columns(6),
-
-                    Section::make('Products Ordered')
-                        ->schema([
-                            RepeatableEntry::make('orderItems')
-                                ->label('Items')
-                                ->contained(false)
-                                ->schema([
-                                    TextEntry::make('product.name')
-                                        ->label('Product'),
-                                    TextEntry::make('productvariant.colorway')
-                                        ->label('Colorway'),
-                                    TextEntry::make('size')
-                                        ->label('Size')
-                                        ->getStateUsing(fn($record) => $record->size ?? '—'),
-                                    TextEntry::make('quantity')
-                                        ->label('Qty'),
-                                    TextEntry::make('unit_price')
-                                        ->label('Unit Price')
-                                        ->money('PHP'),
-                                    TextEntry::make('discount_amount')
-                                        ->label('Discount Price')
-                                        ->money('PHP')
-                                        ->hidden(fn($record) => $record->discount_amount == 0),
-                                    TextEntry::make('line_total')
-                                        ->label('Subtotal')
-                                        ->getStateUsing(fn($record) => 
-                                            ($record->quantity * $record->unit_price) - $record->discount_amount
-                                        )
-                                        ->money('PHP'),
-                                ])
-                                ->columns(7)
-                                ->contained(false),
-                        ]),
-                        
-
-        ]); 
+                                    ->hidden(fn ($record) => $record->discount_amount == 0),
+                                TextEntry::make('line_total')
+                                    ->label('Subtotal')
+                                    ->getStateUsing(fn ($record) =>
+                                        ($record->quantity * $record->unit_price) - $record->discount_amount
+                                    )
+                                    ->money('PHP'),
+                            ])
+                            ->columns(7)
+                            ->contained(false),
+                    ]),
+            ]);
     }
 }

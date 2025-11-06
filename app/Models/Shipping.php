@@ -34,13 +34,16 @@ class Shipping extends Model
     const SHIPPING_METHODS = [
         'JNT' => [
             'name' => 'J&T Express',
-            'fee' => 70,
+            'fee' => 100, // fixed
             'description' => '3-5 business days delivery',
         ],
+
+        // LALAMOVE: no fixed fee, user will input based on Lalamove quote
         'LALAMOVE' => [
             'name' => 'Lalamove',
-            'fee' => 120,
-            'description' => 'Same day delivery',
+            // 'fee' => 120,  // ❌ remove fixed amount
+            // you can leave fee unset or explicit null; frontend handles it
+            'description' => 'Same day delivery (fee based on location via Lalamove)',
         ],
     ];
 
@@ -55,11 +58,15 @@ class Shipping extends Model
         return self::SHIPPING_METHODS[$this->shipping_method] ?? null;
     }
 
-    // Get shipping fee
+    // Get shipping fee (fallback only)
     public function getShippingFee()
     {
         $details = $this->getShippingMethodDetails();
-        return $details ? $details['fee'] : 70; // Default to 70 if method not found
+
+        // if method has a defined fee, use it; otherwise fallback 70
+        return isset($details['fee'])
+            ? $details['fee']
+            : 70;
     }
 
     // Static method to get all shipping methods
@@ -68,26 +75,23 @@ class Shipping extends Model
         return self::SHIPPING_METHODS;
     }
 
+    protected static function booted()
+    {
+        static::updated(function ($shipping) {
+            // Only trigger when the shipping status changes
+            if ($shipping->isDirty('shipping_status')) {
+                $user = $shipping->order?->customer?->user;
 
-protected static function booted()
-{
-    static::updated(function ($shipping) {
-        // Only trigger when the shipping status changes
-        if ($shipping->isDirty('shipping_status')) {
-            $user = $shipping->order?->customer?->user;
-
-            if ($user) {
-                Notification_Customer::create([
-                    'user_id'    => $user->id,
-                    'orderID'    => $shipping->orderID,          
-                    'shippingID' => $shipping->shippingID,       
-                    'message'    => "Your order #{$shipping->order->orderID} shipping status is now {$shipping->shipping_status}.",
-                    'is_read'    => false,
-                ]);
+                if ($user) {
+                    Notification_Customer::create([
+                        'user_id'    => $user->id,
+                        'orderID'    => $shipping->orderID,
+                        'shippingID' => $shipping->shippingID,
+                        'message'    => "Your order #{$shipping->order->orderID} shipping status is now {$shipping->shipping_status}.",
+                        'is_read'    => false,
+                    ]);
+                }
             }
-        }
-    });
-}
-
-
+        });
+    }
 }

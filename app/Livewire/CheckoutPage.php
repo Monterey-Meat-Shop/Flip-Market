@@ -62,6 +62,10 @@ class CheckoutPage extends Component
     public $customer;
     public $isProcessing = false;
 
+    // 🔹 NEW: Lalamove specific
+    public $lalamoveBookingOption = null; // 'customer' or 'admin'
+    public $lalamoveFee = null;           // numeric if admin books
+
     protected $listeners = ['paymentMethodChanged'];
 
     protected $rules = [
@@ -75,6 +79,7 @@ class CheckoutPage extends Component
         'bankTransferReferenceNumber' => 'nullable|string|max:50',
         'discountCode' => 'nullable|string|max:50',
         'paymentScreenshot' => 'nullable|image|max:2048',
+        // (Lalamove fields are validated conditionally in placeOrder)
     ];
 
     protected $messages = [
@@ -120,7 +125,7 @@ class CheckoutPage extends Component
             })
             ->first();
 
-            return $discount;
+        return $discount;
     }
 
     // Calculate discounted price
@@ -135,9 +140,9 @@ class CheckoutPage extends Component
         } elseif ($discount->discount_type === 'Fixed') {
             $discountedPrice = $basePrice - $discount->discount_value;
         } else {
-            // If discount type is unknown, return base price (no discount)
             return $basePrice;
         }
+
         return max($discountedPrice, 0);
     }
 
@@ -170,7 +175,6 @@ class CheckoutPage extends Component
             return;
         }
 
-        // load product discounts
         $this->cartItems = CartItem::where('customerID', $this->customer->customerID)
             ->with(['product.discounts', 'variant'])
             ->get();
@@ -180,7 +184,6 @@ class CheckoutPage extends Component
             return redirect()->route('cart');
         }
 
-        // Calculate product-level discounts and update prices
         $this->productDiscountSavings = 0;
         $this->originalSubtotal = 0;
         $this->discountedSubtotal = 0;
@@ -198,14 +201,12 @@ class CheckoutPage extends Component
                 'discount_type' => $activeDiscount?->discount_type ?? 'none',
             ]);
 
-            // Default values (no discount)
             $item->unit_price = round($basePrice, 2);
             $item->sub_total = round($basePrice * $item->quantity, 2);
             $item->original_price = null;
             $item->discount_amount = 0;
             $item->active_discount = null;
 
-            // Only apply discount if one exists AND is valid
             if ($activeDiscount && $activeDiscount->discount_value > 0) {
                 $discountedPrice = $this->calculateDiscountedPrice($basePrice, $activeDiscount);
                 $discountDifference = $basePrice - $discountedPrice;
@@ -216,7 +217,6 @@ class CheckoutPage extends Component
                     'difference' => $discountDifference,
                 ]);
 
-                // Only apply if there's actual savings (more than 1 cent)
                 if ($discountDifference > 0.01) {
                     $item->active_discount = $activeDiscount;
                     $item->unit_price = round($discountedPrice, 2);
@@ -263,13 +263,13 @@ class CheckoutPage extends Component
         $this->availableShippingMethods = [
             'JNT' => [
                 'name' => 'J&T Express',
-                'fee' => 70,
+                'fee' => 100, // 🔹 fixed 100
                 'description' => '3-5 business days delivery',
             ],
             'LALAMOVE' => [
                 'name' => 'Lalamove',
-                'fee' => 120,
-                'description' => 'Same day delivery',
+                'fee' => 0,   // 🔹 dynamic; depends on booking option
+                'description' => 'Same day delivery (fee depends on location)',
             ],
         ];
         
@@ -298,18 +298,58 @@ class CheckoutPage extends Component
 
     public function updatedSelectedShippingMethod($value)
     {
+        // 🔹 Reset Lalamove-specific fields when switching away
+        if ($value !== 'LALAMOVE') {
+            $this->lalamoveBookingOption = null;
+            $this->lalamoveFee = null;
+        }
+
+        $this->updateDeliveryFee();
+        $this->calculateTotals();
+    }
+
+    // 🔹 React to Lalamove inputs
+    public function updatedLalamoveBookingOption()
+    {
+        $this->updateDeliveryFee();
+        $this->calculateTotals();
+    }
+
+    public function updatedLalamoveFee()
+    {
         $this->updateDeliveryFee();
         $this->calculateTotals();
     }
 
     public function updateDeliveryFee()
     {
-        if (isset($this->availableShippingMethods[$this->selectedShippingMethod])) {
-            $shippingDetails = $this->availableShippingMethods[$this->selectedShippingMethod];
-            $this->deliveryFee = $shippingDetails['fee'];
-        } else {
-            $this->deliveryFee = 70;
+        if ($this->selectedShippingMethod === 'JNT') {
+            // fixed J&T fee
+            $this->deliveryFee = $this->availableShippingMethods['JNT']['fee'] ?? 100;
+            return;
         }
+
+        if ($this->selectedShippingMethod === 'LALAMOVE') {
+            // Customer books via their own Lalamove → no fee in system
+            if ($this->lalamoveBookingOption === 'customer') {
+                $this->deliveryFee = 0;
+                return;
+            }
+
+            // Admin books → require fee from input (if provided)
+            if ($this->lalamoveBookingOption === 'admin' && $this->lalamoveFee !== null && $this->lalamoveFee !== '') {
+                $fee = (float) $this->lalamoveFee;
+                $this->deliveryFee = $fee > 0 ? $fee : 0;
+                return;
+            }
+
+            // Default while nothing chosen
+            $this->deliveryFee = 0;
+            return;
+        }
+
+        // Fallback
+        $this->deliveryFee = 100;
     }
 
     public function updatedSelectedPaymentMethod($value)
@@ -366,10 +406,8 @@ class CheckoutPage extends Component
 
     public function calculateTotals()
     {
-        // Calculate subtotal with product-level discounts already applied
         $this->subtotal = $this->cartItems->sum('sub_total');
-        
-        // Apply checkout-level discount (coupon code) if any
+
         $this->discountAmount = 0;
         if ($this->appliedDiscount) {
             $originalPrice = $this->subtotal;
@@ -426,6 +464,29 @@ class CheckoutPage extends Component
                 return;
             }
 
+            // 🔹 Extra validation for Lalamove choice
+            if ($this->selectedShippingMethod === 'LALAMOVE') {
+                if (!$this->lalamoveBookingOption) {
+                    $this->addError('lalamoveBookingOption', 'Please choose who will book the Lalamove delivery.');
+                    $this->isProcessing = false;
+                    return;
+                }
+
+                if ($this->lalamoveBookingOption === 'admin') {
+                    if ($this->lalamoveFee === null || $this->lalamoveFee === '' || !is_numeric($this->lalamoveFee) || $this->lalamoveFee <= 0) {
+                        $this->addError('lalamoveFee', 'Please enter the Lalamove delivery fee that will be charged.');
+                        $this->isProcessing = false;
+                        return;
+                    }
+                } else {
+                    // customer books → do not store fee on our side
+                    $this->lalamoveFee = null;
+                }
+
+                $this->updateDeliveryFee();
+                $this->calculateTotals();
+            }
+
             $paymentMethod = PaymentMethod::find($this->selectedPaymentMethod);
             $methodName = strtolower($paymentMethod->method_name ?? '');
 
@@ -460,7 +521,6 @@ class CheckoutPage extends Component
                     'stock_deducted' => true,
                 ]);
 
-                // Create order items
                 foreach ($this->cartItems as $cartItem) {
                     $product = $cartItem->product()->with('discounts')->first();
                     $activeDiscount = $this->getActiveDiscount($product);
@@ -503,7 +563,6 @@ class CheckoutPage extends Component
                         'sub_total' => $subTotal,
                     ]);
 
-                    // update stock
                     if ($cartItem->product_variant_id) {
                         $variant = \App\Models\ProductVariant::find($cartItem->product_variant_id);
                         if ($variant) {
@@ -540,9 +599,8 @@ class CheckoutPage extends Component
                     'payment_methodID' => $this->selectedPaymentMethod,
                     'amount' => $this->totalAmount,
                     'reference_number' => $referenceNumber,
-                    'screenshot_path' => $screenshotPath ?? null, // ✅ add null fallback
+                    'screenshot_path' => $screenshotPath ?? null,
                     'status' => 'unpaid',
-                
                 ]);
 
                 Shipping::create([
@@ -552,12 +610,10 @@ class CheckoutPage extends Component
                     'shipping_fee' => $this->deliveryFee,
                 ]);
 
-                // notification to admin
                 try {
                     $order->refresh();
                     $order->load(['customer', 'payment', 'orderItems']);
                     
-                    // Get all users with admin or manager roles
                     $admins = User::role(['admin', 'manager'])->get();
                     
                     if ($admins->count() > 0) {
@@ -603,6 +659,7 @@ class CheckoutPage extends Component
             'availableShippingMethods' => $this->availableShippingMethods,
             'showGcashReference' => $this->showGcashReference,
             'showBankTransferReference' => $this->showBankTransferReference,
+            // Lalamove bindings are automatically available
         ]);
     }
 }
