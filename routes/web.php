@@ -86,7 +86,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/returns/{returnId}', [ReturnController::class, 'show'])->name('returns.show');
 
     // Order details
-    Route::get('/orders/{orderId}', OrderDetailPage::class)->middleware('verified')->name('orders.show');
+    Route::get('/orders/{orderId}', OrderDetailPage::class)
+    ->name('orders.show');
+
 
     Route::get('/logout', function () {
         Auth::logout(); 
