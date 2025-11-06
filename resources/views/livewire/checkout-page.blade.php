@@ -285,8 +285,8 @@
                   @if($lalamoveBookingOption === 'customer')
                     <div class="mt-3 bg-white border border-yellow-100 rounded p-3 text-xs text-gray-700 space-y-1">
                       <p class="font-semibold text-gray-800">Pickup details for your Lalamove booking:</p>
-                      <p><strong>Store Address:</strong> Holy Spirit QC</p>
-                      <p><strong>Store Mobile Number:</strong> 09933367891</p>
+                      <p><strong>Store Address:</strong> 005 Bonifacio, Bagong Silangan, Quezon City, 1119 Metro Manila </p>
+                      <p><strong>Store Mobile Number:</strong> 09359931562 </p>
                       <p class="text-[11px] text-gray-500">
                         Use these details as the pickup information in your Lalamove app. You will pay the Lalamove rider directly.
                       </p>

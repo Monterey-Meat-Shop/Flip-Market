@@ -55,25 +55,25 @@
                     <svg class="w-5 h-5 text-blue-600 mr-3 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                     </svg>
-                    <span>Our team will **review your return request within 1-2 business days**.</span>
+                    <span>Our team will review your return request within 1-2 business days.</span>
                 </li>
-                <li class="flex items-start">
+                <!-- <li class="flex items-start">
                     <svg class="w-5 h-5 text-blue-600 mr-3 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
                     </svg>
-                    <span>You will receive an **email notification** about the status of your request.</span>
-                </li>
+                    <span>You will receive an email notification with instructions once your request is reviewed.</span>
+                </li> -->
                 <li class="flex items-start">
                     <svg class="w-5 h-5 text-blue-600 mr-3 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path>
                     </svg>
-                    <span>If approved, we'll provide a **return shipping label and instructions** for the product return.</span>
+                    <span>If your return is approved, you can either visit our physical store to drop off the item or send it to us via Lalamove using the details we provide.</span>
                 </li>
                 <li class="flex items-start">
                     <svg class="w-5 h-5 text-blue-600 mr-3 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                     </svg>
-                    <span>Your **refund will be processed** once we receive and inspect the returned product.</span>
+                    <span>Your refund will be processed once we receive and inspect the returned product.</span>
                 </li>
             </ul>
         </div>
@@ -91,10 +91,10 @@
     <div class="bg-white rounded-lg shadow-sm p-6 text-center mt-6">
         <p class="text-gray-600 mb-2 font-medium">Have a question or need to make a change?</p>
         <p class="text-sm text-gray-500">
-            Contact our customer support at 
-            <a href="mailto:support@example.com" class="text-blue-600 hover:underline font-medium">support@example.com</a>
-            or call us at 
-            <a href="tel:+1234567890" class="text-blue-600 hover:underline font-medium">+123-456-7890</a>
+            Contact our customer support at
+            <a href="mailto:flipmarketphilippines@gmail.com" class="text-blue-600 hover:underline font-medium">flipmarketphilippines@gmail.com</a>
+            or call us at
+            <a href="tel:+639359931562" class="text-blue-600 hover:underline font-medium">0935 993 1562</a>
         </p>
     </div>
 </div>
