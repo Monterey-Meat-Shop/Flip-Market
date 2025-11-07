@@ -19,6 +19,10 @@ class DatabaseSeeder extends Seeder
             CategoriesSeeder::class,
             PaymentMethodSeeder::class,
             GuestCustomerSeeder::class,
+            // CustomerSeeder::class,
+            // AddressSeeder::class,
+            ProductSeeder::class,
+            CashierSalesSeeder::class,
         ]);
 
         // Admin user
@@ -38,5 +42,14 @@ class DatabaseSeeder extends Seeder
             'password'   => Hash::make('manager'),
         ]);
         $managerUser->assignRole('manager');
+
+        // Cashier user
+        $cashierUser = User::factory()->create([
+            'name'       => 'Cashier',
+            'last_name'  => '',
+            'email'      => 'cashier@gmail.com',
+            'password'   => Hash::make('cashier'),
+        ]);
+        $cashierUser->assignRole('cashier');
     }
 }

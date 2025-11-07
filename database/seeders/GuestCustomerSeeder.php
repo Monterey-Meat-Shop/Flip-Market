@@ -15,22 +15,30 @@ class GuestCustomerSeeder extends Seeder
      */
     public function run(): void
     {
-        // Check if a 'Guest' user already exists
-        if (User::where('email', 'guest@example.com')->doesntExist()) {
-            $user = User::create([
-                'name'       => 'Guest', // optional if your users table has it
-                'last_name'  => '',
-                'email'      => 'guest@example.com',
-                'password'   => Hash::make('password'),
-                'is_active'  => true,
-            ]);
+        // Get or create Guest User
+        $guestUser = User::firstOrCreate(
+            ['email' => 'guest@example.com'],
+            [
+                'name' => 'Guest',
+                'last_name' => '',
+                'password' => Hash::make('password'),
+                'is_active' => true,
+            ]
+        );
 
-            Customer::create([
-                'user_id'    => $user->id,
+        // Get or create Guest Customer
+        // Make sure to use the correct primary key
+        $guestCustomer = Customer::firstOrCreate(
+            ['user_id' => $guestUser->id],
+            [
                 'first_name' => 'Guest',
-                'last_name'  => '',
-                'phone'      => '',
-            ]);
-        }
+                'last_name' => '',
+                'phone' => '',
+            ]
+        );
+
+        // Optional: output the Guest Customer ID for verification
+        $customerID = $guestCustomer->customerID ?? $guestCustomer->id;
+        $this->command->info("Guest customer ID: $customerID");
     }
 }
