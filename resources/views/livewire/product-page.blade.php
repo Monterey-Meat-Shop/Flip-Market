@@ -118,16 +118,28 @@
 
                 <!-- Product List -->
                 <div class="lg:col-span-4">
-                    <!-- Results Count -->
-                    <div class="mb-6">
-                        <p class="text-gray-700 font-medium text-base">Showing {{ $products->count() }} products</p>
+                    <!-- Search + Results Count -->
+                    <div class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                        <p class="text-gray-700 font-medium text-base">
+                            Showing {{ $products->count() }} products
+                        </p>
+
+                        <!-- Search Bar -->
+                        <div class="w-full sm:w-64">
+                            <input
+                                type="text"
+                                wire:model.debounce.300ms="search"
+                                placeholder="Search products..."
+                                class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg
+                                       focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                            />
+                        </div>
                     </div>
 
                     <!-- Products Grid -->
                     <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                         @forelse($products as $product)
                             <article class="rounded-xl bg-white shadow-lg hover:shadow-xl duration-300 overflow-hidden border border-gray-200 transform hover:scale-105 transition-all">
-                                <!-- Product Link (wraps image and content) -->
                                 <a href="{{ route('product.detail', $product->productID) }}" class="block">
                                     <div class="relative overflow-hidden group">
                                         <img 
@@ -191,7 +203,7 @@
                                             @if($product->total_stock_quantity <= 0) disabled @endif
                                             class="w-full flex items-center justify-center space-x-2 rounded-lg bg-gradient-to-r from-blue-500 to-blue-600 px-3 py-2 text-white hover:from-blue-600 hover:to-blue-700 transition-all duration-300 transform hover:scale-105 disabled:bg-gray-400 disabled:cursor-not-allowed shadow-lg hover:shadow-xl font-semibold text-sm">
                                         <svg class="w-4 h-4 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5m4.5-5a2 2 0 11-4 0 2 2 0 014 0zm6 0a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5m4.5-5a2 2 0 11-4 0 2 2 0 014 0z"></path>
                                         </svg>
                                         <span>
                                             @if($product->total_stock_quantity <= 0)
