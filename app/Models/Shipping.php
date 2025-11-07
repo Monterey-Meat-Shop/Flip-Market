@@ -19,6 +19,10 @@ class Shipping extends Model
         'shipping_status',
         'shipping_fee',
         'delivered_at',
+
+        // ✅ NEW: Lalamove specific fields
+        'lalamove_booking_option', // 'customer' or 'store'
+        'lalamove_tracking',       // tracking number or URL
     ];
 
     protected $casts = [
@@ -38,11 +42,9 @@ class Shipping extends Model
             'description' => '3-5 business days delivery',
         ],
 
-        // LALAMOVE: no fixed fee, user will input based on Lalamove quote
+        // LALAMOVE: no fixed fee, user/admin defines
         'LALAMOVE' => [
             'name' => 'Lalamove',
-            // 'fee' => 120,  // ❌ remove fixed amount
-            // you can leave fee unset or explicit null; frontend handles it
             'description' => 'Same day delivery (fee based on location via Lalamove)',
         ],
     ];

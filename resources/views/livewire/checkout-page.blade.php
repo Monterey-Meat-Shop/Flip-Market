@@ -277,7 +277,7 @@
                              value="store"
                              wire:model.live="lalamoveBookingOption"
                              class="h-4 w-4">
-                      <span>Store will book Lalamove for me (fee added to this order).</span>
+                      <span>Store will book Lalamove for me.</span>
                     </label>
                   </div>
 
@@ -292,17 +292,7 @@
                       </p>
                     </div>
 
-                    <div class="mt-3">
-                      <label class="block text-xs font-semibold text-gray-800 mb-1">
-                        Lalamove Tracking Number or Link (optional)
-                      </label>
-                      <input type="text"
-                             wire:model="lalamoveTracking"
-                             class="w-full py-2 px-2 rounded-lg border border-gray-300 text-gray-800
-                                    focus:border-blue-500 focus:ring-blue-500"
-                             placeholder="Paste your Lalamove tracking number or tracking URL here">
-                      @error('lalamoveTracking') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
-                    </div>
+    
                   @endif
 
                   {{-- If store will book: just info, no fee input, no tracking input --}}

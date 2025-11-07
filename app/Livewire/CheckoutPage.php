@@ -40,13 +40,13 @@ class CheckoutPage extends Component
     public $lastName = '';
     public $phone = '';
     public $selectedAddressId = null;
-    
+
     public $addressLine1 = '';
     public $addressLine2 = '';
     public $city = '';
     public $province = '';
     public $postalCode = '';
-    
+
     public $availableAddresses = [];
 
     public $selectedPaymentMethod = null;
@@ -62,9 +62,10 @@ class CheckoutPage extends Component
     public $customer;
     public $isProcessing = false;
 
-    // 🔹 NEW: Lalamove specific
-    public $lalamoveBookingOption = null; // 'customer' or 'admin'
-    public $lalamoveFee = null;           // numeric if admin books
+    // Lalamove-specific
+    public $lalamoveBookingOption = null; // 'customer' or 'store'
+    public $lalamoveFee = null;           // kept for compatibility (not required here)
+    public $lalamoveTracking = null;      // optional tracking number / URL
 
     protected $listeners = ['paymentMethodChanged'];
 
@@ -79,7 +80,6 @@ class CheckoutPage extends Component
         'bankTransferReferenceNumber' => 'nullable|string|max:50',
         'discountCode' => 'nullable|string|max:50',
         'paymentScreenshot' => 'nullable|image|max:2048',
-        // (Lalamove fields are validated conditionally in placeOrder)
     ];
 
     protected $messages = [
@@ -106,29 +106,25 @@ class CheckoutPage extends Component
         $this->calculateTotals();
     }
 
-    //get active discount for a product
     private function getActiveDiscount($product)
     {
         if (!$product || !$product->relationLoaded('discounts')) {
             $product->load('discounts');
         }
 
-        $discount = $product->discounts
+        return $product->discounts
             ->where('is_active', true)
-            ->filter(function($discount) {
+            ->filter(function ($discount) {
                 $now = now();
                 $startDateValid = is_null($discount->start_date) || $discount->start_date <= $now;
                 $endDateValid = is_null($discount->end_date) || $discount->end_date >= $now;
                 $hasValidValue = $discount->discount_value > 0;
-            
+
                 return $startDateValid && $endDateValid && $hasValidValue;
             })
             ->first();
-
-        return $discount;
     }
 
-    // Calculate discounted price
     private function calculateDiscountedPrice($basePrice, $discount)
     {
         if (!$discount) {
@@ -149,7 +145,7 @@ class CheckoutPage extends Component
     public function loadCustomerData()
     {
         $this->customer = Customer::where('user_id', Auth::id())->first();
-        
+
         if (!$this->customer) {
             session()->flash('error', 'Customer profile not found. Please complete your profile first.');
             return redirect()->route('profile');
@@ -235,14 +231,14 @@ class CheckoutPage extends Component
     public function loadPaymentMethods()
     {
         $excludedMethods = ['Cash', 'cash', 'CASH'];
-        
+
         $this->paymentMethods = PaymentMethod::where('is_active', true)
             ->whereNotIn('method_name', $excludedMethods)
             ->get();
-        
+
         $cashOnDelivery = $this->paymentMethods->where('method_name', 'Cash on Delivery')->first();
         $gcash = $this->paymentMethods->where('method_name', 'GCash')->first();
-        
+
         if ($cashOnDelivery) {
             $this->selectedPaymentMethod = $cashOnDelivery->payment_methodID;
             $this->showGcashReference = false;
@@ -263,16 +259,16 @@ class CheckoutPage extends Component
         $this->availableShippingMethods = [
             'JNT' => [
                 'name' => 'J&T Express',
-                'fee' => 100, // 🔹 fixed 100
+                'fee' => 100,
                 'description' => '3-5 business days delivery',
             ],
             'LALAMOVE' => [
                 'name' => 'Lalamove',
-                'fee' => 0,   // 🔹 dynamic; depends on booking option
+                'fee' => 0,
                 'description' => 'Same day delivery (fee depends on location)',
             ],
         ];
-        
+
         $this->selectedShippingMethod = 'JNT';
         $this->updateDeliveryFee();
     }
@@ -298,17 +294,16 @@ class CheckoutPage extends Component
 
     public function updatedSelectedShippingMethod($value)
     {
-        // 🔹 Reset Lalamove-specific fields when switching away
         if ($value !== 'LALAMOVE') {
             $this->lalamoveBookingOption = null;
             $this->lalamoveFee = null;
+            $this->lalamoveTracking = null;
         }
 
         $this->updateDeliveryFee();
         $this->calculateTotals();
     }
 
-    // 🔹 React to Lalamove inputs
     public function updatedLalamoveBookingOption()
     {
         $this->updateDeliveryFee();
@@ -324,49 +319,39 @@ class CheckoutPage extends Component
     public function updateDeliveryFee()
     {
         if ($this->selectedShippingMethod === 'JNT') {
-            // fixed J&T fee
             $this->deliveryFee = $this->availableShippingMethods['JNT']['fee'] ?? 100;
             return;
         }
 
         if ($this->selectedShippingMethod === 'LALAMOVE') {
-            // Customer books via their own Lalamove → no fee in system
-            if ($this->lalamoveBookingOption === 'customer') {
+            // For both options treat as no fixed fee on checkout side
+            if (in_array($this->lalamoveBookingOption, ['customer', 'store'])) {
                 $this->deliveryFee = 0;
                 return;
             }
 
-            // Admin books → require fee from input (if provided)
-            if ($this->lalamoveBookingOption === 'admin' && $this->lalamoveFee !== null && $this->lalamoveFee !== '') {
-                $fee = (float) $this->lalamoveFee;
-                $this->deliveryFee = $fee > 0 ? $fee : 0;
-                return;
-            }
-
-            // Default while nothing chosen
             $this->deliveryFee = 0;
             return;
         }
 
-        // Fallback
         $this->deliveryFee = 100;
     }
 
     public function updatedSelectedPaymentMethod($value)
     {
         $paymentMethod = PaymentMethod::find($value);
-        
+
         if ($paymentMethod) {
             $methodName = strtolower($paymentMethod->method_name);
             $this->showGcashReference = $methodName === 'gcash';
             $this->showBankTransferReference = $methodName === 'bank transfer' || $methodName === 'banktransfer';
-            
+
             if ($methodName === 'cash on delivery') {
                 $this->showGcashReference = false;
                 $this->showBankTransferReference = false;
             }
         }
-        
+
         if (!$this->showGcashReference) {
             $this->gcashReferenceNumber = '';
         }
@@ -425,10 +410,10 @@ class CheckoutPage extends Component
             if (!$item->variant) {
                 throw new \Exception("Product variant not found for {$item->product->name}. Please refresh and try again.");
             }
-            
+
             $variant = $item->variant->fresh();
             $availableStock = $variant->stock_quantity;
-            
+
             if ($item->quantity > $availableStock) {
                 throw new \Exception("Insufficient stock for {$item->product->name} (Size: {$variant->size}). Available: {$availableStock}, Required: {$item->quantity}");
             }
@@ -464,7 +449,6 @@ class CheckoutPage extends Component
                 return;
             }
 
-            // 🔹 Extra validation for Lalamove choice
             if ($this->selectedShippingMethod === 'LALAMOVE') {
                 if (!$this->lalamoveBookingOption) {
                     $this->addError('lalamoveBookingOption', 'Please choose who will book the Lalamove delivery.');
@@ -472,17 +456,14 @@ class CheckoutPage extends Component
                     return;
                 }
 
-                if ($this->lalamoveBookingOption === 'admin') {
-                    if ($this->lalamoveFee === null || $this->lalamoveFee === '' || !is_numeric($this->lalamoveFee) || $this->lalamoveFee <= 0) {
-                        $this->addError('lalamoveFee', 'Please enter the Lalamove delivery fee that will be charged.');
-                        $this->isProcessing = false;
-                        return;
-                    }
-                } else {
-                    // customer books → do not store fee on our side
-                    $this->lalamoveFee = null;
+                if (!in_array($this->lalamoveBookingOption, ['customer', 'store'])) {
+                    $this->addError('lalamoveBookingOption', 'Invalid Lalamove booking option selected.');
+                    $this->isProcessing = false;
+                    return;
                 }
 
+                // No fixed fee stored in system for both options
+                $this->lalamoveFee = null;
                 $this->updateDeliveryFee();
                 $this->calculateTotals();
             }
@@ -498,28 +479,33 @@ class CheckoutPage extends Component
 
             $this->validateStock();
 
-            DB::transaction(function () {
+            $createdOrderId = null;
+
+            DB::transaction(function () use (&$createdOrderId) {
+                // Update customer basic info
                 $this->customer->update([
                     'first_name' => $this->firstName,
-                    'last_name' => $this->lastName,
-                    'phone' => $this->phone,
+                    'last_name'  => $this->lastName,
+                    'phone'      => $this->phone,
                 ]);
 
                 $selectedAddress = Address::find($this->selectedAddressId);
-                
+
                 $order = Order::create([
-                    'customerID' => $this->customer->customerID,
-                    'discountID' => $this->appliedDiscount ? $this->appliedDiscount->discountID : null,
-                    'order_date' => now(),
-                    'total_amount' => $this->subtotal,
-                    'final_amount' => $this->totalAmount,
-                    'order_status' => 'Pending',
+                    'customerID'     => $this->customer->customerID,
+                    'discountID'     => $this->appliedDiscount ? $this->appliedDiscount->discountID : null,
+                    'order_date'     => now(),
+                    'total_amount'   => $this->subtotal,
+                    'final_amount'   => $this->totalAmount,
+                    'order_status'   => 'Pending',
                     'address_choice' => $selectedAddress->address_line_1 . ', ' . $selectedAddress->city,
-                    'postal_code' => $selectedAddress->postal_code,
-                    'city' => $selectedAddress->city,
-                    'province' => $selectedAddress->province,
+                    'postal_code'    => $selectedAddress->postal_code,
+                    'city'           => $selectedAddress->city,
+                    'province'       => $selectedAddress->province,
                     'stock_deducted' => true,
                 ]);
+
+                $createdOrderId = $order->orderID;
 
                 foreach ($this->cartItems as $cartItem) {
                     $product = $cartItem->product()->with('discounts')->first();
@@ -536,31 +522,28 @@ class CheckoutPage extends Component
                             $discountAmount = ($unitPrice * ($activeDiscount->discount_value / 100)) * $cartItem->quantity;
                         } elseif ($discountType === 'fixed') {
                             $discountAmount = (float) $activeDiscount->discount_value * $cartItem->quantity;
-                        } else {
-                            $discountAmount = 0;
                         }
-                        $originalPrice = ($unitPrice * $cartItem->quantity) + $discountAmount;
 
+                        $originalPrice = ($unitPrice * $cartItem->quantity) + $discountAmount;
                     } else {
-                        $discountAmount = 0;
                         $originalPrice = $unitPrice * $cartItem->quantity;
                     }
 
                     $subTotal = $unitPrice * $cartItem->quantity;
 
                     OrderItem::create([
-                        'orderID' => $order->orderID,
-                        'productID' => $cartItem->productID,
-                        'product_variant_id' => $cartItem->product_variant_id,
-                        'discountID' => $activeDiscount?->discountID,
-                        'size' => $cartItem->size,
-                        'colorway' => $cartItem->colorway,
-                        'quantity' => $cartItem->quantity,
-                        'unit_price' => $unitPrice,
-                        'original_price' => $originalPrice,
-                        'discount_name' => $activeDiscount?->name,
-                        'discount_amount' => $discountAmount,
-                        'sub_total' => $subTotal,
+                        'orderID'           => $order->orderID,
+                        'productID'         => $cartItem->productID,
+                        'product_variant_id'=> $cartItem->product_variant_id,
+                        'discountID'        => $activeDiscount?->discountID,
+                        'size'              => $cartItem->size,
+                        'colorway'          => $cartItem->colorway,
+                        'quantity'          => $cartItem->quantity,
+                        'unit_price'        => $unitPrice,
+                        'original_price'    => $originalPrice,
+                        'discount_name'     => $activeDiscount?->name,
+                        'discount_amount'   => $discountAmount,
+                        'sub_total'         => $subTotal,
                     ]);
 
                     if ($cartItem->product_variant_id) {
@@ -579,43 +562,47 @@ class CheckoutPage extends Component
                 if ($this->paymentScreenshot) {
                     $screenshotPath = $this->paymentScreenshot->store('screenshots', 'public');
                 }
-                
+
                 if ($methodName === 'cash on delivery') {
-                    $paymentStatus = 'cash_on_delivery';
                     $referenceNumber = null;
                 } else {
-                    $paymentStatus = 'pending';
                     $referenceNumber = null;
-                    
+
                     if ($this->showGcashReference && $this->gcashReferenceNumber) {
                         $referenceNumber = $this->gcashReferenceNumber;
                     } elseif ($this->showBankTransferReference && $this->bankTransferReferenceNumber) {
                         $referenceNumber = $this->bankTransferReferenceNumber;
                     }
                 }
-                
+
                 Payment::create([
-                    'orderID' => $order->orderID,
-                    'payment_methodID' => $this->selectedPaymentMethod,
-                    'amount' => $this->totalAmount,
-                    'reference_number' => $referenceNumber,
-                    'screenshot_path' => $screenshotPath ?? null,
-                    'status' => 'unpaid',
+                    'orderID'           => $order->orderID,
+                    'payment_methodID'  => $this->selectedPaymentMethod,
+                    'amount'            => $this->totalAmount,
+                    'reference_number'  => $referenceNumber,
+                    'screenshot_path'   => $screenshotPath ?? null,
+                    'status'            => 'unpaid',
                 ]);
 
                 Shipping::create([
-                    'orderID' => $order->orderID,
-                    'shipping_method' => $this->selectedShippingMethod,
-                    'shipping_status' => 'pending',
-                    'shipping_fee' => $this->deliveryFee,
+                    'orderID'                => $order->orderID,
+                    'shipping_method'        => $this->selectedShippingMethod,
+                    'shipping_status'        => 'pending',
+                    'shipping_fee'           => $this->deliveryFee,
+                    'lalamove_booking_option'=> $this->selectedShippingMethod === 'LALAMOVE'
+                        ? $this->lalamoveBookingOption
+                        : null,
+                    'lalamove_tracking'      => $this->selectedShippingMethod === 'LALAMOVE'
+                        ? $this->lalamoveTracking
+                        : null,
                 ]);
 
                 try {
                     $order->refresh();
                     $order->load(['customer', 'payment', 'orderItems']);
-                    
+
                     $admins = User::role(['admin', 'manager'])->get();
-                    
+
                     if ($admins->count() > 0) {
                         Notification::send($admins, new NewOrderNotification($order));
                         Log::info("Bell notification sent to {$admins->count()} admin(s)/manager(s) for Order #{$order->orderID}");
@@ -627,13 +614,17 @@ class CheckoutPage extends Component
                 }
 
                 CartItem::where('customerID', $this->customer->customerID)->delete();
-
                 $this->dispatch('cartUpdated', 0);
-
-                session()->flash('order_success', 'Order placed successfully! Order ID: ' . $order->orderID);
-                
-                return redirect()->route('orders.show', $order->orderID);
             });
+
+            if ($createdOrderId) {
+                session()->flash('order_success', 'Order placed successfully! Order ID: ' . $createdOrderId);
+                $this->isProcessing = false;
+                return redirect()->route('orders.show', $createdOrderId);
+            }
+
+            $this->isProcessing = false;
+            session()->flash('error', 'Failed to create order. Please try again.');
 
         } catch (\Illuminate\Validation\ValidationException $e) {
             $this->isProcessing = false;
@@ -647,19 +638,18 @@ class CheckoutPage extends Component
     public function render()
     {
         return view('livewire.checkout-page', [
-            'cartItems' => $this->cartItems,
-            'subtotal' => $this->subtotal,
-            'deliveryFee' => $this->deliveryFee,
-            'discountAmount' => $this->discountAmount,
-            'productDiscountSavings' => $this->productDiscountSavings,
-            'totalAmount' => $this->totalAmount,
-            'cartCount' => $this->cartCount,
-            'paymentMethods' => $this->paymentMethods,
-            'availableAddresses' => $this->availableAddresses,
+            'cartItems'                => $this->cartItems,
+            'subtotal'                 => $this->subtotal,
+            'deliveryFee'              => $this->deliveryFee,
+            'discountAmount'           => $this->discountAmount,
+            'productDiscountSavings'   => $this->productDiscountSavings,
+            'totalAmount'              => $this->totalAmount,
+            'cartCount'                => $this->cartCount,
+            'paymentMethods'           => $this->paymentMethods,
+            'availableAddresses'       => $this->availableAddresses,
             'availableShippingMethods' => $this->availableShippingMethods,
-            'showGcashReference' => $this->showGcashReference,
-            'showBankTransferReference' => $this->showBankTransferReference,
-            // Lalamove bindings are automatically available
+            'showGcashReference'       => $this->showGcashReference,
+            'showBankTransferReference'=> $this->showBankTransferReference,
         ]);
     }
 }
