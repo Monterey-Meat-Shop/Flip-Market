@@ -273,4 +273,23 @@ class Product extends Model
 
         return max($discounted, 0); // prevent negative price
     }
+
+    public function notifyLowOrOutOfStock(): void
+    {
+        if ($this->status === 'low_stock') {
+            Notification::make()
+                ->title('Low Stock Alert')
+                ->body("Product '{$this->name}' is low in stock ({$this->total_stock_quantity} left).")
+                ->warning()
+                ->send();
+        }
+
+        if ($this->status === 'out_of_stock') {
+            Notification::make()
+                ->title('Out of Stock Alert')
+                ->body("Product '{$this->name}' is out of stock!")
+                ->danger()
+                ->send();
+        }
+    }
 }

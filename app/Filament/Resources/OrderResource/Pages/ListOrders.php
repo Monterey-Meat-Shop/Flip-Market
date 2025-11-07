@@ -24,9 +24,9 @@ class ListOrders extends ListRecords
     public function getTabs(): array
     {
         return [
-            null => Tab::make('All')
-                ->badge(Order::count())
-                ->badgeColor('gray'),
+            // null => Tab::make('All')
+            //     ->badge(Order::count())
+            //     ->badgeColor('gray'),
 
             'pending' => Tab::make('Pending')
                 ->modifyQueryUsing(fn (Builder $query) => $query->where('order_status', 'pending'))

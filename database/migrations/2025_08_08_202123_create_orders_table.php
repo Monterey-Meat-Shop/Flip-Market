@@ -34,7 +34,7 @@ return new class extends Migration
                 'returned',
                 'failed'
             ])->default('pending');
-            $table->enum('payment_status', ['unpaid', 'paid', 'verified'])->default('unpaid');
+            // $table->enum('payment_status', ['unpaid', 'paid', 'verified'])->default('unpaid');
 
             $table->boolean('stock_deducted')->default(false); //added
 

@@ -259,21 +259,25 @@ class ProductResource extends Resource
                         ),
                 ]),
 
-                Section::make('Status')->schema([
-                Select::make('status')
-                    ->options([
-                        'pre_order' => 'Pre-order',
-                        'in_stock' => 'In stock',
-                    ])
-                    ->label('Status')
-                    ->default('in_stock')
-                    ->helperText('Status is calculated automatically unless set to Pre-order.'),
+                Section::make('Status')
+                    ->schema([
+                        Select::make('status')
+                            ->label('Status')
+                            ->options([
+                                'pre_order' => 'Pre-order',
+                                'in_stock' => 'In stock',
+                            ])
+                            ->disabled(function ($record, $get) {
+                                return $record && $record->status === 'in_stock';
+                            })
+                            ->default('in_stock')
+                            ->helperText('Status is calculated automatically unless set to Pre-order.'),
 
-                Toggle::make('is_active')
-                    ->required()
-                    ->default(true)
-                    ->helperText('Automatically managed, unless overridden for pre-order.'),
-                ]),
+                                Toggle::make('is_active')
+                                    ->required()
+                                    ->default(true)
+                                    ->helperText('Automatically managed, unless overridden for pre-order.'),
+                    ]),
             ])->columnSpan(1)
         ])->columns(3);
     }
@@ -511,7 +515,8 @@ class ProductResource extends Resource
                         ->modalSubmitActionLabel('Archive') 
                         ->modalCancelActionLabel('Cancel') 
                         ->color('danger')
-                        ->icon('heroicon-o-archive-box'),
+                        ->icon('heroicon-o-archive-box')
+                        ->visible(fn ($record) => $record->is_active === false),
                     RestoreAction::make(),
                     ForceDeleteAction::make(),
                 ])

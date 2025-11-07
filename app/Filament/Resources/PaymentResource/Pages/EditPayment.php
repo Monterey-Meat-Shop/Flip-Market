@@ -21,7 +21,8 @@ class EditPayment extends EditRecord
                         ->modalSubmitActionLabel('Archive') 
                         ->modalCancelActionLabel('Cancel') 
                         ->color('danger')
-                        ->icon('heroicon-o-archive-box'),
+                        ->icon('heroicon-o-archive-box')
+                        ->visible(fn ($record) => $record->is_active === false),
         ];
     }
 

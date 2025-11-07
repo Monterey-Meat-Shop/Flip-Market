@@ -41,12 +41,12 @@ class NewOrderNotification extends Notification
             'iconColor' => 'success',
             'duration' => 'persistent',
             'actions' => [
-                [
-                    'name' => 'view',
-                    'label' => 'View Order',
-                    'url' => url('/admin/resources/orders/' . $this->order->orderID),
-                    'close' => false,
-                ],
+                // [
+                //     'name' => 'view',
+                //     'label' => 'View Order',
+                //     'url' => url('/admin/resources/orders/' . $this->order->orderID),
+                //     'close' => false,
+                // ],
                 [
                     'name' => 'markAsRead',
                     'label' => 'Mark as read',

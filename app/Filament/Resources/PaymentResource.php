@@ -105,7 +105,8 @@ class PaymentResource extends Resource
                         ->modalSubmitActionLabel('Archive') 
                         ->modalCancelActionLabel('Cancel') 
                         ->color('danger')
-                        ->icon('heroicon-o-archive-box'),
+                        ->icon('heroicon-o-archive-box')
+                        ->visible(fn ($record) => $record->is_active === false),
                     Tables\Actions\RestoreAction::make(),
                     Tables\Actions\ForceDeleteAction::make(),
                 ])

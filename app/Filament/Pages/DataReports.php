@@ -5,13 +5,10 @@ namespace App\Filament\Pages;
 use App\Filament\Resources\DataReportsResource\Widgets\StockStatsWidget;
 use App\Filament\Widgets\CategoryStock;
 use App\Filament\Widgets\SalesReport;
-use App\Models\Category;
+use App\Models\Product;
 use Filament\Actions\Action;
-use Filament\Forms\Components\TextInput;
-use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Barryvdh\DomPDF\Facade\Pdf;
-use App\Exports\ReportsExport;
 
 class DataReports extends Page
 {
@@ -23,9 +20,8 @@ class DataReports extends Page
     public static function getNavigationGroup(): ?string
     {
         $user = auth()->user();
-    
         if ($user && $user->hasRole('admin')) {
-           return 'Reports';
+            return 'Reports';
         }
         return null;
     }
@@ -37,15 +33,13 @@ class DataReports extends Page
 
     protected function getHeaderWidgets(): array
     {
-
-        //Chart Object Here
         return [
             StockStatsWidget::class,
-            SalesReport::class, 
+            SalesReport::class,
             CategoryStock::class,
         ];
-
     }
+
     protected function getHeaderActions(): array
     {
         return [
@@ -53,29 +47,29 @@ class DataReports extends Page
                 ->label('Export PDF')
                 ->icon('heroicon-o-printer')
                 ->color('danger')
-                ->form([
-                    TextInput::make('filename')
-                        ->label('File Name')
-                        ->default('weekly-sales-report_' . now()->format('Ymd_His'))
-                        ->required()
-                        ->helperText('Do not include ".pdf" — it will be added automatically.')
-                        ->maxLength(100),
-                ])
-                ->action(function (array $data) {
-                    $export = new ReportsExport();
-                    $summary = $export->getWeeklySummary();
+                ->action(function () {
+                    // Fetch all products with variants, category, and brand
+                    $products = Product::with(['variants', 'category', 'brand'])
+                        ->orderBy('name')
+                        ->get()
+                        ->groupBy(fn($p) => $p->status); // group by stock status
 
-                    $pdf = Pdf::loadView('pdf.weekly-report', [
-                        'headings' => $export->headings(),
-                        'rows' => $export->array(),
-                        'summary' => $summary,
+                    // Render Blade view for the PDF
+                    $pdf = Pdf::loadView('pdf.inventory-report', [
+                        'groupedProducts' => $products,
                     ])->setPaper('A4', 'portrait');
 
+                    // Stream download
                     return response()->streamDownload(
                         fn () => print($pdf->output()),
-                        $data['filename'] . '.pdf'
+                        'inventory_report.pdf'
                     );
-                }),
+                })
+                ->requiresConfirmation()
+                ->modalHeading('Export Inventory Report')
+                ->modalDescription('Generate a full inventory report PDF grouped by stock status.')
+                ->modalSubmitActionLabel('Export')
+                ->modalCancelActionLabel('Cancel'),
         ];
     }
 }

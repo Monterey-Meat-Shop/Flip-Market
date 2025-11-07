@@ -384,16 +384,16 @@ class ReturnRequestResource extends Resource
             ->actions([
                 Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make()
-                    ->label('Archive')
-                    ->visible(fn ($record) => in_array($record->return_status, ['completed', 'rejected']))
-                    ->modalHeading('Archive Return Request')
-                    ->modalDescription('Are you sure you want to archive this return request? You can restore it later if needed.')
-                    ->modalSubmitActionLabel('Archive') 
-                    ->modalCancelActionLabel('Cancel') 
-                    ->color('danger')
-                    ->icon('heroicon-o-archive-box')
-                    ->visible(fn ($record) => in_array($record->return_status, ['completed', 'rejected'])),
+                // Tables\Actions\DeleteAction::make()
+                //     ->label('Archive')
+                //     ->visible(fn ($record) => in_array($record->return_status, ['completed', 'rejected']))
+                //     // ->modalHeading('Archive Return Request')
+                //     // ->modalDescription('Are you sure you want to archive this return request? You can restore it later if needed.')
+                //     // ->modalSubmitActionLabel('Archive') 
+                //     // ->modalCancelActionLabel('Cancel') 
+                //     // ->color('danger')
+                //     // ->icon('heroicon-o-archive-box')
+                //     ->visible(fn ($record) => in_array($record->return_status, ['completed', 'rejected'])),
                 Tables\Actions\RestoreAction::make(),
                 Tables\Actions\ForceDeleteAction::make(),
                 Tables\Actions\Action::make('approve')

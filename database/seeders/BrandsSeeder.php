@@ -44,6 +44,36 @@ class BrandsSeeder extends Seeder
                 'created_at' => Carbon::now(), 
                 'updated_at' => Carbon::now()
             ],
+
+            [
+                'name' => 'Jordan',
+                'created_at' => Carbon::now(), 
+                'updated_at' => Carbon::now()
+            ],
+
+            [
+                'name' => 'Under Armour',
+                'created_at' => Carbon::now(), 
+                'updated_at' => Carbon::now()
+            ],
+
+            [
+                'name' => 'New Balance',
+                'created_at' => Carbon::now(), 
+                'updated_at' => Carbon::now()
+            ],
+
+            [
+                'name' => 'Reebok',
+                'created_at' => Carbon::now(), 
+                'updated_at' => Carbon::now()
+            ],
+
+            [
+                'name' => 'Anta',
+                'created_at' => Carbon::now(), 
+                'updated_at' => Carbon::now()
+            ],
         ]);
     }
 }

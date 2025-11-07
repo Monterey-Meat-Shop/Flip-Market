@@ -49,11 +49,12 @@ class ListProducts extends ListRecords
             // query for total low stock
             'low_stock' => Tab::make('Low Stock')
                 ->modifyQueryUsing(function (Builder $query) {
-                    // Use withSum and having to get the total stock and filter
                     $query->withSum('variants', 'stock_quantity')
+                        ->having('variants_sum_stock_quantity', '>', 0)
                         ->having('variants_sum_stock_quantity', '<=', 4);
                 })
                 ->badge(Product::withSum('variants', 'stock_quantity')
+                    ->having('variants_sum_stock_quantity', '>', 0)
                     ->having('variants_sum_stock_quantity', '<=', 4)
                     ->count())
                 ->badgeColor('warning'),

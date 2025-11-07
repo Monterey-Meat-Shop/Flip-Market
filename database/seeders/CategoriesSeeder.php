@@ -44,6 +44,18 @@ class CategoriesSeeder extends Seeder
                 'created_at' => Carbon::now(), 
                 'updated_at' => Carbon::now()
             ],
+
+            [
+                'name' => 'Mens',
+                'created_at' => Carbon::now(), 
+                'updated_at' => Carbon::now()
+            ],
+
+            [
+                'name' => 'Womens',
+                'created_at' => Carbon::now(), 
+                'updated_at' => Carbon::now()
+            ],
         ]);
     }
 }
