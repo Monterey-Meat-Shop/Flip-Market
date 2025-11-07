@@ -8,6 +8,13 @@ use Illuminate\Foundation\Console\Kernel as ConsoleKernel;
 class Kernel extends ConsoleKernel
 {
     /**
+     * Register custom commands
+     */
+     protected $commands = [
+        \App\Console\Commands\CheckStockStatus::class,
+    ];
+
+    /**
      * Define the application's command schedule.
      */
     protected function schedule(Schedule $schedule): void
@@ -19,6 +26,11 @@ class Kernel extends ConsoleKernel
             ->everyFiveMinutes()
             ->withoutOverlapping()
             ->appendOutputTo(storage_path('logs/order-stock-check.log'));
+
+        // Schedule the stock check command
+        $schedule->command('stock:check')
+            ->everyFiveMinutes()
+            ->withoutOverlapping();
     }
 
     /**

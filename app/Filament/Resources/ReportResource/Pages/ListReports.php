@@ -2,14 +2,16 @@
 
 namespace App\Filament\Resources\ReportResource\Pages;
 
-use App\Exports\ReportsExport;
 use App\Filament\Resources\ReportResource;
-use Filament\Actions;
-use Filament\Forms;
 use Filament\Resources\Pages\Page;
-use Maatwebsite\Excel\Facades\Excel;
+use Filament\Forms;
+use Filament\Actions;
 use Barryvdh\DomPDF\Facade\Pdf;
-use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
+use App\Models\Order;
+use App\Models\OrderItem;
+use App\Models\Payment;
 
 class ListReports extends Page
 {
@@ -19,51 +21,79 @@ class ListReports extends Page
     protected function getHeaderActions(): array
     {
         return [
-            // Excel Export Button
-            // Actions\Action::make('export_excel')
-            //     ->label('Export Excel')
-            //     ->icon('heroicon-o-document-arrow-down')
-            //     ->color('success')
-            //     ->form([
-            //         Forms\Components\TextInput::make('filename')
-            //             ->label('File Name')
-            //             ->default('weekly-sales-report_' . now()->format('Ymd_His'))
-            //             ->required()
-            //             ->helperText('Do not include ".xlsx" — it will be added automatically.')
-            //             ->maxLength(100),
-            //     ])
-            //     ->action(fn (array $data): BinaryFileResponse =>
-            //         Excel::download(
-            //             new ReportsExport(),
-            //             $data['filename'] . '.xlsx'
-                //     )
-                // ),
-
-            // PDF Export Button
             Actions\Action::make('export_pdf')
                 ->label('Export PDF')
                 ->icon('heroicon-o-printer')
                 ->color('danger')
                 ->form([
+                    Forms\Components\Select::make('period')
+                        ->label('Report Type')
+                        ->options([
+                            'weekly' => 'Weekly Sales Report',
+                            'monthly' => 'Monthly Sales Report',
+                        ])
+                        ->default('weekly')
+                        ->required()
+                        ->live()
+                        ->afterStateUpdated(fn ($state, Forms\Set $set) => $set('month', null)),
+                    
+                    Forms\Components\Select::make('month')
+                        ->label('Select Month')
+                        ->options([
+                            '1' => 'January',
+                            '2' => 'February',
+                            '3' => 'March',
+                            '4' => 'April',
+                            '5' => 'May',
+                            '6' => 'June',
+                            '7' => 'July',
+                            '8' => 'August',
+                            '9' => 'September',
+                            '10' => 'October',
+                            '11' => 'November',
+                            '12' => 'December',
+                        ])
+                        ->default(now()->month)
+                        ->required()
+                        ->visible(fn (Forms\Get $get) => $get('period') === 'monthly'),
+                    
+                    Forms\Components\Select::make('year')
+                        ->label('Select Year')
+                        ->options(function () {
+                            $years = [];
+                            $currentYear = now()->year;
+                            for ($i = $currentYear; $i >= $currentYear - 5; $i--) {
+                                $years[$i] = $i;
+                            }
+                            return $years;
+                        })
+                        ->default(now()->year)
+                        ->required()
+                        ->visible(fn (Forms\Get $get) => $get('period') === 'monthly'),
+                    
                     Forms\Components\TextInput::make('filename')
                         ->label('File Name')
-                        ->default('weekly-sales-report_' . now()->format('Ymd_His'))
+                        ->default('sales-report_' . now()->format('Ymd_His'))
                         ->required()
                         ->helperText('Do not include ".pdf" — it will be added automatically.')
                         ->maxLength(100),
                 ])
                 ->action(function (array $data) {
-                    $export = new ReportsExport();
-                    $summary = $export->getWeeklySummary();
+                    $export = new \App\Exports\ReportsExport(
+                        $data['period'],
+                        $data['month'] ?? null,
+                        $data['year'] ?? null
+                    );
+                    $summary = $export->getSummary();
 
-                    $pdf = Pdf::loadView('pdf.weekly-report', [
+                    $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.weekly-report', [
                         'headings' => $export->headings(),
                         'rows' => $export->array(),
                         'summary' => $summary,
                     ])->setPaper('A4', 'portrait');
 
                     return response()->streamDownload(
-                        fn () => print($pdf->output()),
+                        fn() => print($pdf->output()),
                         $data['filename'] . '.pdf'
                     );
                 }),

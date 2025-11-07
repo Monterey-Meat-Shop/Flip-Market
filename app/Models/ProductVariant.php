@@ -32,57 +32,37 @@ class ProductVariant extends Model
         parent::boot();
 
         static::saved(function ($variant) {
-            $product = $variant->product;
-
-            if (! $product) {
-                return;
-            }
-
-            $totalStock = (int) $product->variants()->sum('stock_quantity');
-            Log::info("Saved Variant → Product {$product->productID}, totalStock = {$totalStock}");
-
-            if ($product->status !== 'pre_order') {
-                if ($totalStock === 0) {
-                    $product->status = 'out_of_stock';
-                } elseif ($totalStock <= 4) {
-                    $product->status = 'low_stock';
-                } else {
-                    $product->status = 'in_stock';
-                }
-            }
-
-            $product->is_active = ($product->status === 'pre_order') || ($totalStock > 0);
-
-            if ($product->isDirty(['status', 'is_active'])) {
-                $product->saveQuietly();
-            }
+            self::updateStockStatus($variant);
         });
 
         static::deleted(function ($variant) {
-            $product = $variant->product;
-
-            if (! $product) {
-                return;
-            }
-
-            $totalStock = (int) $product->variants()->sum('stock_quantity');
-            Log::info("Deleted Variant → Product {$product->productID}, totalStock = {$totalStock}");
-
-            if ($product->status !== 'pre_order') {
-                if ($totalStock === 0) {
-                    $product->status = 'out_of_stock';
-                } elseif ($totalStock <= 4) {
-                    $product->status = 'low_stock';
-                } else {
-                    $product->status = 'in_stock';
-                }
-            }
-
-            $product->is_active = ($product->status === 'pre_order') || ($totalStock > 0);
-
-            if ($product->isDirty(['status', 'is_active'])) {
-                $product->saveQuietly();
-            }
+            self::updateStockStatus($variant);
         });
+    }
+
+    protected static function updateStockStatus($variant): void
+    {
+        $product = $variant->product;
+        if (!$product) return;
+
+        $totalStock = (int) $product->variants()->sum('stock_quantity');
+
+        if ($product->status !== 'pre_order') {
+            if ($totalStock === 0) {
+                $product->status = 'out_of_stock';
+            } elseif ($totalStock <= 4) {
+                $product->status = 'low_stock';
+            } else {
+                $product->status = 'in_stock';
+            }
+        }
+
+        if ($product->status === 'pre_order') {
+            $product->is_active = true;
+        }
+
+        if ($product->isDirty(['status'])) {
+            $product->saveQuietly();
+        }
     }
 }

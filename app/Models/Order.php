@@ -30,7 +30,7 @@ class Order extends Model
         'postal_code',
         'city',
         'province',
-        'payment_status',
+        // 'payment_status',
         'stock_deducted',
     ];
 

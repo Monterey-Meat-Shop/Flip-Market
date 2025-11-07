@@ -22,7 +22,7 @@ class DatabaseSeeder extends Seeder
             // CustomerSeeder::class,
             // AddressSeeder::class,
             ProductSeeder::class,
-            CashierSalesSeeder::class,
+            // CashierSalesSeeder::class,
         ]);
 
         // Admin user

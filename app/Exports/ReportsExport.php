@@ -2,187 +2,112 @@
 
 namespace App\Exports;
 
-use Maatwebsite\Excel\Concerns\FromCollection;
-use Maatwebsite\Excel\Concerns\WithHeadings;
-use Maatwebsite\Excel\Concerns\WithMapping;
 use App\Models\Order;
 use App\Models\Payment;
-use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
+use Maatwebsite\Excel\Concerns\FromArray;
+use Maatwebsite\Excel\Concerns\WithHeadings;
 
-class ReportsExport implements FromCollection, WithHeadings, WithMapping
+class ReportsExport implements FromArray, WithHeadings
 {
-    protected $startOfWeek;
-    protected $endOfWeek;
-    protected $orderAmountColumn;
-    protected $paymentAmountColumn;
+    protected $startDate;
+    protected $endDate;
+    protected $period;
 
-    public function __construct()
+    public function __construct($period = 'weekly', $month = null, $year = null)
     {
-        $this->startOfWeek = Carbon::now()->startOfWeek();
-        $this->endOfWeek = Carbon::now()->endOfWeek();
-        
-        // Detect amount columns
-        if (class_exists(Order::class) && Schema::hasTable((new Order())->getTable())) {
-            $orderTable = (new Order())->getTable();
-            foreach (['total', 'total_amount', 'amount', 'grand_total'] as $col) {
-                if (Schema::hasColumn($orderTable, $col)) {
-                    $this->orderAmountColumn = $col;
-                    break;
-                }
-            }
-        }
+        $this->period = $period;
+        $year = $year ?? now()->year;
 
-        if (class_exists(Payment::class) && Schema::hasTable((new Payment())->getTable())) {
-            $paymentTable = (new Payment())->getTable();
-            foreach (['amount', 'total', 'paid_amount'] as $col) {
-                if (Schema::hasColumn($paymentTable, $col)) {
-                    $this->paymentAmountColumn = $col;
-                    break;
-                }
-            }
+        if ($period === 'monthly') {
+            $month = $month ?? now()->month;
+            $this->startDate = Carbon::create($year, $month, 1)->startOfMonth();
+            $this->endDate = Carbon::create($year, $month, 1)->endOfMonth();
+        } elseif ($period === 'yearly') {
+            $this->startDate = Carbon::create($year, 1, 1)->startOfYear();
+            $this->endDate = Carbon::create($year, 12, 31)->endOfYear();
+        } else {
+            $this->startDate = Carbon::now()->startOfWeek();
+            $this->endDate = Carbon::now()->endOfWeek();
         }
     }
 
-    public function collection()
+    public function getSummary()
     {
-        $data = collect();
+        $start = $this->startDate->copy()->startOfDay();
+        $end = $this->endDate->copy()->endOfDay();
 
-        // Add Orders data
-        if (class_exists(Order::class) && Schema::hasTable((new Order())->getTable())) {
-            $orders = Order::whereBetween('created_at', [$this->startOfWeek, $this->endOfWeek])
-                ->orderBy('created_at', 'desc')
-                ->get();
+        // Get completed orders WITH payments (joined by orderID)
+        $orders = Order::query()
+            ->whereBetween('order_date', [$start, $end])
+            ->where('order_status', 'completed')
+            ->whereHas('payment', function ($query) {
+                $query->whereIn('status', ['paid', 'verified']);
+            })
+            ->get();
 
-            foreach ($orders as $order) {
-                $data->push([
-                    'type' => 'Order',
-                    'id' => $order->id,
-                    'date' => $order->created_at->format('Y-m-d H:i:s'),
-                    'amount' => $this->orderAmountColumn ? $order->{$this->orderAmountColumn} : 0,
-                    'status' => $order->status ?? 'N/A',
-                    'reference' => $order->order_number ?? $order->id,
-                    'customer' => $order->customer_name ?? $order->user->name ?? 'N/A',
-                ]);
-            }
-        }
+        // Get all payments (paid) within the same date range
+        $payments = Payment::query()
+            ->whereBetween('created_at', [$start, $end])
+            ->where('status', 'paid')
+            ->get();
 
-        // Add Payments data
-        if (class_exists(Payment::class) && Schema::hasTable((new Payment())->getTable())) {
-            $payments = Payment::whereBetween('created_at', [$this->startOfWeek, $this->endOfWeek])
-                ->orderBy('created_at', 'desc')
-                ->get();
+        // Count pending payments
+        $pendingPayments = Payment::query()
+            ->whereBetween('created_at', [$start, $end])
+            ->where('status', 'pending')
+            ->count();
 
-            foreach ($payments as $payment) {
-                $data->push([
-                    'type' => 'Payment',
-                    'id' => $payment->id,
-                    'date' => $payment->created_at->format('Y-m-d H:i:s'),
-                    'amount' => $this->paymentAmountColumn ? $payment->{$this->paymentAmountColumn} : 0,
-                    'status' => $payment->status ?? 'N/A',
-                    'reference' => $payment->reference_number ?? $payment->transaction_id ?? $payment->id,
-                    'customer' => $payment->customer_name ?? $payment->user->name ?? 'N/A',
-                ]);
-            }
-        }
+        // Calculate totals
+        $totalOrders = $orders->count();
+        $totalOrderAmount = $orders->sum('final_amount');
+        $totalPaymentsCount = $payments->count();
+        $totalPayments = $payments->sum('amount');
 
-        return $data->sortByDesc('date');
+        // Titles
+        $reportTitle = match ($this->period) {
+            'monthly' => 'Monthly Sales & Orders Report',
+            'yearly' => 'Yearly Sales & Orders Report',
+            default => 'Weekly Sales & Orders Report',
+        };
+
+        $periodType = ucfirst($this->period);
+
+        return [
+            'orders_count' => $totalOrders,
+            'orders_total' => $totalOrderAmount,
+            'payments_count' => $totalPaymentsCount,
+            'payments_total' => $totalPayments,
+            'payments_pending' => $pendingPayments,
+            'period_start' => $start->format('M j'),
+            'period_end' => $end->format('M j, Y'),
+            'report_title' => $reportTitle,
+            'period_type' => $periodType,
+        ];
+    }
+
+    public function array(): array
+    {
+        $summary = $this->getSummary();
+
+        return [
+            [
+                'Total Orders',
+                $summary['orders_count'],
+                '₱' . number_format($summary['orders_total'], 2),
+                '₱' . number_format($summary['payments_total'], 2),
+            ],
+        ];
     }
 
     public function headings(): array
     {
         return [
-            'Type',
-            'ID',
-            'Date',
-            'Amount (₱)',
-            'Status',
-            'Reference',
-            'Customer',
-        ];
-    }
-
-    public function map($item): array
-    {
-        return [
-            $item['type'],
-            $item['id'],
-            $item['date'],
-            '₱' . number_format((float)$item['amount'], 2),
-            $item['status'],
-            $item['reference'],
-            $item['customer'],
-        ];
-    }
-
-    // Helper method for PDF generation
-    public function array(): array
-    {
-        return $this->collection()->map(function ($item) {
-            return $this->map($item);
-        })->toArray();
-    }
-
-    // Get summary statistics for PDF
-    public function getWeeklySummary(): array
-    {
-        $ttl = 60;
-
-        // Orders Stats
-        $ordersCount = 0;
-        $ordersTotal = 0;
-        if (class_exists(Order::class) && Schema::hasTable((new Order())->getTable())) {
-            $ordersCount = Cache::remember("export:orders_count", $ttl, function () {
-                return Order::whereBetween('created_at', [$this->startOfWeek, $this->endOfWeek])->count();
-            });
-
-            if ($this->orderAmountColumn) {
-                $ordersTotal = Cache::remember("export:orders_total", $ttl, function () {
-                    return Order::whereBetween('created_at', [$this->startOfWeek, $this->endOfWeek])
-                        ->sum($this->orderAmountColumn);
-                });
-            }
-        }
-
-        // Payments Stats
-        $paymentsCount = 0;
-        $paymentsTotal = 0;
-        $paymentsPending = 0;
-        if (class_exists(Payment::class) && Schema::hasTable((new Payment())->getTable())) {
-            $paymentTable = (new Payment())->getTable();
-            
-            $paymentsCount = Cache::remember("export:payments_count", $ttl, function () {
-                return Payment::whereBetween('created_at', [$this->startOfWeek, $this->endOfWeek])->count();
-            });
-
-            if ($this->paymentAmountColumn) {
-                $paymentsTotal = Cache::remember("export:payments_total", $ttl, function () {
-                    return Payment::whereBetween('created_at', [$this->startOfWeek, $this->endOfWeek])
-                        ->sum($this->paymentAmountColumn);
-                });
-            }
-
-            if (Schema::hasColumn($paymentTable, 'status')) {
-                $paymentsPending = Cache::remember("export:payments_pending", $ttl, function () {
-                    return Payment::whereBetween('created_at', [$this->startOfWeek, $this->endOfWeek])
-                        ->where('status', 'pending')
-                        ->count();
-                });
-            }
-        }
-
-        return [
-            'period_start' => $this->startOfWeek->format('M j, Y'),
-            'period_end' => $this->endOfWeek->format('M j, Y'),
-            'orders_count' => $ordersCount,
-            'orders_total' => $ordersTotal,
-            'payments_count' => $paymentsCount,
-            'payments_total' => $paymentsTotal,
-            'payments_pending' => $paymentsPending,
-            'total_records' => $ordersCount + $paymentsCount,
+            'Description',
+            'Count',
+            'Total Order Amount',
+            'Total Payments',
         ];
     }
 }
