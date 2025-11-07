@@ -4,10 +4,9 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Contracts\Auth\MustVerifyEmail; // ✅ Added to enable email verification
+use Illuminate\Contracts\Auth\MustVerifyEmail; // ✅ enable email verification
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Illuminate\Support\Str;
 use Filament\Panel;
 use Filament\Models\Contracts\FilamentUser;
 use Laravel\Sanctum\HasApiTokens;
@@ -16,18 +15,23 @@ use Spatie\Permission\Traits\HasRoles;
 use App\Models\Customer;
 use App\Models\Order;
 
-class User extends Authenticatable implements FilamentUser, MustVerifyEmail // ✅ Added MustVerifyEmail
+class User extends Authenticatable implements FilamentUser, MustVerifyEmail
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasApiTokens, HasFactory, Notifiable, HasRoles, SoftDeletes;
 
     protected $fillable = [
         'name',
-        'email',
-        'password',
-        //'first_name',
         'last_name',
+        'email',
         'phone',
+        'password',
+        'is_active',
+        'postal_code',
+        'address_line_1',
+        'address_line_2',
+        'city',
+        'province',
     ];
 
     protected $hidden = [
@@ -76,11 +80,11 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail // �
     public function orders()
     {
         return $this->hasManyThrough(
-            Order::class,     
-            Customer::class,  
-            'user_id',     
-            'customerID',  
-            'id',          
+            Order::class,
+            Customer::class,
+            'user_id',
+            'customerID',
+            'id',
             'customerID'
         );
     }

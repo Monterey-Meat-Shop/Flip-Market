@@ -148,31 +148,38 @@ class RegisterPage extends Component
 
         // ✅ Continue registration as normal
         $user = User::create([
-            'name' => $this->firstname,
-            'last_name' => $this->lastname,
-            'email' => $this->email,
-            'phone' => $this->phone,
-            'password' => bcrypt($this->password),
-            'is_active' => true,
+            'name'          => $this->firstname,
+            'last_name'     => $this->lastname,
+            'email'         => $this->email,
+            'phone'         => $this->phone,
+            'password'      => bcrypt($this->password),
+            'is_active'     => true,
+
+            // 🔹 added so Filament "Customer Information" can see latest data directly on users table
+            'postal_code'     => $this->postal_code,
+            'address_line_1'  => $this->address_line_1,
+            'address_line_2'  => $this->address_line_2,
+            'city'            => $this->city,
+            'province'        => $this->province,
         ]);
 
         $user->assignRole('customer'); // automatically assign the user as a customer
 
         $customer = Customer::create([
-            'user_id' => $user->id,
+            'user_id'    => $user->id,
             'first_name' => $this->firstname,
-            'last_name' => $this->lastname,
-            'phone' => $this->phone,
-            'is_active' => true,
+            'last_name'  => $this->lastname,
+            'phone'      => $this->phone,
+            'is_active'  => true,
         ]);
 
         $address = Address::create([
-            'customerID' => $customer->customerID,
+            'customerID'     => $customer->customerID,
             'address_line_1' => $this->address_line_1,
             'address_line_2' => $this->address_line_2,
-            'city' => $this->city,
-            'province' => $this->province,
-            'postal_code' => $this->postal_code,
+            'city'           => $this->city,
+            'province'       => $this->province,
+            'postal_code'    => $this->postal_code,
         ]);
 
         // ✅ Trigger email verification (Laravel built-in)
@@ -180,19 +187,36 @@ class RegisterPage extends Component
 
         // ✅ Optional: Send a welcome email immediately
         try {
-            Mail::raw('Welcome to Flip Market! Your account has been successfully created.', function ($message) {
-                $message->to($this->email)
-                        ->subject('Welcome to Flip Market!');
-            });
+            Mail::raw(
+                'Welcome to Flip Market! Your account has been successfully created.',
+                function ($message) {
+                    $message->to($this->email)
+                            ->subject('Welcome to Flip Market!');
+                }
+            );
         } catch (\Exception $e) {
             // Silent fail — you can log this if needed
         }
 
         // ✅ Show success message instead of redirect
-        $this->successMessage = '🎉 Account created successfully! A verification and welcome email were sent to ' . $this->email . '. Please check your inbox.';
+        $this->successMessage =
+            '🎉 Account created successfully! A verification and welcome email were sent to ' .
+            $this->email . '. Please check your inbox.';
 
         // Optional: clear form inputs
-        $this->reset(['firstname','lastname','email','password','password_confirmation','phone','address_line_1','address_line_2','city','province','postal_code']);
+        $this->reset([
+            'firstname',
+            'lastname',
+            'email',
+            'password',
+            'password_confirmation',
+            'phone',
+            'address_line_1',
+            'address_line_2',
+            'city',
+            'province',
+            'postal_code',
+        ]);
     }
 
     public function render()

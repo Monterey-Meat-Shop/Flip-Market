@@ -55,10 +55,10 @@ class MyAccountPage extends Component
         
         if (!$this->customer) {
             $this->customer = Customer::create([
-                'user_id' => Auth::id(),
+                'user_id'    => Auth::id(),
                 'first_name' => Auth::user()->name ?? '',
-                'last_name' => '',
-                'email' => Auth::user()->email,
+                'last_name'  => '',
+                'email'      => Auth::user()->email,
             ]);
         }
 
@@ -68,10 +68,20 @@ class MyAccountPage extends Component
 
     public function loadProfile()
     {
-        $this->firstname = $this->customer->first_name ?? '';
-        $this->lastname = $this->customer->last_name ?? '';
-        $this->email = $this->customer->email ?? Auth::user()->email;
-        $this->phone = $this->customer->phone ?? '';
+        $user = Auth::user();
+
+        // ✅ Prefer data from users table; fall back to customer if needed
+        $this->firstname = $user->name
+            ?? ($this->customer->first_name ?? '');
+
+        $this->lastname = $user->last_name
+            ?? ($this->customer->last_name ?? '');
+
+        $this->email = $user->email
+            ?? ($this->customer->email ?? '');
+
+        $this->phone = $user->phone
+            ?? ($this->customer->phone ?? '');
     }
 
     public function loadAddresses()
@@ -79,74 +89,79 @@ class MyAccountPage extends Component
         $this->addresses = $this->customer->address()->get();
     }
 
-  public function saveProfile()
-{
-    $this->validate([
-        'firstname' => [
-            'required',
-            'string',
-            'max:255',
-            'regex:/^[A-Za-z\s\-]+$/',
-            'not_regex:/[0-9!@#$%^&*(),.?":{}|<>]/'
-        ],
-        'lastname' => [
-            'required',
-            'string',
-            'max:255',
-            'regex:/^[A-Za-z\s\-]+$/',
-            'not_regex:/[0-9!@#$%^&*(),.?":{}|<>]/'
-        ],
-        'email' => [
-            'required',
-            'email:rfc,dns',
-            'max:255'
-        ],
-        'phone' => [
-            'nullable',
-            'regex:/^[0-9]{11}$/'
-        ],
-    ], [
-        'firstname.regex' => 'The first name may only contain letters, spaces, or hyphens.',
-        'lastname.regex' => 'The last name may only contain letters, spaces, or hyphens.',
-        'firstname.not_regex' => 'The first name cannot contain symbols or numbers.',
-        'lastname.not_regex' => 'The last name cannot contain symbols or numbers.',
-        'phone.regex' => 'The phone number must be exactly 11 digits and contain numbers only.',
-        'email.email' => 'Please enter a valid and active email address.',
-    ]);
-
-    try {
-        // ✅ Update customer table
-        $this->customer->update([
-            'first_name' => $this->firstname,
-            'last_name'  => $this->lastname,
-            'email'      => $this->email,
-            'phone'      => $this->phone,
+    public function saveProfile()
+    {
+        $this->validate([
+            'firstname' => [
+                'required',
+                'string',
+                'max:255',
+                'regex:/^[A-Za-z\s\-]+$/',
+                'not_regex:/[0-9!@#$%^&*(),.?":{}|<>]/'
+            ],
+            'lastname' => [
+                'required',
+                'string',
+                'max:255',
+                'regex:/^[A-Za-z\s\-]+$/',
+                'not_regex:/[0-9!@#$%^&*(),.?":{}|<>]/'
+            ],
+            'email' => [
+                'required',
+                'email:rfc,dns',
+                'max:255'
+            ],
+            'phone' => [
+                'nullable',
+                'regex:/^[0-9]{11}$/'
+            ],
+        ], [
+            'firstname.regex'      => 'The first name may only contain letters, spaces, or hyphens.',
+            'lastname.regex'       => 'The last name may only contain letters, spaces, or hyphens.',
+            'firstname.not_regex'  => 'The first name cannot contain symbols or numbers.',
+            'lastname.not_regex'   => 'The last name cannot contain symbols or numbers.',
+            'phone.regex'          => 'The phone number must be exactly 11 digits and contain numbers only.',
+            'email.email'          => 'Please enter a valid and active email address.',
         ]);
 
-        // ✅ Update Auth user and refresh the session
-        Auth::user()->update(['name' => "{$this->firstname} {$this->lastname}"]);
-        Auth::setUser(Auth::user()->fresh()); // 💡 Forces session refresh
+        try {
+            // ✅ Update customer record
+            $this->customer->update([
+                'first_name' => $this->firstname,
+                'last_name'  => $this->lastname,
+                'email'      => $this->email,
+                'phone'      => $this->phone,
+            ]);
 
-        // ✅ Notify navigation bar & frontend
-        $updatedName = "{$this->firstname} {$this->lastname}";
-        $this->dispatch('userNameUpdated', $updatedName);
+            // ✅ Update auth user: keep FIRST and LAST name separate
+            $user = Auth::user();
 
-        // ✅ Toast success message
-        $this->dispatch('notify', [
-            'message' => 'Profile updated successfully!',
-            'type' => 'success',
-        ]);
-    } catch (\Exception $e) {
-        $this->dispatch('notify', [
-            'message' => 'Failed to update profile: ' . $e->getMessage(),
-            'type' => 'error',
-        ]);
+            $user->update([
+                'name'      => $this->firstname,   // first name only
+                'last_name' => $this->lastname,
+                'email'     => $this->email,
+                'phone'     => $this->phone,
+            ]);
+
+            // ✅ Refresh session user
+            Auth::setUser($user->fresh());
+
+            // ✅ Notify navbar / frontend (kept from your logic)
+            $updatedName = "{$this->firstname} {$this->lastname}";
+            $this->dispatch('userNameUpdated', $updatedName);
+
+            // ✅ Toast
+            $this->dispatch('notify', [
+                'message' => 'Profile updated successfully!',
+                'type'    => 'success',
+            ]);
+        } catch (\Exception $e) {
+            $this->dispatch('notify', [
+                'message' => 'Failed to update profile: ' . $e->getMessage(),
+                'type'    => 'error',
+            ]);
+        }
     }
-}
-
-
-
-
 
     public function showNewAddressForm()
     {
@@ -162,9 +177,9 @@ class MyAccountPage extends Component
             $this->editingAddressId = $addressId;
             $this->address_line_1 = $address->address_line_1;
             $this->address_line_2 = $address->address_line_2;
-            $this->city = $address->city;
-            $this->province = $address->province;
-            $this->postal_code = $address->postal_code;
+            $this->city           = $address->city;
+            $this->province       = $address->province;
+            $this->postal_code    = $address->postal_code;
             $this->showAddressForm = true;
         }
     }
@@ -174,18 +189,18 @@ class MyAccountPage extends Component
         $this->validate([
             'address_line_1' => 'required|string|max:255',
             'address_line_2' => 'nullable|string|max:255',
-            'city' => 'required|string|max:100',
-            'province' => 'required|string|max:100',
-            'postal_code' => 'required|string|max:20',
+            'city'           => 'required|string|max:100',
+            'province'       => 'required|string|max:100',
+            'postal_code'    => 'required|string|max:20',
         ]);
 
         try {
             $addressData = [
                 'address_line_1' => $this->address_line_1,
                 'address_line_2' => $this->address_line_2,
-                'city' => $this->city,
-                'province' => $this->province,
-                'postal_code' => $this->postal_code,
+                'city'           => $this->city,
+                'province'       => $this->province,
+                'postal_code'    => $this->postal_code,
             ];
 
             if ($this->editingAddressId) {
@@ -231,34 +246,34 @@ class MyAccountPage extends Component
     {
         $this->address_line_1 = '';
         $this->address_line_2 = '';
-        $this->city = '';
-        $this->province = '';
-        $this->postal_code = '';
+        $this->city           = '';
+        $this->province       = '';
+        $this->postal_code    = '';
         $this->editingAddressId = null;
     }
 
     public function changePassword()
     {
         $this->validate([
-            'current_password' => 'required',
-            'new_password' => 'required|min:8',
-            'confirm_password' => 'required|same:new_password',
+            'current_password'  => 'required',
+            'new_password'      => 'required|min:8',
+            'confirm_password'  => 'required|same:new_password',
         ]);
 
         try {
             $user = Auth::user();
 
-            if (!Hash::check($this->current_password, $user->password)) {
+            if (! Hash::check($this->current_password, $user->password)) {
                 session()->flash('error', 'Current password is incorrect.');
                 return;
             }
 
             $user->update([
-                'password' => Hash::make($this->new_password)
+                'password' => Hash::make($this->new_password),
             ]);
 
             $this->current_password = '';
-            $this->new_password = '';
+            $this->new_password     = '';
             $this->confirm_password = '';
 
             session()->flash('success', 'Password changed successfully!');
