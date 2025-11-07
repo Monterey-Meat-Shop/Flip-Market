@@ -6,107 +6,111 @@
             <div class="mx-auto max-w-7xl px-6 grid grid-cols-1 lg:grid-cols-5 gap-8">
 
                 <!-- Filter Sidebar -->
-                <aside class="bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl p-4 shadow-2xl lg:col-span-1 h-fit sticky top-4 border border-gray-700">
-                    <h2 class="text-lg font-bold text-white mb-4 tracking-wide">Filters</h2>
+                <aside class="bg-white rounded-2xl p-4 shadow-lg lg:col-span-1 h-fit sticky top-4 border border-gray-200">
+                    <h2 class="text-lg font-bold text-gray-900 mb-4 tracking-wide">Filters</h2>
 
-                <!-- Price Range -->
-                <div class="mb-6">
-                    <h3 class="text-sm font-semibold text-gray-600 mb-2">Price Range</h3>
-        
-                    <div class="flex flex-col space-x-2">
-                        <div class="flex items-center justify-between">
-                            <label class="text-gray-700">Low</label>
-                            <label class="text-gray-700">High</label>
+                    <!-- Price Range -->
+                    <div class="mb-6">
+                        <h3 class="text-sm font-semibold text-gray-700 mb-2">Price Range</h3>
+
+                        <div class="flex flex-col space-x-2">
+                            <div class="flex items-center justify-between">
+                                <label class="text-gray-600">Low</label>
+                                <label class="text-gray-600">High</label>
+                            </div>
+                            <div class="flex gap-2">
+                                <input type="number"
+                                    min="{{ $minPrice }}"
+                                    max="{{ $maxPriceSelected }}"
+                                    wire:model.lazy="minPriceSelected"
+                                    wire:keydown.enter="updatePriceRange"
+                                    class="w-1/2 border rounded px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                                    placeholder="Min price">
+                                <label class="text-gray-600">-</label>
+                                <input type="number"
+                                    min="{{ $minPriceSelected }}"
+                                    max="{{ $maxPrice }}"
+                                    wire:model.lazy="maxPriceSelected"
+                                    wire:keydown.enter="updatePriceRange"
+                                    class="w-1/2 border rounded px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                                    placeholder="Max price">
+                            </div>
                         </div>
-                        <div class="flex gap-2">
-                            <input type="number" 
-                                min="{{ $minPrice }}" 
-                                max="{{ $maxPriceSelected }}" 
-                                wire:model.lazy="minPriceSelected" 
-                                wire:keydown.enter="updatePriceRange" 
-                                class="w-1/2 border rounded px-2 py-1" 
-                                placeholder="Min price"> 
-                            <label class="text-gray-700">-</label>
-                            <input type="number"
-                                min="{{ $minPriceSelected }}" 
-                                max="{{ $maxPrice }}" 
-                                wire:model.lazy="maxPriceSelected" 
-                                wire:keydown.enter="updatePriceRange" 
-                                class="w-1/2 border rounded px-2 py-1" 
-                                placeholder="Max price">
-                        </div>
+
+                        <p class="text-sm text-gray-500 mt-1">
+                            Showing products between ₱{{ number_format($minPriceSelected) }} and ₱{{ number_format($maxPriceSelected) }}
+                        </p>
                     </div>
-        
-                    <p class="text-sm text-gray-500 mt-1">
-                        Showing products between ₱{{ number_format($minPriceSelected) }} and ₱{{ number_format($maxPriceSelected) }}
-                    </p>
-                </div>
 
-                <!-- Sale and Pre-Order Filter -->
-                <div class="mb-6">
-                    <h3 class="text-sm font-semibold text-gray-600 mb-2">Availability</h3>
-                    <ul class="space-y-2 text-gray-700">
-                        <li>
-                            <input 
-                                type="checkbox"
-                                id="on-sale"
-                                wire:model.live="filterSale"
-                                wire:change="$refresh"
-                                class="mr-2 cursor-pointer"
-                            >
-                            <label for="on-sale" class="cursor-pointer">On Sale</label>
-                        </li>
-                        <li>
-                            <input 
-                                type="checkbox"
-                                id="pre-order"
-                                wire:model.live="filterPreOrder"
-                                wire:change="$refresh"
-                                class="mr-2 cursor-pointer"
-                            >
-                            <label for="pre-order" class="cursor-pointer">Pre-Order</label>
-                        </li>
-                    </ul>
-                </div>
-
-                <!-- Category Filter -->
-                <div class="mb-6">
-                    <h3 class="text-sm font-semibold text-gray-600 mb-2">Category</h3>
-                    <ul class="space-y-2 text-gray-700">
-                        @foreach($categories as $category)
-                            <li wire:key="category-{{ $category->CategoryID }}">
-                                <input type="checkbox"
-                                    id="category-{{ $category->CategoryID }}"
-                                    wire:model.live="selectedCategories"
-                                    value="{{ $category->CategoryID }}"
-                                    class="mr-2">
-                                <label for="category-{{ $category->CategoryID }}">{{ $category->name }}</label>
+                    <!-- Sale and Pre-Order Filter -->
+                    <div class="mb-6">
+                        <h3 class="text-sm font-semibold text-gray-700 mb-2">Availability</h3>
+                        <ul class="space-y-2 text-gray-700">
+                            <li>
+                                <input
+                                    type="checkbox"
+                                    id="on-sale"
+                                    wire:model.live="filterSale"
+                                    wire:change="$refresh"
+                                    class="mr-2 cursor-pointer"
+                                >
+                                <label for="on-sale" class="cursor-pointer">On Sale</label>
                             </li>
-                        @endforeach
-                    </ul>
-                </div>
-
-                <!-- Brand Filter -->
-                <div class="mb-6">
-                    <h3 class="text-sm font-semibold text-gray-600 mb-2">Brand</h3>
-                    <ul class="space-y-2 text-gray-700">
-                        @foreach($brands as $brand)
-                            <li wire:key="brand-{{ $brand->BrandID }}">
-                                <input type="checkbox"
-                                    id="brand-{{ $brand->BrandID }}"
-                                    wire:model.live="selectedBrands"
-                                    value="{{ $brand->BrandID }}"
-                                    class="mr-2">
-                                <label for="brand-{{ $brand->BrandID }}">{{ $brand->name }}</label>
+                            <li>
+                                <input
+                                    type="checkbox"
+                                    id="pre-order"
+                                    wire:model.live="filterPreOrder"
+                                    wire:change="$refresh"
+                                    class="mr-2 cursor-pointer"
+                                >
+                                <label for="pre-order" class="cursor-pointer">Pre-Order</label>
                             </li>
-                        @endforeach
-                    </ul>
-                </div>
+                        </ul>
+                    </div>
+
+                    <!-- Category Filter -->
+                    <div class="mb-6">
+                        <h3 class="text-sm font-semibold text-gray-700 mb-2">Category</h3>
+                        <ul class="space-y-2 text-gray-700">
+                            @foreach($categories as $category)
+                                <li wire:key="category-{{ $category->CategoryID }}">
+                                    <input type="checkbox"
+                                        id="category-{{ $category->CategoryID }}"
+                                        wire:model.live="selectedCategories"
+                                        value="{{ $category->CategoryID }}"
+                                        class="mr-2 cursor-pointer">
+                                    <label for="category-{{ $category->CategoryID }}" class="cursor-pointer">
+                                        {{ $category->name }}
+                                    </label>
+                                </li>
+                            @endforeach
+                        </ul>
+                    </div>
+
+                    <!-- Brand Filter -->
+                    <div class="mb-6">
+                        <h3 class="text-sm font-semibold text-gray-700 mb-2">Brand</h3>
+                        <ul class="space-y-2 text-gray-700">
+                            @foreach($brands as $brand)
+                                <li wire:key="brand-{{ $brand->BrandID }}">
+                                    <input type="checkbox"
+                                        id="brand-{{ $brand->BrandID }}"
+                                        wire:model.live="selectedBrands"
+                                        value="{{ $brand->BrandID }}"
+                                        class="mr-2 cursor-pointer">
+                                    <label for="brand-{{ $brand->BrandID }}" class="cursor-pointer">
+                                        {{ $brand->name }}
+                                    </label>
+                                </li>
+                            @endforeach
+                        </ul>
+                    </div>
 
                     <!-- Clear Filters Button -->
-                    <button 
-                        wire:click="clearFilters" 
-                        class="w-full bg-gradient-to-r from-gray-200 to-gray-300 hover:from-gray-300 hover:to-gray-400 text-gray-800 font-semibold py-2 px-3 rounded-lg transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 text-sm"
+                    <button
+                        wire:click="clearFilters"
+                        class="w-full bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold py-2 px-3 rounded-lg transition-all duration-300 shadow-sm hover:shadow-md text-sm"
                     >
                         Clear All Filters
                     </button>
@@ -127,36 +131,35 @@
                                 <a href="{{ route('product.detail', $product->productID) }}" class="block">
                                     <div class="relative overflow-hidden group">
                                         <img 
-    src="{{ image_url($product->image_path) }}" 
-    alt="{{ $product->name }}" 
-    class="w-full h-40 object-cover group-hover:scale-110 transition-transform duration-300"
-/>
+                                            src="{{ image_url($product->image_path) }}" 
+                                            alt="{{ $product->name }}" 
+                                            class="w-full h-40 object-cover group-hover:scale-110 transition-transform duration-300"
+                                        />
 
-                                        <!-- Optional: Add brand badge -->
                                         @if($product->brand)
                                             <span class="absolute top-2 left-2 bg-black bg-opacity-80 text-white text-xs px-2 py-1 rounded-full font-semibold shadow-md">
                                                 {{ $product->brand->name }}
                                             </span>
                                         @endif
 
-                                    @if($product->discounted_price < $product->price)
-                                        <span class="absolute top-2 right-2 bg-red-600 text-white text-xs font-bold px-2 py-1 rounded shadow-md">
-                                            SALE
-                                        </span>
-                                    @endif
+                                        @if($product->discounted_price < $product->price)
+                                            <span class="absolute top-2 right-2 bg-red-600 text-white text-xs font-bold px-2 py-1 rounded shadow-md">
+                                                SALE
+                                            </span>
+                                        @endif
 
-                                    @if(strtolower($product->status) === 'pre_order')
-                                        <span class="absolute top-2 right-2 bg-yellow-500 text-white text-xs font-bold px-2 py-1 rounded shadow-md">
-                                            PRE-ORDER
-                                        </span>
-                                    @endif
+                                        @if(strtolower($product->status) === 'pre_order')
+                                            <span class="absolute top-2 right-2 bg-yellow-500 text-white text-xs font-bold px-2 py-1 rounded shadow-md">
+                                                PRE-ORDER
+                                            </span>
+                                        @endif
 
-                                    @if($product->total_stock_quantity <= 0)
-                                        <span class="absolute top-2 right-2 bg-red-500 text-white text-xs px-2 py-1 rounded">
-                                            Out of Stock
-                                        </span>
-                                    @endif
-                                </div>
+                                        @if($product->total_stock_quantity <= 0)
+                                            <span class="absolute top-2 right-2 bg-red-500 text-white text-xs px-2 py-1 rounded">
+                                                Out of Stock
+                                            </span>
+                                        @endif
+                                    </div>
 
                                     <div class="p-4 flex flex-col justify-between h-28">
                                         <div>
@@ -167,7 +170,9 @@
 
                                             @if($product->discounted_price < $product->price)
                                                 <div class="flex items-center space-x-1">
-                                                    <p class="text-xs text-gray-500 line-through leading-tight">₱{{ number_format($product->price, 2) }}</p>
+                                                    <p class="text-xs text-gray-500 line-through leading-tight">
+                                                        ₱{{ number_format($product->price, 2) }}
+                                                    </p>
                                                     <p class="text-lg font-bold text-red-600 leading-tight">
                                                         ₱{{ number_format($product->discounted_price, 2) }}
                                                     </p>
@@ -201,91 +206,63 @@
                                 <script>
                                     function checkLoginAndAddToCart(productID) {
                                     @auth
-                                        // Apply animation when adding to cart (optional)
                                         const button = event.target;
-                                        button.classList.add("animate-ping");  // Animation effect
-
-                                        // Delay to ensure animation finishes before adding to cart
+                                        button.classList.add("animate-ping");
                                         setTimeout(function() {
                                             addToCart(productID);
-                                        }, 500);  // Adjust this value based on animation duration
+                                        }, 500);
                                     @else
-                                        // Add a subtle animation before redirecting
                                         const button = event.target;
-                                        button.classList.add("animate-bounce");  // Animation effect
-
-                                        // Redirect after the animation finishes
+                                        button.classList.add("animate-bounce");
                                         setTimeout(function() {
                                             window.location.href = "/login";
-                                        }, 500);  // Adjust this value based on animation duration
+                                        }, 500);
                                     @endauth
                                     }
                                 </script>
 
-                        </article>
-                    @empty
-                        <div class="col-span-3 text-center py-12">
-                            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2 2v-5m16 0h-2M4 13h2m-2 0v9a2 2 0 002 2h2M6 9h12m-6-4v4"></path>
-                            </svg>
-                            <p class="text-gray-500 text-lg mt-4">No products found matching your filters.</p>
-                            <p class="text-gray-400 text-sm mt-2">Try adjusting your search criteria or clearing filters.</p>
+                            </article>
+                        @empty
+                            <div class="col-span-3 text-center py-12">
+                                <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2 2v-5m16 0h-2M4 13h2m-2 0v9a2 2 0 002 2h2M6 9h12m-6-4v4"></path>
+                                </svg>
+                                <p class="text-gray-500 text-lg mt-4">No products found matching your filters.</p>
+                                <p class="text-gray-400 text-sm mt-2">Try adjusting your search criteria or clearing filters.</p>
+                            </div>
+                        @endforelse
+                    </div>
+                    
+                    <div class="flex justify-between items-center mt-6 w-full">
+                        <div class="text-gray-600 text-sm">
+                            Showing {{ $products->firstItem() }} to {{ $products->lastItem() }} of {{ $products->total() }} results
                         </div>
-                    @endforelse
-                </div>
-                
-            <div class="flex justify-between items-center mt-6 w-full">
-                
-                <div class="text-gray-600 text-sm">
-                    Showing {{ $products->firstItem() }} to {{ $products->lastItem() }} of {{ $products->total() }} results
-                </div>
 
-                <div class="flex justify-end">
-                    {{ $products->links() }}
+                        <div class="flex justify-end">
+                            {{ $products->links() }}
+                        </div>
+                    </div>
+
+                    <style>
+                        nav[role="navigation"] > div:first-child,
+                        nav[role="navigation"] > div > div:first-child {
+                            display: none !important;
+                        }
+                        nav[role="navigation"] {
+                            display: flex;
+                            justify-content: flex-end;
+                            width: 100%;
+                        }
+                    </style>
                 </div>
             </div>
-
-            <style>
-                nav[role="navigation"] > div:first-child,
-                nav[role="navigation"] > div > div:first-child {
-                    display: none !important;
-                }
-                nav[role="navigation"] {
-                    display: flex;
-                    justify-content: flex-end;
-                    width: 100%;
-                }
-            </style>
-
-
-
-
-            </div>
-        </div>
-    </section>
+        </section>
+    </div>
 </div>
 
-<!-- Add to Cart JavaScript (optional - for quick add to cart without going to detail page) -->
+<!-- Add to Cart JavaScript -->
 <script>
 function addToCart(productId) {
-    // You can implement AJAX cart functionality here
-    // Or redirect to product detail page
     window.location.href = `/product/${productId}`;
-    
-    // Alternative: AJAX call
-    // fetch('/cart/add', {
-    //     method: 'POST',
-    //     headers: {
-    //         'Content-Type': 'application/json',
-    //         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-    //     },
-    //     body: JSON.stringify({product_id: productId, quantity: 1})
-    // }).then(response => {
-    //     // Handle response
-    //     // Show success message, update cart count, etc.
-    // }).catch(error => {
-    //     console.error('Error adding to cart:', error);
-    // });
 }
 </script>
-

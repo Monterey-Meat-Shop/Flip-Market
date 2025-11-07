@@ -222,18 +222,29 @@
                 <!-- Quantity + Stock + Add to Favorites -->
                 <div class="mt-6 flex items-center flex-wrap gap-3">
 
-                    <!-- Quantity -->
-                    <div class="flex items-center gap-2">
-                        <label for="quantity" class="text-sm font-medium text-gray-900">Quantity:</label>
-                        <input 
-                            wire:model="quantity"
-                            id="quantity"
-                            type="number"
-                            min="1"
-                            max="{{ $this->getCurrentStock() }}"
-                            class="w-20 border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                        >
-                    </div>
+                   <!-- Quantity -->
+<div class="flex items-center gap-2">
+    <label for="quantity" class="text-sm font-medium text-gray-900">Quantity:</label>
+    <input
+        wire:model.live="quantity"
+        id="quantity"
+        type="number"
+        min="1"
+        max="{{ $this->getCurrentStock() }}"
+        step="1"
+        class="w-20 border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+        oninput="
+            if (this.value === '' || parseInt(this.value) < 1) {
+                this.value = 1;
+            }
+            const max = {{ (int) $this->getCurrentStock() }};
+            if (parseInt(this.value) > max) {
+                this.value = max;
+            }
+        "
+    >
+</div>
+
 
                     <!-- Stock info (styled same as buttons) -->
                     @if($selectedVariant)
