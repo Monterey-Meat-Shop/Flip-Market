@@ -163,7 +163,7 @@
                                 <a href="{{ route('product.detail', $product->productID) }}" class="block">
                                     <div class="relative overflow-hidden group">
                                         <img 
-                                            src="{{ image_url($product->image_path) }}" 
+                                            src="{{ $product->image_path ? asset('storage/' . $product->image_path) : 'https://via.placeholder.com/300' }}" 
                                             alt="{{ $product->name }}" 
                                             class="w-full h-40 object-cover group-hover:scale-110 transition-transform duration-300"
                                         />
