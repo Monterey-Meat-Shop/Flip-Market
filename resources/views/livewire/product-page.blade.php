@@ -42,7 +42,7 @@
                         </p>
                     </div>
 
-                    <!-- Sale and Pre-Order Filter -->
+                    <!-- Availability -->
                     <div class="mb-6">
                         <h3 class="text-sm font-semibold text-gray-700 mb-2">Availability</h3>
                         <ul class="space-y-2 text-gray-700">
@@ -121,18 +121,38 @@
                     <!-- Search + Results Count -->
                     <div class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                         <p class="text-gray-700 font-medium text-base">
-                            Showing {{ $products->count() }} products
+                            Showing {{ $products->total() }} products
                         </p>
 
-                        <!-- Search Bar -->
-                        <div class="w-full sm:w-64">
-                            <input
-                                type="text"
-                                wire:model.debounce.300ms="search"
-                                placeholder="Search products..."
-                                class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg
-                                       focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                            />
+                        <!-- Search Bar + Button -->
+                        <div class="flex w-full sm:w-auto gap-2">
+                            <div class="relative flex-1">
+                                <input
+                                    type="text"
+                                    wire:model.debounce.300ms="searchInput"
+                                    placeholder="Search by product, brand, or category..."
+                                    class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg
+                                           focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                                />
+                            </div>
+
+                            <button
+                                type="button"
+                                wire:click="applySearch"
+                                class="px-4 py-2 text-sm font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                            >
+                                Search
+                            </button>
+
+                            @if($search !== '')
+                                <button
+                                    type="button"
+                                    wire:click="clearSearch"
+                                    class="px-3 py-2 text-sm border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-100 transition"
+                                >
+                                    ✕
+                                </button>
+                            @endif
                         </div>
                     </div>
 
@@ -199,9 +219,11 @@
                                 </a>
                                 
                                 <div class="p-4 pt-0">
-                                    <button onclick="checkLoginAndAddToCart({{ $product->productID }})"
-                                            @if($product->total_stock_quantity <= 0) disabled @endif
-                                            class="w-full flex items-center justify-center space-x-2 rounded-lg bg-gradient-to-r from-blue-500 to-blue-600 px-3 py-2 text-white hover:from-blue-600 hover:to-blue-700 transition-all duration-300 transform hover:scale-105 disabled:bg-gray-400 disabled:cursor-not-allowed shadow-lg hover:shadow-xl font-semibold text-sm">
+                                    <button
+                                        onclick="checkLoginAndAddToCart({{ $product->productID }})"
+                                        @if($product->total_stock_quantity <= 0) disabled @endif
+                                        class="w-full flex items-center justify-center space-x-2 rounded-lg bg-gradient-to-r from-blue-500 to-blue-600 px-3 py-2 text-white hover:from-blue-600 hover:to-blue-700 transition-all duration-300 transform hover:scale-105 disabled:bg-gray-400 disabled:cursor-not-allowed shadow-lg hover:shadow-xl font-semibold text-sm"
+                                    >
                                         <svg class="w-4 h-4 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5m4.5-5a2 2 0 11-4 0 2 2 0 014 0z"></path>
                                         </svg>
@@ -214,25 +236,6 @@
                                         </span>
                                     </button>
                                 </div>
-
-                                <script>
-                                    function checkLoginAndAddToCart(productID) {
-                                    @auth
-                                        const button = event.target;
-                                        button.classList.add("animate-ping");
-                                        setTimeout(function() {
-                                            addToCart(productID);
-                                        }, 500);
-                                    @else
-                                        const button = event.target;
-                                        button.classList.add("animate-bounce");
-                                        setTimeout(function() {
-                                            window.location.href = "/login";
-                                        }, 500);
-                                    @endauth
-                                    }
-                                </script>
-
                             </article>
                         @empty
                             <div class="col-span-3 text-center py-12">
@@ -272,9 +275,20 @@
     </div>
 </div>
 
-<!-- Add to Cart JavaScript -->
+<!-- Add to Cart JS (global, single definition) -->
 <script>
+function checkLoginAndAddToCart(productId) {
+    @auth
+        // User logged in → go to product detail or real add-to-cart logic
+        addToCart(productId);
+    @else
+        // Not logged in → send to login page
+        window.location.href = "{{ route('login') }}";
+    @endauth
+}
+
 function addToCart(productId) {
+    // Current behavior: go to product detail page
     window.location.href = `/product/${productId}`;
 }
 </script>

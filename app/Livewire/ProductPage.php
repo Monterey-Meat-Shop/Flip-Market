@@ -7,7 +7,6 @@ use Livewire\WithPagination;
 use App\Models\Product;
 use App\Models\Brand;
 use App\Models\Category;
-use Illuminate\Database\Eloquent\Builder;
 
 class ProductPage extends Component
 {
@@ -24,10 +23,10 @@ class ProductPage extends Component
     public bool $filterSale = false;
     public bool $filterPreOrder = false;
 
-    // 🔍 Search text
+    // search state
+    public $searchInput = '';
     public $search = '';
 
-    // Keep your existing query string behavior + add search
     protected $updatesQueryString = [
         'selectedCategories',
         'selectedBrands',
@@ -45,6 +44,8 @@ class ProductPage extends Component
 
         $this->minPriceSelected = $this->minPrice;
         $this->maxPriceSelected = $this->maxPrice;
+
+        $this->searchInput = $this->search;
     }
 
     // Reset pagination when filters change
@@ -55,9 +56,24 @@ class ProductPage extends Component
     public function updatedFilterSale() { $this->resetPage(); }
     public function updatedFilterPreOrder() { $this->resetPage(); }
 
-    // 🔍 Reset page when search input changes
-    public function updatedSearch()
+    // Live typing: keep input but don’t commit filter until applySearch()
+    public function updatedSearchInput()
     {
+        // optional: live search
+        $this->search = $this->searchInput;
+        $this->resetPage();
+    }
+
+    public function applySearch()
+    {
+        $this->search = $this->searchInput;
+        $this->resetPage();
+    }
+
+    public function clearSearch()
+    {
+        $this->searchInput = '';
+        $this->search = '';
         $this->resetPage();
     }
 
@@ -69,8 +85,8 @@ class ProductPage extends Component
         $this->filterPreOrder = false;
         $this->minPriceSelected = $this->minPrice;
         $this->maxPriceSelected = $this->maxPrice;
+        $this->searchInput = '';
         $this->search = '';
-
         $this->resetPage();
     }
 
@@ -82,56 +98,43 @@ class ProductPage extends Component
     public function render()
     {
         $products = Product::with(['brand', 'category', 'discounts'])
-
-            // 🔍 SEARCH: match starting with typed text (name / brand / category)
-            ->when(trim($this->search) !== '', function (Builder $query) {
-                $search = mb_strtolower(trim($this->search)) . '%';
-
-                $query->where(function (Builder $q) use ($search) {
-                    $q->whereRaw('LOWER(name) LIKE ?', [$search])
-                      ->orWhereHas('brand', function (Builder $b) use ($search) {
-                          $b->whereRaw('LOWER(name) LIKE ?', [$search]);
-                      })
-                      ->orWhereHas('category', function (Builder $c) use ($search) {
-                          $c->whereRaw('LOWER(name) LIKE ?', [$search]);
-                      });
+            // search by name / brand / category
+            ->when($this->search !== '', function ($query) {
+                $search = '%' . $this->search . '%';
+                $query->where(function ($q) use ($search) {
+                    $q->where('name', 'like', $search)
+                        ->orWhereHas('brand', fn ($b) => $b->where('name', 'like', $search))
+                        ->orWhereHas('category', fn ($c) => $c->where('name', 'like', $search));
                 });
             })
-
-            // Category filter
-            ->when(count($this->selectedCategories) > 0, function (Builder $query) {
-                return $query->whereIn('categoryID', $this->selectedCategories);
-            })
-
-            // Brand filter
-            ->when(count($this->selectedBrands) > 0, function (Builder $query) {
-                return $query->whereIn('brandID', $this->selectedBrands);
-            })
+            ->when(count($this->selectedCategories) > 0, fn($query) =>
+                $query->whereIn('categoryID', $this->selectedCategories))
+            ->when(count($this->selectedBrands) > 0, fn($query) =>
+                $query->whereIn('brandID', $this->selectedBrands))
 
             // On Sale filter
-            ->when($this->filterSale, function (Builder $query) {
+            ->when($this->filterSale, function ($query) {
                 $query->whereHas('discounts', function ($q) {
                     $q->where('is_active', true)
                         ->where(function ($q) {
-                            $q->whereNull('start_date')
-                              ->orWhere('start_date', '<=', now());
+                            $q->whereNull('start_date')->orWhere('start_date', '<=', now());
                         })
                         ->where(function ($q) {
-                            $q->whereNull('end_date')
-                              ->orWhere('end_date', '>=', now());
+                            $q->whereNull('end_date')->orWhere('end_date', '>=', now());
                         });
                 });
             })
 
             // Pre-Order filter
-            ->when($this->filterPreOrder, function (Builder $query) {
+            ->when($this->filterPreOrder, function ($query) {
                 $query->where('status', 'pre_order');
             })
 
             // Price range
             ->whereBetween('price', [$this->minPriceSelected, $this->maxPriceSelected])
 
-            ->paginate(10);
+            // ✅ 12 products per page
+            ->paginate(12);
 
         return view('livewire.product-page', [
             'categories' => Category::all(),
