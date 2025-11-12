@@ -16,6 +16,8 @@ class CartPage extends Component
     public $cartCount = 0;
     public $canCheckout = true;
     public $stockIssues = [];
+    public $selectedItems = [];
+    public $selectAll = false;
 
     protected $listeners = ['cartUpdated' => 'loadCart'];
 
@@ -108,10 +110,54 @@ class CartPage extends Component
 
     private function recalculateTotals()
     {
-        $this->total = $this->cartItems->sum('sub_total');
-        $this->cartCount = $this->cartItems->sum('quantity');
+        $this->total = $this->cartItems
+            ->whereIn('cart_itemID', $this->selectedItems)
+            ->sum('sub_total');
+
+        $this->cartCount = $this->cartItems
+            ->whereIn('cart_itemID', $this->selectedItems)
+            ->sum('quantity');
+
         $this->dispatch('cartUpdated', $this->cartCount);
     }
+
+    public function toggleSelectItem($cartItemId)
+    {
+        if (in_array($cartItemId, $this->selectedItems)) {
+            $this->selectedItems = array_diff($this->selectedItems, [$cartItemId]);
+        } else {
+            $this->selectedItems[] = $cartItemId;
+        }
+
+        $this->recalculateTotals();
+    }
+
+    public function selectAll()
+    {
+        $this->selectedItems = $this->cartItems->pluck('cart_itemID')->toArray();
+        $this->recalculateTotals();
+    }
+
+    public function deselectAll()
+    {
+        $this->selectedItems = [];
+        $this->recalculateTotals();
+    }
+
+    public function updatedSelectAll($value)
+    {
+        if ($value) {
+            $this->selectedItems = $this->cartItems->pluck('cart_itemID')->toArray();
+        } else {
+            $this->selectedItems = [];
+        }
+    }
+
+    public function updatedSelectedItems()
+    {
+        // Update "select all" checkbox based on selected count
+        $this->selectAll = count($this->selectedItems) === $this->cartItems->count();
+    }    
 
     public function validateStockForCheckout()
     {
@@ -129,7 +175,7 @@ class CartPage extends Component
                 ? $item->variant->stock_quantity 
                 : $item->product->total_stock_quantity;
 
-            // ✅ FIX: User already has items in cart, warehouse stock is what's LEFT
+            // FIX: User already has items in cart, warehouse stock is what's LEFT
             // They can't have negative warehouse stock
             if ($warehouseStock < 0) {
                 $this->canCheckout = false;
@@ -146,29 +192,23 @@ class CartPage extends Component
 
     public function proceedToCheckout()
     {
-        if (!Auth::check()) {
-            session()->flash('error', 'Please login to proceed.');
-            return redirect()->route('login');
-        }
-
-        $this->loadCart();
-
-        if (!$this->canCheckout) {
-            $this->dispatch('checkout-error', 
-                message: 'Some items in your cart exceed available stock. Please update quantities before proceeding.'
-            );
+        if (empty($this->selectedItems)) {
+            session()->flash('error', 'Please select at least one item to checkout.');
             return;
         }
 
-        if ($this->cartItems->isEmpty()) {
-            $this->dispatch('checkout-error', 
-                message: 'Your cart is empty. Please add items before checkout.'
-            );
+        $selectedCartItems = $this->cartItems->whereIn('cart_itemID', $this->selectedItems);
+
+        if ($selectedCartItems->isEmpty()) {
+            session()->flash('error', 'No valid items selected.');
             return;
         }
+
+        session(['checkout_items' => $selectedCartItems->pluck('cart_itemID')->toArray()]);
 
         return redirect()->route('checkout');
     }
+
 
     public function increaseQuantity($cartItemId)
     {

@@ -171,14 +171,22 @@ class CheckoutPage extends Component
             return;
         }
 
-        $this->cartItems = CartItem::where('customerID', $this->customer->customerID)
-            ->with(['product.discounts', 'variant'])
-            ->get();
+        //  Get only selected cart items from session
+    $selectedIds = session('checkout_items', []);
 
-        if ($this->cartItems->isEmpty()) {
-            session()->flash('error', 'Your cart is empty.');
-            return redirect()->route('cart');
-        }
+    $query = CartItem::where('customerID', $this->customer->customerID)
+        ->with(['product.discounts', 'variant']);
+
+    if (!empty($selectedIds)) {
+        $query->whereIn('cart_itemID', $selectedIds);
+    }
+
+    $this->cartItems = $query->get();
+
+    if ($this->cartItems->isEmpty()) {
+        session()->flash('error', 'No items selected for checkout.');
+        return redirect()->route('cart');
+    }
 
         $this->productDiscountSavings = 0;
         $this->originalSubtotal = 0;

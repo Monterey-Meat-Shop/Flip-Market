@@ -11,10 +11,27 @@
               <a href="{{ route('products') }}" class="text-blue-600 hover:underline mt-2 inline-block">Browse Products</a>
             </div>
           @else
+            {{-- Select All Checkbox --}}
+            <div class="flex justify-between items-center mb-4">
+              <div class="flex items-center space-x-2">
+                <input type="checkbox" wire:model="selectAll" class="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                <label class="text-sm font-medium text-gray-700">Select All</label>
+              </div>
+              <button wire:click="$set('selectedItems', [])" class="text-gray-600 hover:underline text-sm">Deselect All</button>
+            </div>
+
             <div class="space-y-6">
               @foreach ($cartItems as $item)
                 <div class="flex items-center justify-between bg-white shadow-sm rounded-xl p-4 mb-4">
                   <div class="flex items-center space-x-4">
+                    {{-- Individual checkbox --}}
+                    <input 
+                        type="checkbox" 
+                        wire:model="selectedItems"
+                        value="{{ $item->cart_itemID }}"
+                        class="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    >
+
                     {{-- Product Image --}}
                     <img src="{{ asset('storage/' . $item->product->image_path) }}"
                          alt="{{ $item->product->name }}"
@@ -25,7 +42,7 @@
                       <h3 class="text-lg font-semibold text-gray-800">
                         {{ $item->product->name }}
 
-                        {{-- Discount Badge (if applicable) --}}
+                        {{-- Discount Badge --}}
                         @php
                             $activeDiscount = $item->product->discounts()
                                 ->where('is_active', true)
@@ -77,12 +94,8 @@
                           </div>
                           {{-- Available Stock Display --}}
                           @if($item->variant)
-                              @php
-                                  // Show available stock PLUS what's already in cart
-                                  $totalAvailable = $item->variant->stock_quantity + $item->quantity;
-                              @endphp
                               <span class="text-xs text-gray-500 mt-1">
-                                  {{ $item->variant->stock_quantity }} more available
+                                  {{ $item->variant->stock_quantity }} available
                               </span>
                           @endif
                       </div>
@@ -97,7 +110,6 @@
                           Remove
                       </button>
                   </div>
-
                 </div>
               @endforeach
             </div>
@@ -124,20 +136,22 @@
 
             <div class="space-y-4">
               <div class="space-y-2">
-                <dl class="flex items-center justify-between">
-                  <dt class="text-base font-normal text-gray-500">Subtotal</dt>
-                  <dd class="text-base font-medium text-gray-900">₱{{ number_format($total ?? 0, 2) }}</dd>
-                </dl>
-
-                {{-- Total Savings --}}
+                {{-- Compute subtotal only for selected items --}}
                 @php
+                  $subtotal = 0;
                   $totalSavings = 0;
-                  foreach($cartItems as $item) {
-                    if(isset($item->active_discount) && isset($item->original_price)) {
+                  foreach($cartItems->whereIn('cart_itemID', $selectedItems) as $item) {
+                    $subtotal += $item->sub_total ?? 0;
+                    if(isset($item->original_price) && isset($item->unit_price)) {
                       $totalSavings += ($item->original_price - $item->unit_price) * $item->quantity;
                     }
                   }
                 @endphp
+
+                <dl class="flex items-center justify-between">
+                  <dt class="text-base font-normal text-gray-500">Subtotal</dt>
+                  <dd class="text-base font-medium text-gray-900">₱{{ number_format($subtotal, 2) }}</dd>
+                </dl>
 
                 @if($totalSavings > 0)
                   <dl class="flex items-center justify-between text-green-600">
@@ -149,16 +163,16 @@
 
               <dl class="flex items-center justify-between border-t pt-4">
                 <dt class="text-lg font-bold text-gray-900">Total</dt>
-                <dd class="text-lg font-bold text-blue-700">₱{{ number_format($total ?? 0, 2) }}</dd>
+                <dd class="text-lg font-bold text-blue-700">₱{{ number_format($subtotal, 2) }}</dd>
               </dl>
 
               @if(!$cartItems->isEmpty())
-                <a 
-                  href="{{ route('checkout') }}" 
+                <button 
+                  wire:click="proceedToCheckout"
                   class="flex w-full items-center justify-center rounded-lg bg-blue-700 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-800 transition"
                 >
                   Proceed to Checkout
-                </a>
+                </button>
               @endif
               
               <a 
