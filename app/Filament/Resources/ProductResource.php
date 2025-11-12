@@ -102,16 +102,28 @@ class ProductResource extends Resource
         ->schema([
             Group::make()->schema([
                 Section::make('Product Information')->schema([
-                    TextInput::make('name')
-                        ->required()
-                        ->maxLength(225)
-                        ->live(onBlur: true)
-                        ->afterStateUpdated(function(string $operation, $state, Set $set) {
-                            if ($operation !== 'create') {
-                                return;
-                            }
-                            $set('slug', Str::slug($state));
-                        }),
+                   TextInput::make('name')
+    ->required()
+    ->maxLength(225)
+
+    // 1) Instantly force uppercase while typing (no Livewire re-render)
+    ->extraAttributes([
+        'oninput' => 'this.value = this.value.toUpperCase()', // or: 'this.value = this.value.toLocaleUpperCase()'
+        'style'   => 'text-transform: uppercase',              // visual cue
+    ])
+
+    // 2) Avoid per-keystroke Livewire updates (prevents caret jump)
+    ->live(onBlur: true)
+
+    // 3) Keep your slug logic (runs on blur/create)
+    ->afterStateUpdated(function (string $operation, $state, Set $set) {
+        if ($operation === 'create') {
+            $set('slug', Str::slug($state));
+        }
+    })
+
+    // 4) Persist uppercase safely at save/dehydrate
+    ->dehydrateStateUsing(fn ($state) => mb_strtoupper((string) $state)),
 
                     TextInput::make('slug')
                         ->required()
