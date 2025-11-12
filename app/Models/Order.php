@@ -66,23 +66,30 @@ class Order extends Model
         return $this->hasOne(Shipping::class, 'orderID', 'orderID');
     }
 
-    public function shippingAddress(): BelongsTo
+    public function shippingAddress()
     {
-        return $this->belongsTo(Address::class, 'address_choice', 'addressID');
+        return $this->belongsTo(Address::class, 'shipping_address_id', 'id');
     }
 
     public function getFormattedShippingAddressAttribute(): string
     {
-        $address = $this->shippingAddress;
+        if ($this->address_choice) {
+            $address = $this->address_choice;
 
-        if (!$address && $this->customer) {
-            $address = $this->customer->address->first();
-        }
-        
-        if ($address) {
-            return $address->full_address;
-        }
+            if ($this->city) {
+                $address .= ', ' . $this->city;
+            }
 
+            if ($this->province) {
+                $address .= ', ' . $this->province;
+            }
+
+            if ($this->postal_code) {
+                $address .= ' ' . $this->postal_code;
+            }
+
+            return $address;
+        }
         return '— Address Not Found or Selected —';
     }
 
