@@ -5,12 +5,8 @@ use Illuminate\Support\Facades\Storage;
 
 if (!function_exists('image_url')) {
     /**
-     * Generate the correct public image URL for any given path (auto-handles local vs production).
-     * Adds cache-busting (version parameter) based on file last modified time.
-     *
-     * @param  string|null  $path
-     * @param  string|null  $placeholder
-     * @return string
+     * Generate the correct public image URL for any given path.
+     * Works for both local (artisan serve) and Hostinger production.
      */
     function image_url(?string $path, ?string $placeholder = 'https://via.placeholder.com/300'): string
     {
@@ -20,17 +16,13 @@ if (!function_exists('image_url')) {
 
         $path = ltrim($path, '/');
 
+        // Check if file exists on the public disk
         if (Storage::disk('public')->exists($path)) {
             $baseUrl = config('app.url');
-            $mtime = Storage::disk('public')->lastModified($path); // cache-busting timestamp
+            $mtime = Storage::disk('public')->lastModified($path); // cache busting
 
-            if (App::environment('local')) {
-                // Local environment (php artisan serve)
-                return "{$baseUrl}/storage/{$path}?v={$mtime}";
-            }
-
-            // Production (Hostinger uses /uploads/)
-            return "{$baseUrl}/uploads/{$path}?v={$mtime}";
+            // Always return /storage/ for both local and production
+            return "{$baseUrl}/storage/{$path}?v={$mtime}";
         }
 
         return $placeholder;
