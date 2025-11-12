@@ -161,6 +161,59 @@ class Product extends Model
         });
     }
 
+
+// --- Previous boot logic (commented out) --- Updated!!!!!! Hostinger Uploaded
+
+//                 protected static function boot()
+// {
+//     parent::boot();
+
+//     // Compute status before saving; only manage is_active if user didn't set it
+//     static::saving(function (Product $product) {
+//         // If user explicitly changed is_active on this request, don't override it.
+//         $manageIsActive = ! $product->isDirty('is_active');
+
+//         // If status was set to pre_order, respect that and keep is_active as-is (or default true)
+//         if (($product->getAttribute('status') ?? null) === 'pre_order') {
+//             if ($manageIsActive && is_null($product->is_active)) {
+//                 $product->is_active = true; // sane default
+//             }
+//             return;
+//         }
+
+//         // Auto-calc status from current stock
+//         $totalStock = (int) $product->variants()->sum('stock_quantity');
+
+//         if ($totalStock === 0) {
+//             $product->attributes['status'] = 'out_of_stock';
+//             if ($manageIsActive) {
+//                 // Don’t auto-disable on first create if the UI set it to true
+//                 $product->is_active = (bool) ($product->is_active ?? false);
+//             }
+//         } elseif ($totalStock <= 4) {
+//             $product->attributes['status'] = 'low_stock';
+//             if ($manageIsActive) {
+//                 $product->is_active = true;
+//             }
+//         } else {
+//             $product->attributes['status'] = 'in_stock';
+//             if ($manageIsActive) {
+//                 $product->is_active = true;
+//             }
+//         }
+
+//         // If still null (e.g., brand-new record with no toggle interaction), keep it true
+//         if (is_null($product->is_active)) {
+//             $product->is_active = true;
+//         }
+//     });
+// }
+
+
+
+
+
+
     /**
      * Scope: Get top performing products by sales & revenue
      */
