@@ -17,10 +17,10 @@ class OrdersRelationManager extends RelationManager
         return $table
             ->recordTitleAttribute('orderID')
             ->columns([
-                TextColumn::make('orderID')
-                    ->label('Order ID')
-                    ->sortable()
-                    ->searchable(),
+                // TextColumn::make('orderID')
+                //     ->label('Order ID')
+                //     ->sortable()
+                //     ->searchable(),
 
                 TextColumn::make('customer.first_name')
                     ->label('Customer')
@@ -29,20 +29,20 @@ class OrdersRelationManager extends RelationManager
                     )
                     ->sortable(),
 
-                TextColumn::make('payment.payment_status')
-                    ->label('Payment')
-                    ->badge()
-                    ->colors([
-                        'secondary' => 'unpaid',
-                        'success' => 'paid',
-                        'danger' => 'failed',
-                    ])
-                    ->sortable(),
+                // TextColumn::make('payment.payment_status')
+                //     ->label('Payment')
+                //     ->badge()
+                //     ->colors([
+                //         'secondary' => 'unpaid',
+                //         'success' => 'paid',
+                //         'danger' => 'failed',
+                //     ])
+                //     ->sortable(),
 
-                TextColumn::make('sub_total')
-                    ->label('Subtotal')
-                    ->money('PHP')
-                    ->sortable(),
+                // TextColumn::make('sub_total')
+                //     ->label('Subtotal')
+                //     ->money('PHP')
+                //     ->sortable(),
 
                 TextColumn::make('total_amount')
                     ->label('Total')
@@ -67,7 +67,7 @@ class OrdersRelationManager extends RelationManager
             ->filters([])
             ->headerActions([])
             ->actions([
-                Tables\Actions\ViewAction::make(),
+               // Tables\Actions\ViewAction::make(),
             ])
             ->bulkActions([]);
     }
