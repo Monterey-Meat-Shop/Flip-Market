@@ -71,26 +71,26 @@ class ViewStockOrder extends ViewRecord
                         ]);
                     })->toArray()),
 
-                Section::make('Quantity Details')
-                    ->schema([
-                        Grid::make(3)
-                            ->schema([
-                                TextEntry::make('ordered_quantity')
-                                    ->label('Total Ordered')
-                                    ->badge()
-                                    ->color('gray'),
+                // Section::make('Quantity Details')
+                //     ->schema([
+                //         Grid::make(3)
+                //             ->schema([
+                //                 TextEntry::make('ordered_quantity')
+                //                     ->label('Total Ordered')
+                //                     ->badge()
+                //                     ->color('gray'),
 
-                                TextEntry::make('received_quantity')
-                                    ->label('Received Quantity')
-                                    ->badge()
-                                    ->color('success'),
+                //                 TextEntry::make('received_quantity')
+                //                     ->label('Received Quantity')
+                //                     ->badge()
+                //                     ->color('success'),
 
-                                TextEntry::make('pending_quantity')
-                                    ->label('Pending Quantity')
-                                    ->badge()
-                                    ->color(fn ($record) => $record->pending_quantity > 0 ? 'warning' : 'success'),
-                            ]),
-                    ]),
+                //                 TextEntry::make('pending_quantity')
+                //                     ->label('Pending Quantity')
+                //                     ->badge()
+                //                     ->color(fn ($record) => $record->pending_quantity > 0 ? 'warning' : 'success'),
+                //             ]),
+                //     ]),
 
                 Section::make('Supplier & Dates')
                     ->schema([
