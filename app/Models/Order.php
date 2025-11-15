@@ -71,6 +71,28 @@ class Order extends Model
         return $this->belongsTo(Address::class, 'shipping_address_id', 'id');
     }
 
+    // new added attribute for payment method on Cash on Delivery
+    public function getFullPaymentMethodAttribute()
+    {
+        if (!$this->payment) {
+            return 'No Payment';
+        }
+
+        $mainMethod = $this->payment->paymentMethod->method_name ?? 'Unknown';
+    
+        // If it's COD, check reference number for method prefix
+        if (strtolower($mainMethod) === 'cash on delivery' && $this->payment->reference_number) {
+            $ref = $this->payment->reference_number;
+        
+            if (str_contains($ref, '[GCASH]')) {
+                return "Cash on Delivery: GCash";
+            } elseif (str_contains($ref, '[BANK]')) {
+                return "Cash on Delivery: Bank Transfer";
+            }
+        }
+        return $mainMethod;
+    }
+
     public function getFormattedShippingAddressAttribute(): string
     {
         if ($this->address_choice) {

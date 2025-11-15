@@ -47,7 +47,6 @@ class OrderDetailPage extends Component
             ->firstOrFail();
 
         $this->calculateDiscounts();
-        
     }
 
     private function calculateDiscounts(): void
@@ -58,26 +57,32 @@ class OrderDetailPage extends Component
         // discount calculation
         foreach ($this->order->orderItems as $item) {
             $unitPrice = (float) $item->unit_price;
-
-            $originalPrice = (float) ($item->original_price ?? $unitPrice);
             $quantity = (int) $item->quantity;
-
-            $item->discounted_unit_price = round($unitPrice, 2); 
+            $discountAmount = (float) ($item->discount_amount ?? 0);
 
             // Reset defaults
             $item->has_discount = false;
             $item->original_unit_price = $unitPrice;
+            $item->discounted_unit_price = $unitPrice;
             $item->savings_per_unit = 0.0;
 
-            // Check if product has an assigned discount and the unit price is actually lower than original
-            if (!empty($item->discount_id) && $originalPrice > $unitPrice) {
+            // Fixed: Check if item has discount using discountID and discount_amount
+            if (!is_null($item->discountID) && $discountAmount > 0) {
                 $item->has_discount = true;
-                $item->original_unit_price = $originalPrice;
-                $item->savings_per_unit = round($originalPrice - $unitPrice, 2);
+                
+                // Calculate original unit price from original_price column
+                // original_price stores the total before discount for this line item
+                $originalTotalPrice = (float) $item->original_price;
+                $originalUnitPrice = $originalTotalPrice / $quantity;
+                
+                $item->original_unit_price = round($originalUnitPrice, 2);
+                $item->discounted_unit_price = round($unitPrice, 2);
+                $item->savings_per_unit = round($originalUnitPrice - $unitPrice, 2);
 
+                // Calculate total savings for this item
                 $itemSavings = $item->savings_per_unit * $quantity;
                 $this->productDiscountSavings += $itemSavings;
-                $this->originalSubtotal += $originalPrice * $quantity;
+                $this->originalSubtotal += $originalTotalPrice;
             } else {
                 // If no product discount, original subtotal is just the unit price paid
                 $this->originalSubtotal += $unitPrice * $quantity;
@@ -87,8 +92,7 @@ class OrderDetailPage extends Component
         $this->productDiscountSavings = round($this->productDiscountSavings, 2);
         $this->originalSubtotal = round($this->originalSubtotal, 2);
 
-
-        // discount calculation
+        // Coupon discount calculation
         $this->couponDiscountAmount = 0.0;
 
         if ($this->order->discount) {

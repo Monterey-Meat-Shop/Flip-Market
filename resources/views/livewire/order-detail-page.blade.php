@@ -130,94 +130,94 @@
                 </thead>
 
                 <tbody>
-                    @foreach($order->orderItems as $item)
-                        @php
-                            // Use properties set by the OrderDetailPage component's calculateDiscounts method
-                            $has_discount = $item->has_discount ?? false; // Boolean set in PHP
-                            $originalPrice = (float) ($item->original_unit_price ?? $item->unit_price); // Price before product discount
-                            $unitPricePaid = (float) $item->unit_price; // Final unit price paid
-                            $savingsPerUnit = $item->savings_per_unit ?? 0; // Savings per unit (0 if none)
-                            $totalSavings = $savingsPerUnit * $item->quantity; // Total savings for this item line
-                        @endphp
+                  @foreach($order->orderItems as $item)
+                      @php
+                          // These properties are now set by the calculateDiscounts method
+                          $has_discount = $item->has_discount ?? false;
+                          $originalUnitPrice = $item->original_unit_price ?? $item->unit_price;
+                          $unitPricePaid = $item->discounted_unit_price ?? $item->unit_price;
+                          $savingsPerUnit = $item->savings_per_unit ?? 0;
+                          $totalSavings = $savingsPerUnit * $item->quantity;
+                      @endphp
 
-                        <tr class="border-b hover:bg-gray-50 transition">
-                            <td class="py-4">
-                                <div class="flex items-center">
-                                    @if($item->product && $item->product->image_path)
-                                        <img src="{{ asset('storage/' . $item->product->image_path) }}"
-                                                alt="{{ $item->product->name }}"
-                                                class="h-16 w-16 mr-4 object-cover rounded">
-                                    @else
-                                        <div class="h-16 w-16 mr-4 bg-gray-200 rounded flex items-center justify-center">
-                                            <span class="text-gray-500 text-xs font-semibold">
-                                                {{ strtoupper(substr($item->product->name ?? 'Product', 0, 2)) }}
-                                            </span>
-                                        </div>
-                                    @endif
+                      <tr class="border-b hover:bg-gray-50 transition">
+                          <td class="py-4">
+                              <div class="flex items-center">
+                                  @if($item->product && $item->product->image_path)
+                                      <img src="{{ asset('storage/' . $item->product->image_path) }}"
+                                              alt="{{ $item->product->name }}"
+                                              class="h-16 w-16 mr-4 object-cover rounded">
+                                  @else
+                                      <div class="h-16 w-16 mr-4 bg-gray-200 rounded flex items-center justify-center">
+                                          <span class="text-gray-500 text-xs font-semibold">
+                                              {{ strtoupper(substr($item->product->name ?? 'Product', 0, 2)) }}
+                                          </span>
+                                      </div>
+                                  @endif
 
-                                    <div>
-                                        <span class="font-semibold text-gray-800">{{ $item->product->name }}</span>
+                                  <div>
+                                      <span class="font-semibold text-gray-800">{{ $item->product->name }}</span>
 
-                                        {{-- Variant details --}}
-                                        @if($item->size || $item->colorway)
-                                            <p class="text-xs text-gray-500">
-                                                @if($item->colorway) {{ $item->colorway }} @endif
-                                                @if($item->size) | Size: {{ $item->size }} @endif
-                                            </p>
-                                        @endif
+                                      {{-- Variant details --}}
+                                      @if($item->size || $item->colorway)
+                                          <p class="text-xs text-gray-500">
+                                              @if($item->colorway) {{ $item->colorway }} @endif
+                                              @if($item->size) | Size: {{ $item->size }} @endif
+                                          </p>
+                                      @endif
 
-                                        {{-- Discount info --}}
-                                        @if($has_discount)
-                                            <div class="flex items-center gap-2 mt-1">
-                                                <span class="inline-block text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded">
-                                                    Discounted
-                                                </span>
-                                                @if($item->discount_name)
-                                                    <span class="text-xs text-gray-500">
-                                                        ({{ $item->discount_name }})
-                                                    </span>
-                                                @endif
-                                            </div>
-                                        @endif
-                                    </div>
-                                </div>
-                            </td>
+                                      {{-- Discount info --}}
+                                      @if($has_discount)
+                                          <div class="flex items-center gap-2 mt-1">
+                                              <span class="inline-block text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded">
+                                                  Discounted
+                                              </span>
+                                              @if($item->discount_name)
+                                                  <span class="text-xs text-gray-500">
+                                                      ({{ $item->discount_name }})
+                                                  </span>
+                                              @endif
+                                          </div>
+                                      @endif
+                                  </div>
+                              </div>
+                          </td>
 
-                            <td class="py-4">
-                                @if($has_discount)
-                                    {{-- Display the higher price with a strikethrough --}}
-                                    <span class="line-through text-gray-400">₱{{ number_format($originalPrice, 2) }}</span>
-                                @else
-                                    {{-- Display the unit price as the 'Original Price' (no strikethrough) --}}
-                                    <span class="text-gray-800">₱{{ number_format($unitPricePaid, 2) }}</span>
-                                @endif
-                            </td>
+                          <td class="py-4">
+                              @if($has_discount)
+                                  {{-- Display the original price with strikethrough --}}
+                                  <span class="line-through text-gray-400">₱{{ number_format($originalUnitPrice, 2) }}</span>
+                              @else
+                                  {{-- Display the unit price (no discount) --}}
+                                  <span class="text-gray-800">₱{{ number_format($unitPricePaid, 2) }}</span>
+                              @endif
+                          </td>
 
-                            <td class="py-4">
-                                @if($has_discount)
-                                    <div class="flex flex-col">
-                                        {{-- Display the discounted unit price and total savings for the line --}}
-                                        <span class="font-semibold text-green-600">₱{{ number_format($unitPricePaid, 2) }}</span>
-                                        <span class="text-xs text-green-600">Save ₱{{ number_format($totalSavings, 2) }}</span>
-                                    </div>
-                                @else
-                                    {{-- Display ₱0.00 as the discounted price when no discount --}}
-                                    <span class="font-semibold text-gray-800">₱{{ number_format(0.00, 2) }}</span>
-                                @endif
-                            </td>
+                          <td class="py-4">
+                              @if($has_discount)
+                                  <div class="flex flex-col">
+                                      {{-- Display the discounted unit price --}}
+                                      <span class="font-semibold text-green-600">₱{{ number_format($unitPricePaid, 2) }}</span>
+                                      <span class="text-xs text-green-600">Save ₱{{ number_format($totalSavings, 2) }}</span>
+                                  </div>
+                              @else
+                                  {{-- No discount applied --}}
+                                  <span class="text-gray-500">—</span>
+                              @endif
+                          </td>
 
-                            <td class="py-4 text-left">
-                                <span>{{ $item->quantity }}</span>
-                            </td>
+                          <td class="py-4 text-left">
+                              <span>{{ $item->quantity }}</span>
+                          </td>
 
-                            <td class="py-4">
-                                <span class="font-semibold text-gray-900">
-                                    ₱{{ number_format($item->sub_total, 2) }}
-                                </span>
-                            </td>
-                        </tr>
-                    @endforeach
-                </tbody>
+                          <td class="py-4">
+                              <span class="font-semibold text-gray-900">
+                                  ₱{{ number_format($item->sub_total, 2) }}
+                              </span>
+                          </td>
+                      </tr>
+                  @endforeach
+              </tbody>
             </table>
         </div>
 
@@ -279,7 +279,7 @@
       <div class="md:w-1/4">
         <div class="bg-white rounded-lg shadow-md p-6 border border-gray-200">
           <h2 class="text-lg font-semibold mb-4">Order Summary</h2>
-          
+    
           <div class="space-y-2">
             {{-- Original Subtotal (if there are discounts) --}}
             @if($productDiscountSavings > 0)
@@ -335,6 +335,60 @@
             </div>
             @endif
 
+            {{-- ✅ NEW: COD Downpayment & Remaining Balance --}}
+            @php
+              $paymentMethod = $order->payment->paymentMethod ?? null;
+              $isCOD = $paymentMethod && strtolower($paymentMethod->method_name) === 'cash on delivery';
+        
+              if ($isCOD) {
+                $totalItems = $order->orderItems->sum('quantity');
+                $downpaymentPerItem = 300;
+                $downpaymentAmount = $totalItems * $downpaymentPerItem;
+                $remainingBalance = $order->final_amount - $downpaymentAmount;
+          
+                // Get downpayment method from reference number
+                $refNumber = $order->payment->reference_number ?? '';
+                $downpaymentMethod = '';
+                if (str_contains($refNumber, '[GCASH]')) {
+                  $downpaymentMethod = 'GCash';
+                } elseif (str_contains($refNumber, '[BANK]')) {
+                  $downpaymentMethod = 'Bank Transfer';
+                }
+              }
+            @endphp
+
+            @if($isCOD)
+            <div class="border-t pt-3 mt-3">
+              <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3 space-y-2">
+                <div class="text-sm font-semibold text-gray-800 mb-2">
+                  Cash on Delivery Payment Breakdown
+                </div>
+          
+                {{-- Downpayment Amount --}}
+                <div class="flex justify-between text-sm">
+                  <span class="text-gray-700">
+                    Downpayment Paid
+                    @if($downpaymentMethod)
+                      <span class="block text-xs text-gray-500">(via {{ $downpaymentMethod }})</span>
+                    @endif
+                  </span>
+                  <span class="font-semibold text-blue-600">₱{{ number_format($downpaymentAmount, 2) }}</span>
+                </div>
+
+                {{-- Calculation Info --}}
+                <div class="text-xs text-gray-500 italic">
+                  ₱300 × {{ $totalItems }} {{ Str::plural('item', $totalItems) }}
+                </div>
+
+                {{-- Remaining Balance --}}
+                <div class="flex justify-between text-sm pt-2 border-t border-yellow-300">
+                  <span class="font-medium text-gray-800">Balance on Delivery</span>
+                  <span class="font-bold text-orange-600">₱{{ number_format($remainingBalance, 2) }}</span>
+                </div>
+              </div>
+            </div>
+            @endif
+
             {{-- Grand Total --}}
             <div class="border-t pt-3 mt-3">
               <div class="flex justify-between">
@@ -342,6 +396,7 @@
                 <span class="font-bold text-lg text-blue-700">₱{{ number_format($order->final_amount, 2) }}</span>
               </div>
             </div>
+
           </div>
         </div>
 
@@ -350,5 +405,6 @@
           Back to Orders
         </a>
       </div>
+
     </div>
 </div>

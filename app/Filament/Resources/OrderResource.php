@@ -694,6 +694,7 @@ class OrderResource extends Resource
                     ->formatStateUsing(fn ($state) => $state ?? 'N/A'),
 
                 TextColumn::make('payment.amount')
+                    ->label('Amount')
                     ->numeric()
                     ->sortable()
                     ->money('PHP'),

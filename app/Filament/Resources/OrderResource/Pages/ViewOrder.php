@@ -204,10 +204,10 @@ class ViewOrder extends ViewRecord
                         Section::make('Payment Details')
                             ->schema([
                                 Grid::make(2)->schema([
-                                    TextEntry::make('payment.paymentMethod.method_name')
+                                    // new upadte
+                                    TextEntry::make('payment_method')
                                         ->label('Payment Method')
-                                        ->icon('heroicon-o-arrow-right-circle')
-                                        ->placeholder('— N/A —'),
+                                        ->getStateUsing(fn($record) => $record->full_payment_method),
 
                                     TextEntry::make('payment.reference_number')
                                         ->label('Reference No.')
@@ -225,9 +225,31 @@ class ViewOrder extends ViewRecord
                                         })
                                         ->placeholder('— N/A —'),
 
+                                    // new update added
                                     TextEntry::make('payment.amount')
-                                        ->label('Total Amount to Pay')
+                                        ->label('Total Amount to Pay / Downpayment')
                                         ->icon('heroicon-o-banknotes')
+                                        ->getStateUsing(function ($record) {
+                                            if (!$record->payment) {
+                                                return 0;
+                                            }
+
+                                            $paymentMethod = $record->payment->paymentMethod;
+                                            $methodName = strtolower($paymentMethod->method_name ?? '');
+
+                                            // If it's COD, calculate and show downpayment amount
+                                            if ($methodName === 'cash on delivery') {
+                                                // Get total items from order
+                                                $totalItems = $record->orderItems->sum('quantity');
+                                                $downpaymentPerItem = 300; // ₱300 per item
+                                                $downpaymentAmount = $totalItems * $downpaymentPerItem;
+            
+                                                return $downpaymentAmount;
+                                            }
+
+                                            // For other payment methods, show full amount
+                                            return $record->payment->amount;
+                                        })
                                         ->money('PHP'),
                                 ]),
                             ]),

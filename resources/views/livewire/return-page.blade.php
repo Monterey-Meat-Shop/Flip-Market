@@ -142,20 +142,20 @@
       <div class="space-y-2">
         <h3 class="font-medium text-gray-900 mb-2 text-lg">What is the condition of the product?</h3>
 
-        <label class="flex items-center space-x-2 cursor-pointer">
+        {{-- <label class="flex items-center space-x-2 cursor-pointer">
           <input type="radio" wire:model="condition" value="not_delivered" class="w-5 h-5 text-blue-600 border-gray-300 focus:ring-blue-500" onclick="toggleTextarea(false)" required>
           <span class="text-gray-700 text-md">The product was not delivered</span>
-        </label>
+        </label> --}}
 
         <label class="flex items-center space-x-2 cursor-pointer">
           <input type="radio" wire:model="condition" value="defective" class="w-5 h-5 text-blue-600 border-gray-300 focus:ring-blue-500" onclick="toggleTextarea(false)">
           <span class="text-gray-700 text-md">Defective or Damaged Product</span>
         </label>
 
-        <label class="flex items-center space-x-2 cursor-pointer">
+        {{-- <label class="flex items-center space-x-2 cursor-pointer">
           <input type="radio" wire:model="condition" value="changed_mind" class="w-5 h-5 text-blue-600 border-gray-300 focus:ring-blue-500" onclick="toggleTextarea(false)">
           <span class="text-gray-700 text-md">Changed Mind/Not as Expected</span>
-        </label>
+        </label> --}}
 
         <label class="flex items-center space-x-2 cursor-pointer">
           <input type="radio" wire:model="condition" value="incorrect" class="w-5 h-5 text-blue-600 border-gray-300 focus:ring-blue-500" onclick="toggleTextarea(false)">
