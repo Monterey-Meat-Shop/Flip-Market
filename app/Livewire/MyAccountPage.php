@@ -265,6 +265,13 @@ class MyAccountPage extends Component
 
             if (! Hash::check($this->current_password, $user->password)) {
                 session()->flash('error', 'Current password is incorrect.');
+
+                //  Also trigger toast (this was missing!)
+                $this->dispatch('notify', [
+                    'message' => 'Current password is incorrect.',
+                    'type'    => 'error',
+                ]);
+
                 return;
             }
 
@@ -277,10 +284,28 @@ class MyAccountPage extends Component
             $this->confirm_password = '';
 
             session()->flash('success', 'Password changed successfully!');
+
+            //  Notify toast
+            $this->dispatch('notify', [
+                'message' => 'Password changed successfully!',
+                'type'    => 'success',
+            ]);
+
+            //  NEW: Dispatch event to switch back to profile tab
+            $this->dispatch('password-changed-success');
+
         } catch (\Exception $e) {
+
             session()->flash('error', 'Failed to change password: ' . $e->getMessage());
+
+            //  Notify toast
+            $this->dispatch('notify', [
+                'message' => 'Failed to change password: ' . $e->getMessage(),
+                'type'    => 'error',
+            ]);
         }
     }
+
 
     public function render()
     {

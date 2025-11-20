@@ -6,10 +6,10 @@ use App\Models\Address;
 use App\Models\Customer;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Http; // ✅ Added for API calls
-use Illuminate\Support\Facades\Mail; // ✅ Added for sending emails
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Mail;
 use Livewire\Component;
-use Illuminate\Auth\Events\Registered; // ✅ Added for triggering Laravel’s built-in verification
+use Illuminate\Auth\Events\Registered;
 use Illuminate\Validation\Rule;
 
 class RegisterPage extends Component
@@ -27,22 +27,35 @@ class RegisterPage extends Component
     public $province;
     public $postal_code;
 
-    // ✅ NEW: Success message property
     public $successMessage = null;
+    public $emailError = null;   //real-time email error message
 
-    // ✅ Email validation using MailboxLayer API (safe/fail-open)
+    //REAL-TIME EMAIL CHECK
+    public function updatedEmail()
+    {
+        if (!$this->email) {
+            $this->emailError = null;
+            return;
+        }
+
+        if (!$this->checkEmailValidity($this->email)) {
+            $this->emailError = "❌ This email is invalid, unreachable, or disposable.";
+        } else {
+            $this->emailError = null;
+        }
+    }
+
+    //STRICT EMAIL VALIDATION
     public function checkEmailValidity($email)
     {
-        // quick format check first
         if (! filter_var($email, FILTER_VALIDATE_EMAIL)) {
             return false;
         }
 
         $apiKey = env('MAILBOXLAYER_API_KEY');
 
-        // if no API key configured, skip external check (do not block)
         if (empty($apiKey)) {
-            return true;
+            return false; 
         }
 
         try {
@@ -53,48 +66,34 @@ class RegisterPage extends Component
                 'format' => 1,
             ]);
         } catch (\Throwable $e) {
-            // API request failed (network, timeout, etc.) — do not block registration
-            return true;
+            return false;
         }
 
         if ($response->failed()) {
-            // upstream service error — allow registration to proceed
-            return true;
+            return false;
         }
 
         $data = $response->json();
 
         if (!is_array($data) || empty($data)) {
-            // unexpected payload — don't block user
-            return true;
+            return false;
         }
 
-        // If provider returned an error payload, allow registration (avoid false negatives)
         if (isset($data['success']) && $data['success'] === false) {
-            return true;
+            return false;
         }
 
-        // Only use checks that exist in the response. If none exist, allow registration.
-        $hasFormat = array_key_exists('format_valid', $data);
-        $hasSmtp   = array_key_exists('smtp_check', $data);
-        $hasMx     = array_key_exists('mx_found', $data);
-
-        if (! ($hasFormat || $hasSmtp || $hasMx)) {
-            return true;
-        }
-
-        $formatValid = $hasFormat ? (bool) $data['format_valid'] : true;
-        $smtpCheck   = $hasSmtp   ? (bool) $data['smtp_check']   : true;
-        $mxFound     = $hasMx     ? (bool) $data['mx_found']     : true;
-
-        // require all available checks to be truthy
-        return $formatValid && $smtpCheck && $mxFound;
+        //STRICT: require ALL to be true
+        return 
+            !empty($data['format_valid']) &&
+            !empty($data['smtp_check']) &&
+            !empty($data['mx_found']) &&
+            empty($data['disposable']); // block temporary emails
     }
 
-    // validation using livewire :<<
     public function register()
     {
-        // Load provinces/cities dataset
+
         $dataPath = public_path('data/philippines.json');
         $locations = [];
         if (file_exists($dataPath)) {
@@ -103,7 +102,6 @@ class RegisterPage extends Component
         $allowedProvinces = array_keys($locations);
         $allowedCities = $locations[$this->province] ?? [];
 
-        // Dynamic rules: prefer exact match against dataset; fallback to relaxed pattern
         $provinceRules = ['required', 'max:255'];
         if (!empty($allowedProvinces)) {
             $provinceRules[] = Rule::in($allowedProvinces);
@@ -118,35 +116,43 @@ class RegisterPage extends Component
             $cityRules[] = 'regex:/^[A-Za-z0-9\s\-\.\'\(\)&]+$/';
         }
 
-        $this->validate([
-            'firstname' => ['required', 'max:255', 'regex:/^[A-Za-z\s\-]+$/'],
-            'lastname'  => ['required', 'max:255', 'regex:/^[A-Za-z\s\-]+$/'],
-            'email' => [
-                'required',
-                'email:rfc,dns', // checks format AND domain existence
-                'unique:users,email',
-                'max:255'
-            ],
-            'password'  => 'required|min:8|max:255|confirmed',
-            'password_confirmation' => 'required',
-            'postal_code' => 'required|numeric|digits_between:4,10',
-            'address_line_1' => 'required|max:255',
-            'address_line_2' => 'max:255',
-            'city' => $cityRules,
-            'province' => $provinceRules,
-            'phone' => [
-                'required',
-                'regex:/^[0-9]{10,11}$/',
-            ],
-        ]);
+       $this->validate([
+    'firstname' => ['required', 'max:255', 'regex:/^[A-Za-z\s\-]+$/'],
+    'lastname'  => ['required', 'max:255', 'regex:/^[A-Za-z\s\-]+$/'],
 
-        // ✅ Check if email is real via API
+    'email' => [
+        'required',
+        'email:rfc,dns',
+        'unique:users,email',
+        'max:255'
+    ],
+
+    'phone' => [
+        'required',
+        'regex:/^[0-9]{11}$/',
+        'unique:users,phone'
+    ],
+
+    'password'  => 'required|min:8|max:255|confirmed',
+    'password_confirmation' => 'required',
+
+    'postal_code' => 'required|numeric|digits_between:4,10',
+    'address_line_1' => 'required|max:255',
+    'address_line_2' => 'max:255',
+
+    'city' => $cityRules,
+    'province' => $provinceRules,
+]);
+
+
+        //BLOCK INVALID EMAILS STRICTLY
+
         if (!$this->checkEmailValidity($this->email)) {
-            $this->addError('email', 'The email address appears invalid or unreachable.');
+            $this->addError('email', 'The email address is invalid, unreachable, or disposable.');
             return;
         }
 
-        // ✅ Continue registration as normal
+        
         $user = User::create([
             'name'          => $this->firstname,
             'last_name'     => $this->lastname,
@@ -154,8 +160,6 @@ class RegisterPage extends Component
             'phone'         => $this->phone,
             'password'      => bcrypt($this->password),
             'is_active'     => true,
-
-            // 🔹 added so Filament "Customer Information" can see latest data directly on users table
             'postal_code'     => $this->postal_code,
             'address_line_1'  => $this->address_line_1,
             'address_line_2'  => $this->address_line_2,
@@ -163,7 +167,7 @@ class RegisterPage extends Component
             'province'        => $this->province,
         ]);
 
-        $user->assignRole('customer'); // automatically assign the user as a customer
+        $user->assignRole('customer');
 
         $customer = Customer::create([
             'user_id'    => $user->id,
@@ -173,7 +177,7 @@ class RegisterPage extends Component
             'is_active'  => true,
         ]);
 
-        $address = Address::create([
+        Address::create([
             'customerID'     => $customer->customerID,
             'address_line_1' => $this->address_line_1,
             'address_line_2' => $this->address_line_2,
@@ -182,10 +186,8 @@ class RegisterPage extends Component
             'postal_code'    => $this->postal_code,
         ]);
 
-        // ✅ Trigger email verification (Laravel built-in)
         event(new Registered($user));
 
-        // ✅ Optional: Send a welcome email immediately
         try {
             Mail::raw(
                 'Welcome to Flip Market! Your account has been successfully created.',
@@ -194,16 +196,12 @@ class RegisterPage extends Component
                             ->subject('Welcome to Flip Market!');
                 }
             );
-        } catch (\Exception $e) {
-            // Silent fail — you can log this if needed
-        }
+        } catch (\Exception $e) {}
 
-        // ✅ Show success message instead of redirect
         $this->successMessage =
             '🎉 Account created successfully! A verification and welcome email were sent to ' .
             $this->email . '. Please check your inbox.';
 
-        // Optional: clear form inputs
         $this->reset([
             'firstname',
             'lastname',

@@ -33,10 +33,10 @@ class PendingWidget extends BaseWidget
                     ->label('Shipping Status')
                     ->badge()
                     ->color('warning'),
-                TextColumn::make('payment_status')
-                    ->label('Payment Status')
-                    ->badge()
-                    ->color('warning'),
+                // TextColumn::make('payment_status')
+                //     ->label('Payment Status')
+                //     ->badge()
+                //     ->color('warning'),
                 TextColumn::make('total_amount')->label('Total')->money('php')->color('success'),
             ])
             ->filters([
