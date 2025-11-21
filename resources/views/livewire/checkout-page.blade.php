@@ -24,15 +24,15 @@
         <div class="grid grid-cols-2 gap-4 mb-4">
           <div>
             <label class="block text-sm mb-1">First Name</label>
-            <input type="text" wire:model="firstName"
-                   class="w-full py-2 px-2 rounded-lg border border-gray-300 text-gray-800
+            <input type="text" wire:model="firstName" readonly
+                   class="w-full py-2 px-2 rounded-lg border border-gray-300 text-gray-800 bg-gray-100 cursor-not-allowed
                           focus:border-blue-500 focus:ring-blue-500 @error('firstName') border-red-500 @enderror">
             @error('firstName') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
           </div>
           <div>
             <label class="block text-sm mb-1">Last Name</label>
-            <input type="text" wire:model="lastName"
-                   class="w-full py-2 px-2 rounded-lg border border-gray-300 text-gray-800
+            <input type="text" wire:model="lastName" readonly
+                   class="w-full py-2 px-2 rounded-lg border border-gray-300 text-gray-800 bg-gray-100 cursor-not-allowed
                           focus:border-blue-500 focus:ring-blue-500 @error('lastName') border-red-500 @enderror">
             @error('lastName') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
           </div>
@@ -40,8 +40,8 @@
 
         <div class="mb-4">
           <label class="block text-sm mb-1">Phone Number</label>
-          <input type="text" wire:model="phone"
-                 class="w-full py-2 px-2 rounded-lg border border-gray-300 text-gray-800
+          <input type="text" wire:model="phone" readonly
+                 class="w-full py-2 px-2 rounded-lg border border-gray-300 text-gray-800 bg-gray-100 cursor-not-allowed
                         focus:border-blue-500 focus:ring-blue-500 @error('phone') border-red-500 @enderror">
           @error('phone') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
         </div>
@@ -92,7 +92,8 @@
         <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
           @foreach($paymentMethods as $method)
             <div class="flex items-start rounded-lg border border-gray-200 bg-gray-50 p-4
-                        {{ $selectedPaymentMethod == $method->payment_methodID ? 'border-blue-500 bg-blue-50' : '' }}">
+                        {{ $selectedPaymentMethod == $method->payment_methodID ? 'border-blue-500 bg-blue-50' : '' }}
+                        {{ strtolower($method->method_name) === 'cash on delivery' ? 'md:col-span-2' : '' }}">
               <input id="payment-{{ $method->payment_methodID }}"
                      type="radio"
                      name="payment-method"
@@ -109,6 +110,8 @@
                     Pay using your GCash wallet
                   @elseif(strtolower($method->method_name) === 'bank transfer' || strtolower($method->method_name) === 'banktransfer')
                     Transfer to our bank account
+                  @elseif(strtolower($method->method_name) === 'cash on delivery')
+                    Pay ₱300/item downpayment ({{ $totalItems }} {{ Str::plural('item', $totalItems) }} = ₱{{ number_format($codDownpaymentAmount, 2) }})
                   @else
                     {{ $method->method_name }}
                   @endif
@@ -117,9 +120,178 @@
             </div>
           @endforeach
         </div>
-        @error('selectedPaymentMethod') <span class="text-red-500 text-xs mt-2 block">{{ $message }}</span> @enderror
 
-        {{-- GCash Instructions --}}
+        @error('selectedPaymentMethod') 
+          <span class="text-red-500 text-xs mt-2 block">{{ $message }}</span> 
+        @enderror
+
+        {{-- COD Downpayment Instructions --}}
+        @if($showCodDownPayment)
+          <div class="mt-4 p-4 border border-gray-300 rounded-lg bg-gray-50">
+            <h4 class="font-semibold text-gray-800 mb-3">Cash on Delivery - Downpayment Required</h4>
+
+            <div class="mb-4 p-3 bg-blue-50 border border-blue-200 rounded">
+              <p class="text-sm text-gray-700">
+                <strong>Downpayment Calculation:</strong><br>
+                ₱300 per item × {{ $totalItems }} {{ Str::plural('item', $totalItems) }} = 
+                <strong class="text-blue-600 text-lg">₱{{ number_format($codDownpaymentAmount, 2) }}</strong>
+              </p>
+              <p class="text-xs text-gray-600 mt-1">
+                The remaining balance of <strong>₱{{ number_format($totalAmount - $codDownpaymentAmount, 2) }}</strong> will be paid upon delivery.
+              </p>
+            </div>
+
+            {{-- Select COD Downpayment Method --}}
+            <label class="block mb-2 text-sm font-medium">
+              Choose Downpayment Method <span class="text-red-500">*</span>
+            </label>
+
+            <select wire:model.live="codDownPaymentMethod" 
+                    class="w-full border rounded-lg p-2 mb-4 @error('codDownPaymentMethod') border-red-500 @enderror">
+              <option value="">-- Select Payment Method --</option>
+              <option value="gcash">GCash</option>
+              <option value="bank_transfer">Bank Transfer</option>
+            </select>
+
+            @error('codDownPaymentMethod') 
+              <span class="text-red-500 text-xs">{{ $message }}</span> 
+            @enderror
+
+            {{-- Show instructions only after user selects a method --}}
+            @if($codDownPaymentMethod === 'gcash')
+              <div class="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h4 class="font-semibold text-gray-800 mb-3">GCash Payment Instructions (Downpayment)</h4>
+
+                <div class="grid md:grid-cols-2 gap-4 mb-4">
+                  <div class="text-center">
+                    <p class="text-sm text-gray-600 mb-2">Scan QR Code:</p>
+                    <div class="bg-white p-3 rounded-lg inline-block">
+                      
+                      {{-- 🔵 DYNAMIC GCASH QR --}}
+                      <img src="{{ $paymentSettings?->gcash_qr ? asset('storage/' . $paymentSettings->gcash_qr) : asset('images/GCASH_QR.jpg') }}"
+                           alt="GCash QR Code"
+                           class="w-48 h-48 object-contain mx-auto">
+
+                    </div>
+                  </div>
+
+                  <div class="space-y-2 text-sm">
+                    <div>
+                      <p class="text-gray-600">Account Name:</p>
+
+                      {{-- 🔵 DYNAMIC GCASH ACCOUNT NAME --}}
+                      <p class="font-semibold">{{ $paymentSettings->gcash_account_name ?? 'Not Set' }}</p>
+
+                    </div>
+                    <div>
+                      <p class="text-gray-600">GCash Number:</p>
+
+                      {{-- 🔵 DYNAMIC GCASH NUMBER --}}
+                      <p class="font-semibold">{{ $paymentSettings->gcash_number ?? 'Not Set' }}</p>
+
+                    </div>
+                    <div>
+                      <p class="text-gray-600">Downpayment Amount:</p>
+                      <p class="font-semibold text-lg text-blue-600">₱{{ number_format($codDownpaymentAmount, 2) }}</p>
+                      <p class="text-xs text-gray-500">(₱300 × {{ $totalItems }} {{ Str::plural('item', $totalItems) }})</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="mb-3 p-3 bg-yellow-50 border border-yellow-200 rounded">
+                  <p class="text-xs text-gray-700">
+                    <strong>Note:</strong> Please send exactly <strong>₱{{ number_format($codDownpaymentAmount, 2) }}</strong> and enter the reference number below after payment.
+                  </p>
+                </div>
+
+                <label class="block text-sm mb-1 font-medium">
+                  GCash Reference Number <span class="text-red-500">*</span>
+                </label>
+                <input type="text" 
+                       wire:model="codGcashReferenceNumber"
+                       class="w-full py-2 px-3 rounded-lg border border-gray-300 text-gray-800
+                              focus:border-blue-500 focus:ring-1 focus:ring-blue-500 
+                              @error('codGcashReferenceNumber') border-red-500 @enderror"
+                       placeholder="Enter the 13-digit reference number from GCash"
+                       maxlength="13">
+
+                @error('codGcashReferenceNumber') 
+                  <span class="text-red-500 text-xs mt-1 block">{{ $message }}</span> 
+                @enderror
+              </div>
+
+            @elseif($codDownPaymentMethod === 'bank_transfer')
+              <div class="mt-4 bg-green-50 border border-green-200 rounded-lg p-4">
+                <h4 class="font-semibold text-gray-800 mb-3">Bank Transfer Payment Instructions (Downpayment)</h4>
+
+                <div class="grid md:grid-cols-2 gap-4 mb-4">
+                  <div class="text-center">
+                    <p class="text-sm text-gray-600 mb-2">Scan QR Code:</p>
+                    <div class="bg-white p-3 rounded-lg inline-block">
+
+                      {{-- 🟢 DYNAMIC BANK TRANSFER QR --}}
+                      <img src="{{ $paymentSettings?->bank_qr ? asset('storage/' . $paymentSettings->bank_qr) : asset('images/BANK_QR.jpg') }}"
+                           alt="Bank Transfer QR Code"
+                           class="w-48 h-48 object-contain mx-auto">
+
+                    </div>
+                  </div>
+
+                  <div class="space-y-2 text-sm">
+                    <div>
+                      <p class="text-gray-600">Bank Name:</p>
+
+                      {{-- 🟢 DYNAMIC BANK NAME --}}
+                      <p class="font-semibold">{{ $paymentSettings->bank_name ?? 'Not Set' }}</p>
+
+                    </div>
+                    <div>
+                      <p class="text-gray-600">Account Name:</p>
+
+                      {{-- 🟢 DYNAMIC BANK ACCOUNT NAME --}}
+                      <p class="font-semibold">{{ $paymentSettings->bank_account_name ?? 'Not Set' }}</p>
+
+                    </div>
+                    <div>
+                      <p class="text-gray-600">Account Number:</p>
+
+                      {{-- 🟢 DYNAMIC BANK ACCOUNT NUMBER --}}
+                      <p class="font-semibold">{{ $paymentSettings->bank_account_number ?? 'Not Set' }}</p>
+
+                    </div>
+                    <div>
+                      <p class="text-gray-600">Downpayment Amount:</p>
+                      <p class="font-semibold text-lg text-green-600">₱{{ number_format($codDownpaymentAmount, 2) }}</p>
+                      <p class="text-xs text-gray-500">(₱300 × {{ $totalItems }} {{ Str::plural('item', $totalItems) }})</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="mb-3 p-3 bg-yellow-50 border border-yellow-200 rounded">
+                  <p class="text-xs text-gray-700">
+                    <strong>Note:</strong> Please send exactly <strong>₱{{ number_format($codDownpaymentAmount, 2) }}</strong> and enter the reference number from your bank receipt below.
+                  </p>
+                </div>
+
+                <label class="block text-sm mb-1 font-medium">
+                  Bank Transfer Reference Number <span class="text-red-500">*</span>
+                </label>
+                <input type="text" 
+                       wire:model="codBankReferenceNumber"
+                       class="w-full py-2 px-3 rounded-lg border border-gray-300 text-gray-800
+                              focus:border-blue-500 focus:ring-1 focus:ring-blue-500 
+                              @error('codBankReferenceNumber') border-red-500 @enderror"
+                       placeholder="Enter your bank transfer reference number">
+
+                @error('codBankReferenceNumber') 
+                  <span class="text-red-500 text-xs mt-1 block">{{ $message }}</span> 
+                @enderror
+              </div>
+            @endif
+          </div>
+        @endif
+
+        {{-- GCash Instructions (Full Payment) --}}
         @if($showGcashReference)
           <div class="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
             <h4 class="font-semibold text-gray-800 mb-3">GCash Payment Instructions</h4>
@@ -128,20 +300,29 @@
               <div class="text-center">
                 <p class="text-sm text-gray-600 mb-2">Scan QR Code:</p>
                 <div class="bg-white p-3 rounded-lg inline-block">
-                  <img src="{{ asset('storage/payment_qr/gcash.png') }}"
+
+                  {{-- 🔵 DYNAMIC GCASH QR --}}
+                  <img src="{{ $paymentSettings?->gcash_qr ? asset('storage/' . $paymentSettings->gcash_qr) : asset('images/GCASH_QR.jpg') }}"
                        alt="GCash QR Code"
                        class="w-48 h-48 object-contain mx-auto">
+
                 </div>
               </div>
 
               <div class="space-y-2 text-sm">
                 <div>
                   <p class="text-gray-600">Account Name:</p>
-                  <p class="font-semibold">Flip Market</p>
+
+                  {{-- 🔵 DYNAMIC GCASH ACCOUNT NAME --}}
+                  <p class="font-semibold">{{ $paymentSettings->gcash_account_name ?? 'Not Set' }}</p>
+
                 </div>
                 <div>
                   <p class="text-gray-600">GCash Number:</p>
-                  <p class="font-semibold">0917-123-4567</p>
+
+                  {{-- 🔵 DYNAMIC GCASH NUMBER --}}
+                  <p class="font-semibold">{{ $paymentSettings->gcash_number ?? 'Not Set' }}</p>
+
                 </div>
                 <div>
                   <p class="text-gray-600">Amount to Pay:</p>
@@ -159,15 +340,21 @@
             <label class="block text-sm mb-1 font-medium">
               GCash Reference Number <span class="text-red-500">*</span>
             </label>
-            <input type="text" wire:model="gcashReferenceNumber"
-                   class="w-full py-2 px-2 rounded-lg border border-gray-300 text-gray-800
-                          focus:border-blue-500 focus:ring-blue-500 @error('gcashReferenceNumber') border-red-500 @enderror"
-                   placeholder="Enter the 13-digit reference number from GCash">
-            @error('gcashReferenceNumber') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
+            <input type="text" 
+                   wire:model="gcashReferenceNumber"
+                   class="w-full py-2 px-3 rounded-lg border border-gray-300 text-gray-800
+                          focus:border-blue-500 focus:ring-1 focus:ring-blue-500 
+                          @error('gcashReferenceNumber') border-red-500 @enderror"
+                   placeholder="Enter the 13-digit reference number from GCash"
+                   maxlength="13">
+
+            @error('gcashReferenceNumber') 
+              <span class="text-red-500 text-xs mt-1 block">{{ $message }}</span> 
+            @enderror
           </div>
         @endif
 
-        {{-- Bank Transfer Instructions --}}
+        {{-- Bank Transfer Instructions (Full Payment) --}}
         @if($showBankTransferReference)
           <div class="mt-4 bg-green-50 border border-green-200 rounded-lg p-4">
             <h4 class="font-semibold text-gray-800 mb-3">Bank Transfer Payment Instructions</h4>
@@ -176,24 +363,36 @@
               <div class="text-center">
                 <p class="text-sm text-gray-600 mb-2">Scan QR Code:</p>
                 <div class="bg-white p-3 rounded-lg inline-block">
-                  <img src="{{ asset('storage/payment_qr/gcash.png') }}"
-                       alt="Bank QR Code"
+
+                  {{-- 🟢 DYNAMIC BANK TRANSFER QR --}}
+                  <img src="{{ $paymentSettings?->bank_qr ? asset('storage/' . $paymentSettings->bank_qr) : asset('images/BANK_QR.jpg') }}"
+                       alt="Bank Transfer QR Code"
                        class="w-48 h-48 object-contain mx-auto">
+
                 </div>
               </div>
 
               <div class="space-y-2 text-sm">
                 <div>
                   <p class="text-gray-600">Bank Name:</p>
-                  <p class="font-semibold">BDO / BPI / Metrobank</p>
+
+                  {{-- 🟢 DYNAMIC BANK NAME --}}
+                  <p class="font-semibold">{{ $paymentSettings->bank_name ?? 'Not Set' }}</p>
+
                 </div>
                 <div>
                   <p class="text-gray-600">Account Name:</p>
-                  <p class="font-semibold">Flip Market</p>
+
+                  {{-- 🟢 DYNAMIC BANK ACCOUNT NAME --}}
+                  <p class="font-semibold">{{ $paymentSettings->bank_account_name ?? 'Not Set' }}</p>
+
                 </div>
                 <div>
                   <p class="text-gray-600">Account Number:</p>
-                  <p class="font-semibold">1234-5678-9012</p>
+
+                  {{-- 🟢 DYNAMIC BANK ACCOUNT NUMBER --}}
+                  <p class="font-semibold">{{ $paymentSettings->bank_account_number ?? 'Not Set' }}</p>
+
                 </div>
                 <div>
                   <p class="text-gray-600">Amount to Pay:</p>
@@ -211,11 +410,16 @@
             <label class="block text-sm mb-1 font-medium">
               Bank Transfer Reference Number <span class="text-red-500">*</span>
             </label>
-            <input type="text" wire:model="bankTransferReferenceNumber"
-                   class="w-full py-2 px-2 rounded-lg border border-gray-300 text-gray-800
-                          focus:border-blue-500 focus:ring-blue-500 @error('bankTransferReferenceNumber') border-red-500 @enderror"
+            <input type="text" 
+                   wire:model="bankTransferReferenceNumber"
+                   class="w-full py-2 px-3 rounded-lg border border-gray-300 text-gray-800
+                          focus:border-blue-500 focus:ring-1 focus:ring-blue-500 
+                          @error('bankTransferReferenceNumber') border-red-500 @enderror"
                    placeholder="Enter your bank transfer reference number">
-            @error('bankTransferReferenceNumber') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
+
+            @error('bankTransferReferenceNumber') 
+              <span class="text-red-500 text-xs mt-1 block">{{ $message }}</span> 
+            @enderror
           </div>
         @endif
       </div>
@@ -251,7 +455,7 @@
                 </div>
               </div>
 
-              {{-- 🔹 Lalamove extra UI --}}
+              {{-- Lalamove extra UI --}}
               @if($methodKey === 'LALAMOVE' && $selectedShippingMethod === 'LALAMOVE')
                 <div class="mt-4 bg-yellow-50 border border-yellow-200 rounded-lg p-4 space-y-3">
                   <p class="text-sm font-semibold text-gray-800">
@@ -281,21 +485,14 @@
                     </label>
                   </div>
 
-                  {{-- If customer will book themselves: show store pickup + tracking input --}}
                   @if($lalamoveBookingOption === 'customer')
                     <div class="mt-3 bg-white border border-yellow-100 rounded p-3 text-xs text-gray-700 space-y-1">
                       <p class="font-semibold text-gray-800">Pickup details for your Lalamove booking:</p>
                       <p><strong>Store Address:</strong> 005 Bonifacio, Bagong Silangan, Quezon City, 1119 Metro Manila </p>
                       <p><strong>Store Mobile Number:</strong> 09359931562 </p>
-                      <p class="text-[11px] text-gray-500">
-                        Use these details as the pickup information in your Lalamove app. You will pay the Lalamove rider directly.
-                      </p>
                     </div>
-
-    
                   @endif
 
-                  {{-- If store will book: just info, no fee input, no tracking input --}}
                   @if($lalamoveBookingOption === 'store')
                     <p class="mt-1 text-xs text-gray-700">
                       Our staff will arrange the Lalamove booking for you. The final delivery fee will be confirmed and
@@ -410,6 +607,33 @@
             </span>
           </div>
 
+          @if($showCodDownPayment)
+            @php
+              $remainingBalance = $totalAmount - $codDownpaymentAmount;
+            @endphp
+
+            <div class="border-t border-gray-200 pt-3 mt-3 bg-yellow-50 rounded-lg p-3">
+              <div class="flex justify-between items-center">
+                <span class="text-sm font-semibold text-yellow-700">
+                  COD Downpayment (₱{{ number_format($codDownpaymentPerItem, 0) }} × {{ $totalItems }} item{{ $totalItems > 1 ? 's' : '' }})
+                </span>
+                <span class="text-sm font-bold text-yellow-700">
+                  ₱{{ number_format($codDownpaymentAmount, 2) }}
+                </span>
+              </div>
+
+              <div class="flex justify-between items-center mt-2">
+                <span class="text-sm text-gray-700 font-medium">Remaining Balance on Delivery</span>
+                <span class="text-sm font-bold text-gray-800">₱{{ number_format($remainingBalance, 2) }}</span>
+              </div>
+
+              <p class="text-xs text-yellow-600 mt-2 leading-tight">
+                A downpayment of ₱{{ number_format($codDownpaymentAmount, 2) }} is required via your chosen method (GCash or Bank Transfer) before your order is processed.  
+                The remaining balance of ₱{{ number_format($remainingBalance, 2) }} will be paid upon delivery.
+              </p>
+            </div>
+          @endif
+
           @php
             $totalSavings = $productDiscountSavings + $discountAmount;
           @endphp
@@ -425,9 +649,20 @@
         </div>
 
         <div class="flex justify-between font-bold text-lg border-t pt-4 mt-4">
-          <span>Total</span>
+          @if($showCodDownPayment)
+            <span>Total (Full Price)</span>
+          @else
+            <span>Total</span>
+          @endif
           <span class="text-blue-700">₱{{ number_format($totalAmount, 2) }}</span>
         </div>
+
+        @if($showCodDownPayment)
+          <div class="flex justify-between mt-2 text-sm text-yellow-700 font-semibold">
+            <span>Pay Now:</span>
+            <span>₱{{ number_format($codDownpaymentAmount, 2) }}</span>
+          </div>
+        @endif
 
         <button wire:click="placeOrder"
                 wire:loading.attr="disabled"
@@ -469,6 +704,7 @@
                  class="mx-auto w-48 h-48 object-cover rounded-lg border shadow">
           </div>
         @endif
+        
       </div>
     </div>
   </div>

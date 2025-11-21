@@ -32,6 +32,14 @@ class CheckoutPage extends Component
     public $productDiscountSavings = 0;
     public $totalAmount = 0;
     public $cartCount = 0;
+    public $paymentSettings; // Payment settings added 11/21/2025
+    
+
+
+    // NEW: COD Downpayment Calculation
+    public $totalItems = 0;
+    public $codDownpaymentAmount = 0;
+    public $codDownpaymentPerItem = 300; // ₱300 per item
 
     public $selectedShippingMethod = 'JNT';
     public $availableShippingMethods = [];
@@ -62,10 +70,15 @@ class CheckoutPage extends Component
     public $customer;
     public $isProcessing = false;
 
+    public $showCodDownPayment = false;
+    public $codDownPaymentMethod = null;
+    public $codGcashReferenceNumber = '';
+    public $codBankReferenceNumber = '';
+
     // Lalamove-specific
-    public $lalamoveBookingOption = null; // 'customer' or 'store'
-    public $lalamoveFee = null;           // kept for compatibility (not required here)
-    public $lalamoveTracking = null;      // optional tracking number / URL
+    public $lalamoveBookingOption = null;
+    public $lalamoveFee = null;
+    public $lalamoveTracking = null;
 
     protected $listeners = ['paymentMethodChanged'];
 
@@ -104,6 +117,10 @@ class CheckoutPage extends Component
         $this->loadShippingMethods();
         $this->loadCartData();
         $this->calculateTotals();
+        $this->calculateCodDownpayment(); // NEW
+       $this->paymentSettings = \App\Models\PaymentSetting::latest('id')->first(); // Load payment settings added 11/21/2025
+
+
     }
 
     private function getActiveDiscount($product)
@@ -142,6 +159,19 @@ class CheckoutPage extends Component
         return max($discountedPrice, 0);
     }
 
+    // NEW: Calculate COD Downpayment based on total items
+    private function calculateCodDownpayment()
+    {
+        $this->totalItems = 0;
+
+        foreach ($this->cartItems as $item) {
+            $this->totalItems += $item->quantity;
+        }
+
+        // Calculate: ₱300 per item
+        $this->codDownpaymentAmount = $this->totalItems * $this->codDownpaymentPerItem;
+    }
+
     public function loadCustomerData()
     {
         $this->customer = Customer::where('user_id', Auth::id())->first();
@@ -171,12 +201,19 @@ class CheckoutPage extends Component
             return;
         }
 
-        $this->cartItems = CartItem::where('customerID', $this->customer->customerID)
-            ->with(['product.discounts', 'variant'])
-            ->get();
+        $selectedIds = session('checkout_items', []);
+
+        $query = CartItem::where('customerID', $this->customer->customerID)
+            ->with(['product.discounts', 'variant']);
+
+        if (!empty($selectedIds)) {
+            $query->whereIn('cart_itemID', $selectedIds);
+        }
+
+        $this->cartItems = $query->get();
 
         if ($this->cartItems->isEmpty()) {
-            session()->flash('error', 'Your cart is empty.');
+            session()->flash('error', 'No items selected for checkout.');
             return redirect()->route('cart');
         }
 
@@ -226,6 +263,9 @@ class CheckoutPage extends Component
 
             $this->originalSubtotal += $basePrice * $item->quantity;
         }
+
+        // Recalculate COD downpayment after cart data is loaded
+        $this->calculateCodDownpayment();
     }
 
     public function loadPaymentMethods()
@@ -236,21 +276,20 @@ class CheckoutPage extends Component
             ->whereNotIn('method_name', $excludedMethods)
             ->get();
 
-        $cashOnDelivery = $this->paymentMethods->where('method_name', 'Cash on Delivery')->first();
+        $cod = $this->paymentMethods->where('method_name', 'Cash on Delivery')->first();
         $gcash = $this->paymentMethods->where('method_name', 'GCash')->first();
+        $bank = $this->paymentMethods->where('method_name', 'Bank Transfer')->first();
 
-        if ($cashOnDelivery) {
-            $this->selectedPaymentMethod = $cashOnDelivery->payment_methodID;
-            $this->showGcashReference = false;
-            $this->showBankTransferReference = false;
+        if ($cod) {
+            $this->selectedPaymentMethod = $cod->payment_methodID;
+            $this->showCodDownPayment = true;
+            $this->codDownPaymentMethod = null;
         } elseif ($gcash) {
             $this->selectedPaymentMethod = $gcash->payment_methodID;
             $this->showGcashReference = true;
-        } elseif ($this->paymentMethods->isNotEmpty()) {
-            $firstMethod = $this->paymentMethods->first();
-            $this->selectedPaymentMethod = $firstMethod->payment_methodID;
-            $methodName = strtolower($firstMethod->method_name);
-            $this->showBankTransferReference = $methodName === 'bank transfer' || $methodName === 'banktransfer';
+        } elseif ($bank) {
+            $this->selectedPaymentMethod = $bank->payment_methodID;
+            $this->showBankTransferReference = true;
         }
     }
 
@@ -324,7 +363,6 @@ class CheckoutPage extends Component
         }
 
         if ($this->selectedShippingMethod === 'LALAMOVE') {
-            // For both options treat as no fixed fee on checkout side
             if (in_array($this->lalamoveBookingOption, ['customer', 'store'])) {
                 $this->deliveryFee = 0;
                 return;
@@ -340,24 +378,37 @@ class CheckoutPage extends Component
     public function updatedSelectedPaymentMethod($value)
     {
         $paymentMethod = PaymentMethod::find($value);
+        if (!$paymentMethod) return;
 
-        if ($paymentMethod) {
-            $methodName = strtolower($paymentMethod->method_name);
-            $this->showGcashReference = $methodName === 'gcash';
-            $this->showBankTransferReference = $methodName === 'bank transfer' || $methodName === 'banktransfer';
+        $methodName = strtolower($paymentMethod->method_name);
 
-            if ($methodName === 'cash on delivery') {
-                $this->showGcashReference = false;
-                $this->showBankTransferReference = false;
-            }
-        }
+        // Reset all
+        $this->showGcashReference = false;
+        $this->showBankTransferReference = false;
+        $this->showCodDownPayment = false;
 
-        if (!$this->showGcashReference) {
-            $this->gcashReferenceNumber = '';
+        // Reset reference numbers
+        $this->gcashReferenceNumber = '';
+        $this->bankTransferReferenceNumber = '';
+        $this->codGcashReferenceNumber = '';
+        $this->codBankReferenceNumber = '';
+        $this->codDownPaymentMethod = null;
+
+        if ($methodName === 'gcash') {
+            $this->showGcashReference = true;
+        } elseif ($methodName === 'bank transfer' || $methodName === 'banktransfer') {
+            $this->showBankTransferReference = true;
+        } elseif ($methodName === 'cash on delivery') {
+            $this->showCodDownPayment = true;
         }
-        if (!$this->showBankTransferReference) {
-            $this->bankTransferReferenceNumber = '';
-        }
+    }
+
+    // NEW: Handle COD downpayment method changes
+    public function updatedCodDownPaymentMethod($value)
+    {
+        // Clear reference numbers when switching COD downpayment method
+        $this->codGcashReferenceNumber = '';
+        $this->codBankReferenceNumber = '';
     }
 
     public function applyDiscount()
@@ -392,6 +443,9 @@ class CheckoutPage extends Component
     public function calculateTotals()
     {
         $this->subtotal = $this->cartItems->sum('sub_total');
+
+        // new fix for cart count
+        $this->cartCount = $this->cartItems->sum('quantity');
 
         $this->discountAmount = 0;
         if ($this->appliedDiscount) {
@@ -437,6 +491,30 @@ class CheckoutPage extends Component
                 return;
             }
 
+            // NEW: COD Downpayment Validation
+            $paymentMethod = PaymentMethod::find($this->selectedPaymentMethod);
+            $methodName = strtolower($paymentMethod->method_name ?? '');
+
+            if ($methodName === 'cash on delivery') {
+                if (empty($this->codDownPaymentMethod)) {
+                    $this->addError('codDownPaymentMethod', 'Please choose a downpayment method for COD.');
+                    $this->isProcessing = false;
+                    return;
+                }
+
+                if ($this->codDownPaymentMethod === 'gcash' && empty($this->codGcashReferenceNumber)) {
+                    $this->addError('codGcashReferenceNumber', 'GCash reference number is required for downpayment.');
+                    $this->isProcessing = false;
+                    return;
+                }
+
+                if ($this->codDownPaymentMethod === 'bank_transfer' && empty($this->codBankReferenceNumber)) {
+                    $this->addError('codBankReferenceNumber', 'Bank transfer reference number is required for downpayment.');
+                    $this->isProcessing = false;
+                    return;
+                }
+            }
+
             if ($this->showGcashReference && empty($this->gcashReferenceNumber)) {
                 $this->addError('gcashReferenceNumber', 'GCash reference number is required.');
                 $this->isProcessing = false;
@@ -462,14 +540,10 @@ class CheckoutPage extends Component
                     return;
                 }
 
-                // No fixed fee stored in system for both options
                 $this->lalamoveFee = null;
                 $this->updateDeliveryFee();
                 $this->calculateTotals();
             }
-
-            $paymentMethod = PaymentMethod::find($this->selectedPaymentMethod);
-            $methodName = strtolower($paymentMethod->method_name ?? '');
 
             if ($methodName !== 'cash on delivery' && !$this->paymentScreenshot) {
                 $this->addError('paymentScreenshot', 'A payment screenshot is required for this payment method.');
@@ -481,8 +555,7 @@ class CheckoutPage extends Component
 
             $createdOrderId = null;
 
-            DB::transaction(function () use (&$createdOrderId) {
-                // Update customer basic info
+            DB::transaction(function () use (&$createdOrderId, $methodName) {
                 $this->customer->update([
                     'first_name' => $this->firstName,
                     'last_name'  => $this->lastName,
@@ -552,22 +625,23 @@ class CheckoutPage extends Component
                             $newStock = max($variant->stock_quantity - $cartItem->quantity, 0);
                             $variant->update(['stock_quantity' => $newStock]);
                         }
-                    }
+                    }    
                 }
-
-                $paymentMethod = PaymentMethod::find($this->selectedPaymentMethod);
-                $methodName = strtolower($paymentMethod->method_name);
 
                 $screenshotPath = null;
                 if ($this->paymentScreenshot) {
                     $screenshotPath = $this->paymentScreenshot->store('screenshots', 'public');
                 }
 
+                // UPDATED: Build reference number with COD downpayment method prefix
+                $referenceNumber = null;
                 if ($methodName === 'cash on delivery') {
-                    $referenceNumber = null;
+                    if ($this->codDownPaymentMethod === 'gcash') {
+                        $referenceNumber = '[GCASH] ' . $this->codGcashReferenceNumber;
+                    } elseif ($this->codDownPaymentMethod === 'bank_transfer') {
+                        $referenceNumber = '[BANK] ' . $this->codBankReferenceNumber;
+                    }
                 } else {
-                    $referenceNumber = null;
-
                     if ($this->showGcashReference && $this->gcashReferenceNumber) {
                         $referenceNumber = $this->gcashReferenceNumber;
                     } elseif ($this->showBankTransferReference && $this->bankTransferReferenceNumber) {
@@ -622,7 +696,7 @@ class CheckoutPage extends Component
                 $this->isProcessing = false;
                 return redirect()->route('orders.show', $createdOrderId);
             }
-
+    
             $this->isProcessing = false;
             session()->flash('error', 'Failed to create order. Please try again.');
 
@@ -635,21 +709,32 @@ class CheckoutPage extends Component
         }
     }
 
-    public function render()
-    {
-        return view('livewire.checkout-page', [
-            'cartItems'                => $this->cartItems,
-            'subtotal'                 => $this->subtotal,
-            'deliveryFee'              => $this->deliveryFee,
-            'discountAmount'           => $this->discountAmount,
-            'productDiscountSavings'   => $this->productDiscountSavings,
-            'totalAmount'              => $this->totalAmount,
-            'cartCount'                => $this->cartCount,
-            'paymentMethods'           => $this->paymentMethods,
-            'availableAddresses'       => $this->availableAddresses,
-            'availableShippingMethods' => $this->availableShippingMethods,
-            'showGcashReference'       => $this->showGcashReference,
-            'showBankTransferReference'=> $this->showBankTransferReference,
-        ]);
-    }
+   public function render()
+{
+    // Add this line — it fixes your problem
+   $this->paymentSettings = \App\Models\PaymentSetting::latest('id')->first();
+
+
+    return view('livewire.checkout-page', [
+        'cartItems'                => $this->cartItems,
+        'subtotal'                 => $this->subtotal,
+        'deliveryFee'              => $this->deliveryFee,
+        'discountAmount'           => $this->discountAmount,
+        'productDiscountSavings'   => $this->productDiscountSavings,
+        'totalAmount'              => $this->totalAmount,
+        'cartCount'                => $this->cartCount,
+        'paymentMethods'           => $this->paymentMethods,
+        'availableAddresses'       => $this->availableAddresses,
+        'availableShippingMethods' => $this->availableShippingMethods,
+        'showGcashReference'       => $this->showGcashReference,
+        'showBankTransferReference'=> $this->showBankTransferReference,
+        'showCodDownPayment'       => $this->showCodDownPayment,
+        'codDownPaymentMethod'     => $this->codDownPaymentMethod,
+        'codGcashReferenceNumber'  => $this->codGcashReferenceNumber,
+        'codBankReferenceNumber'   => $this->codBankReferenceNumber,
+        'totalItems'               => $this->totalItems,
+        'codDownpaymentAmount'     => $this->codDownpaymentAmount,
+    ]);
 }
+
+    }
