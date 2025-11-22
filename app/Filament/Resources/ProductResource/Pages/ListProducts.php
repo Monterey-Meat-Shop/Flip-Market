@@ -41,10 +41,10 @@ class ListProducts extends ListRecords
                 ->badgeColor('success'),
 
             // query for total pre-order
-            'pre_order' => Tab::make('Pre-order')
-                ->modifyQueryUsing(fn (Builder $query) => $query->withoutTrashed()->where('status', 'pre_order'))
-                ->badge(Product::withoutTrashed()->where('status', 'pre_order')->count())
-                ->badgeColor('info'),
+            // 'pre_order' => Tab::make('Pre-order')
+            //     ->modifyQueryUsing(fn (Builder $query) => $query->withoutTrashed()->where('status', 'pre_order'))
+            //     ->badge(Product::withoutTrashed()->where('status', 'pre_order')->count())
+            //     ->badgeColor('info'),
 
             // query for total low stock
             'low_stock' => Tab::make('Low Stock')

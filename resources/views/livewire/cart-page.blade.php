@@ -65,7 +65,7 @@
 
                       {{-- Product details --}}
                       <p class="text-sm text-gray-500">
-                        Size: {{ $item->size }} • Color: {{ $item->color }}
+                        Size: {{ $item->size }} • Color: {{ $item->colorway }}
                       </p>
 
                       {{-- Price Display --}}

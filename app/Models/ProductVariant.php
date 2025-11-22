@@ -20,6 +20,7 @@ class ProductVariant extends Model
 
     protected $casts = [
         'stock_quantity' => 'integer',
+        
     ];
 
     public function product(): BelongsTo

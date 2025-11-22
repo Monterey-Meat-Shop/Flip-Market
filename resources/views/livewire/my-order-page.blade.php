@@ -166,6 +166,15 @@
               View Order Details
             </button>
 
+            {{-- Delivered Function new added by chan--}} 
+            @if ($order->shipping->shipping_status === 'in_transit')
+                <button wire:click="markDelivered({{ $order->orderID }})"
+                        wire:confirm="Mark this order as delivered?"
+                        class="bg-green-600 hover:bg-green-800 text-white rounded-lg px-3 py-2 text-md">
+                    Delivered
+                </button>
+            @endif
+
             @if($order->order_status === 'pending')
               <button wire:click="cancelOrder({{ $order->orderID }})"
                       wire:confirm="Are you sure you want to cancel this order?"

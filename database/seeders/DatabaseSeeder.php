@@ -20,10 +20,6 @@ class DatabaseSeeder extends Seeder
             CategoriesSeeder::class,
             PaymentMethodSeeder::class,
             GuestCustomerSeeder::class,
-            // CustomerSeeder::class,
-            // AddressSeeder::class,
-            ProductSeeder::class,
-            // CashierSalesSeeder::class,
         ]);
 
         // Admin user

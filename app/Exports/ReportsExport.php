@@ -4,12 +4,17 @@ namespace App\Exports;
 
 use App\Models\Order;
 use App\Models\Payment;
+use App\Models\OrderItem;
 use Carbon\Carbon;
-use Illuminate\Support\Facades\DB;
-use Maatwebsite\Excel\Concerns\FromArray;
-use Maatwebsite\Excel\Concerns\WithHeadings;
+use Maatwebsite\Excel\Concerns\WithMultipleSheets;
 
-class ReportsExport implements FromArray, WithHeadings
+// Import all sheet classes
+use App\Exports\Sheets\SummarySheet;
+use App\Exports\Sheets\FastMovingProductsSheet;
+use App\Exports\Sheets\TopCustomersSheet;
+use App\Exports\Sheets\OrderDetailsSheet;
+
+class ReportsExport implements WithMultipleSheets
 {
     protected $startDate;
     protected $endDate;
@@ -22,8 +27,8 @@ class ReportsExport implements FromArray, WithHeadings
 
         if ($period === 'monthly') {
             $month = $month ?? now()->month;
-            $this->startDate = Carbon::create($year, $month, 1)->startOfMonth();
-            $this->endDate = Carbon::create($year, $month, 1)->endOfMonth();
+            $this->startDate = Carbon::create($year, $month)->startOfMonth();
+            $this->endDate = Carbon::create($year, $month)->endOfMonth();
         } elseif ($period === 'yearly') {
             $this->startDate = Carbon::create($year, 1, 1)->startOfYear();
             $this->endDate = Carbon::create($year, 12, 31)->endOfYear();
@@ -33,81 +38,13 @@ class ReportsExport implements FromArray, WithHeadings
         }
     }
 
-    public function getSummary()
-    {
-        $start = $this->startDate->copy()->startOfDay();
-        $end = $this->endDate->copy()->endOfDay();
-
-        // Get completed orders WITH payments (joined by orderID)
-        $orders = Order::query()
-            ->whereBetween('order_date', [$start, $end])
-            ->where('order_status', 'completed')
-            ->whereHas('payment', function ($query) {
-                $query->whereIn('status', ['paid', 'verified']);
-            })
-            ->get();
-
-        // Get all payments (paid) within the same date range
-        $payments = Payment::query()
-            ->whereBetween('created_at', [$start, $end])
-            ->where('status', 'paid')
-            ->get();
-
-        // Count pending payments
-        $pendingPayments = Payment::query()
-            ->whereBetween('created_at', [$start, $end])
-            ->where('status', 'pending')
-            ->count();
-
-        // Calculate totals
-        $totalOrders = $orders->count();
-        $totalOrderAmount = $orders->sum('final_amount');
-        $totalPaymentsCount = $payments->count();
-        $totalPayments = $payments->sum('amount');
-
-        // Titles
-        $reportTitle = match ($this->period) {
-            'monthly' => 'Monthly Sales & Orders Report',
-            'yearly' => 'Yearly Sales & Orders Report',
-            default => 'Weekly Sales & Orders Report',
-        };
-
-        $periodType = ucfirst($this->period);
-
-        return [
-            'orders_count' => $totalOrders,
-            'orders_total' => $totalOrderAmount,
-            'payments_count' => $totalPaymentsCount,
-            'payments_total' => $totalPayments,
-            'payments_pending' => $pendingPayments,
-            'period_start' => $start->format('M j'),
-            'period_end' => $end->format('M j, Y'),
-            'report_title' => $reportTitle,
-            'period_type' => $periodType,
-        ];
-    }
-
-    public function array(): array
-    {
-        $summary = $this->getSummary();
-
-        return [
-            [
-                'Total Orders',
-                $summary['orders_count'],
-                '₱' . number_format($summary['orders_total'], 2),
-                '₱' . number_format($summary['payments_total'], 2),
-            ],
-        ];
-    }
-
-    public function headings(): array
+    public function sheets(): array
     {
         return [
-            'Description',
-            'Count',
-            'Total Order Amount',
-            'Total Payments',
+            new SummarySheet($this->startDate, $this->endDate, $this->period),
+            new FastMovingProductsSheet($this->startDate, $this->endDate),
+            new TopCustomersSheet($this->startDate, $this->endDate),
+            new OrderDetailsSheet($this->startDate, $this->endDate),
         ];
     }
 }

@@ -40,6 +40,7 @@ use Illuminate\Support\Str;
 use Illuminate\Database\Eloquent\Model;
 use Filament\Notifications\Notification;
 
+use Filament\Forms\Components\Actions\Action;
 class ProductResource extends Resource
 {
     protected static ?string $model = Product::class;
@@ -124,7 +125,7 @@ class ProductResource extends Resource
                         ->fileAttachmentsDirectory('products/descriptions')
                         ->columnSpanFull()
                         ->maxLength(1000),
-                    
+                
                     Repeater::make('variants')
                         ->label('Sizes & Stock')
                         ->relationship('variants')
@@ -133,11 +134,10 @@ class ProductResource extends Resource
                                 ->required()
                                 ->maxLength(225)
                                 ->live(onBlur: true)
-                                ->afterStateUpdated(function (Get $get, Set $set, $state) {
-                                    // Trigger merge check when size is changed
-                                    static::mergeDuplicateSizes($get, $set);
+                                ->afterStateUpdated(function (Get $get, Set $set) {
+                                    static::mergeDuplicateVariants($get, $set);
                                 }),
-                            
+
                             TextInput::make('stock_quantity')
                                 ->numeric()
                                 ->rule('integer')
@@ -148,7 +148,7 @@ class ProductResource extends Resource
                                     'integer' => 'The stock quantity must be a whole number.',
                                     'min' => 'The stock quantity cannot be less than 0.',
                                 ]),
-                            
+
                             Select::make('colorway')
                                 ->label('Colorway')
                                 ->options([
@@ -173,49 +173,116 @@ class ProductResource extends Resource
                                 ])
                                 ->multiple()
                                 ->searchable()
-                                ->afterStateHydrated(function ($component, $state, string $operation) {
-                                    // When editing, convert database string back to array
-                                    if ($operation === 'edit' && is_string($state) && !empty($state)) {
-                                        $colorwayArray = array_map('trim', explode(',', $state));
-                                        $component->state($colorwayArray);
+                                ->afterStateHydrated(function ($component, $state) {
+                                    if (is_string($state) && !empty($state)) {
+                                        $component->state(array_map('trim', explode(',', $state)));
                                     }
                                 })
                                 ->dehydrateStateUsing(fn ($state) => is_array($state) ? implode(', ', $state) : $state)
                                 ->required()
                                 ->default(function (Get $get, string $operation) {
-                                    // Only auto-fill for CREATE operation when adding new variant rows
                                     if ($operation !== 'create') {
                                         return null;
                                     }
-                                    
-                                    // Auto-fill colorway from first variant when adding new rows
                                     $variants = $get('../../variants');
                                     if (is_array($variants) && count($variants) > 0) {
                                         $firstColorway = $variants[0]['colorway'] ?? null;
                                         if ($firstColorway) {
-                                            // If it's already an array, return as is
-                                            if (is_array($firstColorway)) {
+                                           if (is_array($firstColorway)) {
                                                 return $firstColorway;
                                             }
-                                            // If it's a string, convert to array
                                             if (is_string($firstColorway)) {
                                                 return array_map('trim', explode(',', $firstColorway));
                                             }
                                         }
                                     }
                                     return null;
+                                })
+                                ->afterStateUpdated(function (Get $get, Set $set) {
+                                    static::mergeDuplicateVariants($get, $set);
                                 }),
-                        ])
-                        ->defaultItems(1)
-                        ->columns(3)
-                        ->columnSpanFull()
-                        ->reorderable(false)
-                        ->afterStateUpdated(function (Get $get, Set $set) {
-                            // Trigger merge when items are added or removed
-                            static::mergeDuplicateSizes($get, $set);
-                        })
-                        ->addActionLabel('Add Size')
-                        ->live(),
+                                ])
+                                ->defaultItems(1)
+                                ->columns(3)
+                                ->columnSpanFull()
+                                ->reorderable(false)
+                                ->afterStateUpdated(function (Get $get, Set $set) {
+                                    static::mergeDuplicateVariants($get, $set);
+                                })
+                                ->addActionLabel('Add Size')
+                                ->extraItemActions([
+                                    Action::make('addSameColor')
+                                        ->label('Add Same Color')
+                                        ->icon('heroicon-m-swatch')
+                                        ->color('info')
+                                        ->action(function (array $arguments, Repeater $component): void {
+                                            $items = $component->getState();
+                
+                                            if (!is_array($items)) {
+                                                $items = [];
+                                            }
+                
+                                            $currentUuid = $arguments['item'] ?? null;
+                
+                                            if ($currentUuid !== null) {
+                                                $keys = array_keys($items);
+                                                $currentIndex = array_search($currentUuid, $keys);
+                    
+                                                if ($currentIndex !== false && isset($items[$currentUuid])) {
+                                                    $currentItem = $items[$currentUuid];
+                                                    $colorway = $currentItem['colorway'] ?? [];
+                        
+                                                    if (is_string($colorway)) {
+                                                        $colorway = array_map('trim', explode(',', $colorway));
+                                                    }
+                        
+                                                    $newItem = [
+                                                        'size' => '',
+                                                        'stock_quantity' => 0,
+                                                        'colorway' => $colorway,
+                                                    ];
+                        
+                                                    $indexedItems = array_values($items);
+                                                    array_splice($indexedItems, $currentIndex + 1, 0, [$newItem]);
+                                                    $component->state($indexedItems);
+                                                }
+                                            }
+                                        }),
+                                        Action::make('addSameSize')
+                                            ->label('Add Same Size')
+                                            ->icon('heroicon-m-arrows-up-down')
+                                            ->color('success')
+                                            ->action(function (array $arguments, Repeater $component): void {
+                                                $items = $component->getState();
+                
+                                                if (!is_array($items)) {
+                                                    $items = [];
+                                                }
+                
+                                                $currentUuid = $arguments['item'] ?? null;
+                
+                                                if ($currentUuid !== null) {
+                                                    $keys = array_keys($items);
+                                                    $currentIndex = array_search($currentUuid, $keys);
+                    
+                                                    if ($currentIndex !== false && isset($items[$currentUuid])) {
+                                                        $currentItem = $items[$currentUuid];
+                                                        $size = trim($currentItem['size'] ?? '');
+                        
+                                                        $newItem = [
+                                                            'size' => $size,
+                                                            'stock_quantity' => 0,
+                                                            'colorway' => [],
+                                                        ];
+                        
+                                                        $indexedItems = array_values($items);
+                                                        array_splice($indexedItems, $currentIndex + 1, 0, [$newItem]);
+                                                        $component->state($indexedItems);
+                                                    }
+                                                }
+                                            }),
+                                    ])
+                                    ->live(),
                 ])->columns(2),
 
                 Section::make('Images')->schema([
@@ -264,43 +331,45 @@ class ProductResource extends Resource
                         Select::make('status')
                             ->label('Status')
                             ->options([
-                                'pre_order' => 'Pre-order',
+                                // 'pre_order' => 'Pre-order',
                                 'in_stock' => 'In stock',
+                                'low_stock' => 'Low stock',
+                                'out_of_stock' => 'Out of stock',
                             ])
                             ->disabled(function ($record, $get) {
                                 return $record && $record->status === 'in_stock';
                             })
                             ->default('in_stock')
-                            ->helperText('Status is calculated automatically unless set to Pre-order.'),
+                            // ->helperText('Status is calculated automatically unless set to Pre-order.')
+                            ->disabled(),
 
                                 Toggle::make('is_active')
                                     ->required()
                                     ->default(true)
-                                    ->helperText('Automatically managed, unless overridden for pre-order.'),
+                                    // ->helperText('Automatically managed, unless overridden for pre-order.')
+                                    ,
                     ]),
             ])->columnSpan(1)
         ])->columns(3);
     }
 
-    /**
-     * Merge duplicate sizes and combine their stock quantities
-     */
-    protected static function mergeDuplicateSizes(Get $get, Set $set): void
+    protected static function mergeDuplicateVariants(Get $get, Set $set): void
     {
         $variants = $get('variants');
-        
+    
         if (!is_array($variants) || empty($variants)) {
             return;
         }
 
         $mergedVariants = [];
-        $sizeMap = [];
+        $variantKeyMap = [];
         $hasDuplicates = false;
 
-        foreach ($variants as $index => $variant) {
+        foreach ($variants as $variant) {
             $size = trim($variant['size'] ?? '');
-            
-            // Skip empty sizes
+            $colorway = $variant['colorway'] ?? [];
+            $stockQuantity = (int)($variant['stock_quantity'] ?? 0);
+        
             if (empty($size)) {
                 $mergedVariants[] = $variant;
                 continue;
@@ -308,53 +377,43 @@ class ProductResource extends Resource
 
             $sizeLower = strtolower($size);
 
-            if (isset($sizeMap[$sizeLower])) {
-                // Found duplicate - merge stock quantities
+            $colorwayArray = is_array($colorway) 
+                ? $colorway 
+                : (is_string($colorway) ? array_map('trim', explode(', ', $colorway)) : []);
+            $colorwayArray = array_filter($colorwayArray);
+
+            sort($colorwayArray);
+            $normalizedColorway = implode('|', $colorwayArray);
+
+            $compositeKey = $sizeLower . '_' . $normalizedColorway;
+
+            if (isset($variantKeyMap[$compositeKey])) {
                 $hasDuplicates = true;
-                $existingIndex = $sizeMap[$sizeLower];
-                
+                $existingIndex = $variantKeyMap[$compositeKey];
+            
                 $existingStock = (int)($mergedVariants[$existingIndex]['stock_quantity'] ?? 0);
-                $newStock = (int)($variant['stock_quantity'] ?? 0);
-                $totalStock = $existingStock + $newStock;
-                
+                $totalStock = $existingStock + $stockQuantity;
+            
                 $mergedVariants[$existingIndex]['stock_quantity'] = $totalStock;
-                
-                // Keep the first colorway or merge if different
-                $existingColorway = $mergedVariants[$existingIndex]['colorway'] ?? '';
-                $newColorway = $variant['colorway'] ?? '';
-                
-                if ($newColorway && $newColorway !== $existingColorway) {
-                    // Merge colorways if they're different
-                    if (is_string($existingColorway)) {
-                        $existingColorwayArray = array_filter(explode(', ', $existingColorway));
-                    } else {
-                        $existingColorwayArray = is_array($existingColorway) ? $existingColorway : [];
-                    }
-                    
-                    if (is_string($newColorway)) {
-                        $newColorwayArray = array_filter(explode(', ', $newColorway));
-                    } else {
-                        $newColorwayArray = is_array($newColorway) ? $newColorway : [];
-                    }
-                    
-                    $combinedColorways = array_unique(array_merge($existingColorwayArray, $newColorwayArray));
-                    $mergedVariants[$existingIndex]['colorway'] = implode(', ', $combinedColorways);
-                }
+            
+                $mergedVariants[$existingIndex]['colorway'] = $colorwayArray;
+            
             } else {
-                // New size - add to merged list
-                $sizeMap[$sizeLower] = count($mergedVariants);
+            
+                $variantKeyMap[$compositeKey] = count($mergedVariants);
+            
+                $variant['colorway'] = $colorwayArray;
+
                 $mergedVariants[] = $variant;
             }
         }
 
-        // Only update if we found duplicates
         if ($hasDuplicates) {
             $set('variants', array_values($mergedVariants));
-            
-            // Show notification
+        
             Notification::make()
-                ->title('Duplicate Sizes Merged')
-                ->body('Same sizes have been combined and their stock quantities added together.')
+                ->title('Duplicate Variants Merged')
+                ->body('Same size/color variants have been combined and their stock quantities added together.')
                 ->warning()
                 ->duration(4000)
                 ->send();
@@ -424,30 +483,41 @@ class ProductResource extends Resource
                     ])
                     ->sortable()
                     ->label('Status'),
-                
-                TextColumn::make('size_stocks')
-                    ->label('Sizes & Stock')
+
+                TextColumn::make('variant_details')
+                    ->label('Color & Sizes')
+                    ->html()
                     ->getStateUsing(function ($record) {
+
                         if ($record->variants && $record->variants->isNotEmpty()) {
-                            return $record->variants->map(function ($variant) {
-                                return "Size {$variant->size}: {$variant->stock_quantity}";
-                            })->implode(' | ');
+
+                            $grouped = $record->variants->groupBy('colorway');
+
+                            $lines = $grouped->map(function ($variants, $color) {
+
+                                $sizes = $variants->map(function ($variant) {
+
+                                    $style = '';
+
+                                    if ($variant->stock_quantity == 0) {
+                                        $style = 'color: #D34E4E !important; font-weight: bold;';
+                                    } elseif ($variant->stock_quantity <= 4) {
+                                        $style = 'color: #E9B63B !important; font-weight: bold;';
+                                    }
+
+                                    return "<span style='{$style}'>{$variant->size}</span>";
+
+                                })->implode(', ');
+
+                                return "<strong>{$color}:</strong> {$sizes} ";
+                            });
+
+                            return $lines->implode('<br>');
                         }
+
                         return '-';
                     })
                     ->wrap(),
-
-                TextColumn::make('colorways')
-                    ->label('Colorways')
-                    ->getStateUsing(function ($record) {
-                        if ($record->variants && $record->variants->isNotEmpty()) {
-                            $colorways = $record->variants->pluck('colorway')->filter()->unique()->implode(' | ');
-                            return $colorways ?: '-';
-                        }
-                        return '-';
-                    })
-                    ->wrap()
-                    ->lineClamp(2),
 
                 TextColumn::make('price')
                     ->money('PHP')

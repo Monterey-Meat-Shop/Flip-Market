@@ -143,6 +143,30 @@ class MyOrderPage extends Component
         }
     }
 
+    // new added by chan
+    public function markDelivered($orderId)
+        {
+            // Get muna naten ya ung ID ng irereturn nyo 
+            $order = Order::where('orderID', $orderId)
+                ->where('customerID', $this->customer->customerID)
+                ->with('shipping')
+                ->first();
+                // instead of get ksi pag get toh mag uupdate lahat ng order na may shipping status na kaparehas 
+
+
+            // UPDATE PO NG STATUS NI ORDER TABLE
+            $order->update([
+                'order_status' => 'completed',
+            ]);
+
+            // UPDATE PO NI SHIPPING STATUS
+            $order->shipping->update([
+                'shipping_status' => 'delivered',
+            ]);
+            session()->flash('success', 'Order marked as delivered successfully.');
+            $this->resetPage();
+        }
+
     public function viewOrderDetails($orderId)
     {
         return redirect()->route('orders.show', $orderId);

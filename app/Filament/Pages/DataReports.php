@@ -43,33 +43,23 @@ class DataReports extends Page
     protected function getHeaderActions(): array
     {
         return [
-            Action::make('export_pdf')
-                ->label('Export PDF')
-                ->icon('heroicon-o-printer')
-                ->color('danger')
-                ->action(function () {
-                    // Fetch all products with variants, category, and brand
-                    $products = Product::with(['variants', 'category', 'brand'])
-                        ->orderBy('name')
-                        ->get()
-                        ->groupBy(fn($p) => $p->status); // group by stock status
+            Action::make('export_excel')
+               ->label('Export Excel')
+               ->icon('heroicon-o-document-arrow-down')
+               ->color('success')
+               ->action(function () {
+                   $filename = 'inventory_report_' . now()->format('Ymd_His') . '.xlsx';
 
-                    // Render Blade view for the PDF
-                    $pdf = Pdf::loadView('pdf.inventory-report', [
-                        'groupedProducts' => $products,
-                    ])->setPaper('A4', 'portrait');
-
-                    // Stream download
-                    return response()->streamDownload(
-                        fn () => print($pdf->output()),
-                        'inventory_report.pdf'
-                    );
-                })
-                ->requiresConfirmation()
-                ->modalHeading('Export Inventory Report')
-                ->modalDescription('Generate a full inventory report PDF grouped by stock status.')
-                ->modalSubmitActionLabel('Export')
-                ->modalCancelActionLabel('Cancel'),
+                   return \Maatwebsite\Excel\Facades\Excel::download(
+                       new \App\Exports\Sheets\InventoryReportSheet(),
+                       $filename
+                   );
+               })
+               ->requiresConfirmation()
+               ->modalHeading('Export Inventory Report')
+               ->modalDescription('Generate a full inventory report grouped by stock status.')
+               ->modalSubmitActionLabel('Export')
+               ->modalCancelActionLabel('Cancel'),
         ];
     }
 }

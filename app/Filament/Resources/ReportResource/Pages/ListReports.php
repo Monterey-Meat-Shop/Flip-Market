@@ -21,42 +21,35 @@ class ListReports extends Page
     protected function getHeaderActions(): array
     {
         return [
-            Actions\Action::make('export_pdf')
-                ->label('Export PDF')
-                ->icon('heroicon-o-printer')
-                ->color('danger')
+            Actions\Action::make('export_excel')
+                ->label('Export Excel')
+                ->icon('heroicon-o-document-arrow-down')
+                ->color('success')
                 ->form([
                     Forms\Components\Select::make('period')
                         ->label('Report Type')
                         ->options([
                             'weekly' => 'Weekly Sales Report',
                             'monthly' => 'Monthly Sales Report',
+                            'yearly' => 'Yearly Sales Report',
                         ])
                         ->default('weekly')
                         ->required()
                         ->live()
                         ->afterStateUpdated(fn ($state, Forms\Set $set) => $set('month', null)),
-                    
+
                     Forms\Components\Select::make('month')
                         ->label('Select Month')
                         ->options([
-                            '1' => 'January',
-                            '2' => 'February',
-                            '3' => 'March',
-                            '4' => 'April',
-                            '5' => 'May',
-                            '6' => 'June',
-                            '7' => 'July',
-                            '8' => 'August',
-                            '9' => 'September',
-                            '10' => 'October',
-                            '11' => 'November',
-                            '12' => 'December',
+                            '1' => 'January', '2' => 'February', '3' => 'March',
+                            '4' => 'April', '5' => 'May', '6' => 'June',
+                            '7' => 'July', '8' => 'August', '9' => 'September',
+                            '10' => 'October', '11' => 'November', '12' => 'December',
                         ])
                         ->default(now()->month)
                         ->required()
                         ->visible(fn (Forms\Get $get) => $get('period') === 'monthly'),
-                    
+
                     Forms\Components\Select::make('year')
                         ->label('Select Year')
                         ->options(function () {
@@ -69,32 +62,25 @@ class ListReports extends Page
                         })
                         ->default(now()->year)
                         ->required()
-                        ->visible(fn (Forms\Get $get) => $get('period') === 'monthly'),
-                    
+                        ->visible(fn (Forms\Get $get) => in_array($get('period'), ['monthly', 'yearly'])),
+
                     Forms\Components\TextInput::make('filename')
                         ->label('File Name')
                         ->default('sales-report_' . now()->format('Ymd_His'))
                         ->required()
-                        ->helperText('Do not include ".pdf" — it will be added automatically.')
-                        ->maxLength(100),
+                        ->maxLength(100)
+                        ->helperText('Do not include ".xlsx" — it will be added automatically.'),
                 ])
                 ->action(function (array $data) {
-                    $export = new \App\Exports\ReportsExport(
-                        $data['period'],
-                        $data['month'] ?? null,
-                        $data['year'] ?? null
-                    );
-                    $summary = $export->getSummary();
+                    $filename = $data['filename'] . '.xlsx';
 
-                    $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.weekly-report', [
-                        'headings' => $export->headings(),
-                        'rows' => $export->array(),
-                        'summary' => $summary,
-                    ])->setPaper('A4', 'portrait');
-
-                    return response()->streamDownload(
-                        fn() => print($pdf->output()),
-                        $data['filename'] . '.pdf'
+                    return \Maatwebsite\Excel\Facades\Excel::download(
+                        new \App\Exports\ReportsExport(
+                            $data['period'],
+                            $data['month'] ?? null,
+                            $data['year'] ?? null
+                        ),
+                        $filename
                     );
                 }),
         ];
